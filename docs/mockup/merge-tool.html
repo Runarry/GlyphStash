@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GlyphStash - 合并工具</title>
+  <link rel="stylesheet" href="css/glyphstash.css">
+</head>
+<body>
+  <main class="app">
+    <aside class="nav">
+      <div class="brand"><div class="brand-mark">G</div><div><strong>GlyphStash</strong><span>字体资产工作台</span></div></div>
+      <nav class="nav-section">
+        <a class="nav-link" href="index.html"><i class="nav-dot"></i><span>总览</span></a>
+        <a class="nav-link" href="font-library.html"><i class="nav-dot"></i><span>字体库</span></a>
+        <a class="nav-link" href="collections.html"><i class="nav-dot"></i><span>集合</span></a>
+        <a class="nav-link" href="online-fonts.html"><i class="nav-dot"></i><span>在线字体</span></a>
+        <a class="nav-link active" href="merge-tool.html"><i class="nav-dot"></i><span>合并工具</span></a>
+        <a class="nav-link" href="glyph-browser.html"><i class="nav-dot"></i><span>字形浏览</span></a>
+        <a class="nav-link" href="settings.html"><i class="nav-dot"></i><span>设置</span></a>
+      </nav>
+      <div class="nav-footer"><div class="caption">默认冲突策略</div><strong>基础字体已有码位跳过</strong></div>
+    </aside>
+    <section class="workspace">
+      <header class="topbar">
+        <div><h1>合并工具</h1><p>按指定 Unicode 范围从补充字体合并字形，并生成可追踪报告。</p></div>
+        <div class="actions"><button class="btn">查看历史报告</button></div>
+      </header>
+      <div class="content">
+        <div class="stepper" style="margin-bottom:16px">
+          <button class="step active" data-step>1 选择字体</button>
+          <button class="step" data-step>2 指定范围</button>
+          <button class="step" data-step>3 预览冲突</button>
+          <button class="step" data-step>4 授权与导出</button>
+          <button class="step" data-step>5 报告</button>
+        </div>
+        <section class="panel panel-pad">
+          <div class="wizard-page active" data-wizard-page>
+            <div class="two-col">
+              <div class="filter">
+                <div class="section-title"><h2>基础字体 A</h2><span class="pill blue">保留优先</span></div>
+                <input class="input" value="Noto Serif CJK SC">
+                <article class="row active"><h3>Noto Serif CJK SC</h3><p class="muted">OTF · 7 styles · 已安装 · OFL</p></article>
+                <article class="row"><h3>Source Han Serif SC</h3><p class="muted">OTF · 14 styles · 系统字体</p></article>
+              </div>
+              <div class="filter">
+                <div class="section-title"><h2>补充字体 B</h2><span class="pill warn">仅取指定范围</span></div>
+                <input class="input" value="Source Han Sans SC">
+                <article class="row active"><h3>Source Han Sans SC</h3><p class="muted">OTF · 未启用 · 未知授权</p></article>
+                <article class="row"><h3>Brand CJK Patch</h3><p class="muted">TTF · GlyphStash 管理</p></article>
+              </div>
+            </div>
+          </div>
+          <div class="wizard-page" data-wizard-page>
+            <div class="field">
+              <label>Unicode 范围输入</label>
+              <input class="input" data-range-input value="U+4E00-U+9FFF">
+            </div>
+            <div class="chips">
+              <button class="chip active">CJK Unified Ideographs</button>
+              <button class="chip">Basic Latin</button>
+              <button class="chip">CJK Symbols</button>
+              <button class="chip">Punctuation</button>
+            </div>
+            <div class="row">
+              <h3>范围摘要</h3>
+              <p class="muted" data-range-summary>U+4E00-U+9FFF · 将预检查补充字体覆盖、重复码位和授权状态</p>
+              <div class="meta-grid">
+                <div class="meta"><span>预计检查字形</span>20,992</div>
+                <div class="meta"><span>补充字体覆盖</span>2,064</div>
+                <div class="meta"><span>重复码位</span>128</div>
+                <div class="meta"><span>缺失字形</span>18,800</div>
+              </div>
+            </div>
+          </div>
+          <div class="wizard-page" data-wizard-page>
+            <div class="section-title"><h2>冲突摘要</h2><span class="pill warn">需确认授权</span></div>
+            <div class="meta-grid">
+              <div class="meta"><span>重复码位</span>128 · 默认跳过</div>
+              <div class="meta"><span>缺失字形</span>18,800 · 不写入</div>
+              <div class="meta"><span>字体单位不匹配</span>已转换预检查</div>
+              <div class="meta"><span>格式支持</span>OTF 可处理</div>
+            </div>
+            <table class="table">
+              <tr><th>码位</th><th>字符</th><th>基础字体状态</th><th>补充字体状态</th><th>默认处理</th></tr>
+              <tr><td>U+4F60</td><td>你</td><td>已存在</td><td>存在</td><td><span class="pill warn">跳过</span></td></tr>
+              <tr><td>U+9FA5</td><td>龥</td><td>缺失</td><td>存在</td><td><span class="pill ok">合并</span></td></tr>
+              <tr><td>U+2E80</td><td>⺀</td><td>缺失</td><td>缺失</td><td><span class="pill">记录缺失</span></td></tr>
+            </table>
+          </div>
+          <div class="wizard-page" data-wizard-page>
+            <div class="two-col">
+              <section class="row">
+                <h3>授权确认</h3>
+                <p class="muted">GlyphStash 不判断商业可用性；合并和导出前必须由用户确认输入字体授权风险。</p>
+                <div class="chips"><span class="pill ok">基础字体：OFL</span><span class="pill warn">补充字体：未知授权</span></div>
+                <label style="margin-top:12px;display:flex;gap:9px;align-items:flex-start"><input type="checkbox" data-license-confirm> 我确认有权执行合并和导出，并理解未知授权不代表可商用。</label>
+              </section>
+              <section class="row">
+                <h3>输出设置</h3>
+                <div class="field"><label>输出字体名称</label><input class="input" value="Noto Serif CJK SC Patch"></div>
+                <div class="field"><label>输出文件路径</label><input class="input" value="D:\\GlyphStash\\exports\\NotoSerifCJKSC-Patch.otf"></div>
+                <p class="muted">输出不能覆盖原始字体文件。</p>
+              </section>
+            </div>
+          </div>
+          <div class="wizard-page" data-wizard-page>
+            <div class="row">
+              <div class="section-title"><h2>合并报告</h2><span class="pill ok">成功</span></div>
+              <p data-merge-report>等待导出。</p>
+              <table class="table">
+                <tr><th>项目</th><th>结果</th></tr>
+                <tr><td>输入字体</td><td>Noto Serif CJK SC + Source Han Sans SC</td></tr>
+                <tr><td>范围</td><td>U+4E00-U+9FFF</td></tr>
+                <tr><td>输出文件</td><td>D:\GlyphStash\exports\NotoSerifCJKSC-Patch.otf</td></tr>
+                <tr><td>license 确认时间</td><td>2026-05-18 16:57</td></tr>
+              </table>
+            </div>
+          </div>
+          <div class="actions" style="justify-content:space-between;margin-top:16px">
+            <button class="btn" data-prev-step>上一步</button>
+            <button class="btn primary" data-next-step>下一步</button>
+          </div>
+        </section>
+      </div>
+      <footer class="statusbar"><span>fontTools worker 在后台运行，不阻塞主界面</span><span>失败时报告区保留错误与诊断入口</span></footer>
+    </section>
+  </main>
+  <div class="toast"></div>
+  <script src="js/glyphstash.js"></script>
+</body>
+</html>

@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GlyphStash - 设置</title>
+  <link rel="stylesheet" href="css/glyphstash.css">
+</head>
+<body>
+  <main class="app" data-settings>
+    <aside class="nav">
+      <div class="brand"><div class="brand-mark">G</div><div><strong>GlyphStash</strong><span>字体资产工作台</span></div></div>
+      <nav class="nav-section">
+        <a class="nav-link" href="index.html"><i class="nav-dot"></i><span>总览</span></a>
+        <a class="nav-link" href="font-library.html"><i class="nav-dot"></i><span>字体库</span></a>
+        <a class="nav-link" href="collections.html"><i class="nav-dot"></i><span>集合</span></a>
+        <a class="nav-link" href="online-fonts.html"><i class="nav-dot"></i><span>在线字体</span></a>
+        <a class="nav-link" href="merge-tool.html"><i class="nav-dot"></i><span>合并工具</span></a>
+        <a class="nav-link" href="glyph-browser.html"><i class="nav-dot"></i><span>字形浏览</span></a>
+        <a class="nav-link active" href="settings.html"><i class="nav-dot"></i><span>设置</span></a>
+      </nav>
+    </aside>
+    <section class="workspace">
+      <header class="topbar">
+        <div><h1>设置</h1><p>管理目录、缓存、官方字体源、授权提示和诊断日志。</p></div>
+        <div class="actions"><button class="btn primary" data-setting-action="设置已保存">保存设置</button></div>
+      </header>
+      <div class="content">
+        <div class="two-col">
+          <section class="panel panel-pad filter">
+            <div class="section-title"><h2>本地管理目录</h2><span class="pill ok">可写</span></div>
+            <div class="field"><label>当前目录</label><input class="input" value="C:\Users\you\GlyphStash\fonts"></div>
+            <div class="actions"><button class="btn" data-setting-action="已打开目录选择器">选择目录</button><button class="btn" data-setting-action="目录可用性检查通过">检查可用性</button></div>
+            <p class="muted">所有下载和导入文件默认限制在 GlyphStash 管理目录，导出任务除外。</p>
+          </section>
+          <section class="panel panel-pad filter">
+            <div class="section-title"><h2>缓存</h2><span class="pill blue">SQLite</span></div>
+            <div class="meta-grid">
+              <div class="meta"><span>字体索引缓存</span>1,284 families</div>
+              <div class="meta"><span>预览缓存</span>318 entries</div>
+            </div>
+            <div class="actions"><button class="btn" data-setting-action="字体索引缓存已刷新">重建索引缓存</button><button class="btn danger" data-setting-action="预览缓存已清理">清理预览缓存</button></div>
+          </section>
+          <section class="panel panel-pad filter">
+            <div class="section-title"><h2>在线字体源</h2><span class="pill warn" data-api-status>未配置</span></div>
+            <div class="field"><label>Google Fonts API key</label><input class="input" data-api-key type="password" placeholder="AIza..."></div>
+            <p class="muted">v1 只配置 Google Fonts Provider，不显示未实现的第三方字体源。</p>
+            <button class="btn" data-setting-action="正在验证 Google Fonts API key">验证 API key</button>
+          </section>
+          <section class="panel panel-pad filter">
+            <div class="section-title"><h2>授权提示</h2><span class="pill ok">导出前强确认</span></div>
+            <label class="row"><input type="checkbox" checked> 合并/导出前总是显示授权确认</label>
+            <label class="row"><input type="checkbox" checked> 未知授权在字体详情和下载后状态中标记</label>
+            <label class="row"><input type="checkbox"> 下载完成后自动打开字体详情</label>
+          </section>
+        </div>
+        <section class="panel panel-pad" style="margin-top:16px">
+          <div class="section-title"><h2>诊断日志</h2><button class="btn" data-setting-action="诊断日志已导出">导出日志</button></div>
+          <div class="progress-log">
+            <div class="log-line"><span>16:42 字体扫描完成，新增 2 个字体族</span><span>scan</span></div>
+            <div class="log-line"><span>16:37 Google Fonts 请求失败：API key 未配置</span><span>online</span></div>
+            <div class="log-line"><span>16:31 集合官网改版导出清单</span><span>collection</span></div>
+            <div class="log-line"><span>16:22 合并任务失败：输出路径与原始字体冲突</span><span>merge</span></div>
+          </div>
+        </section>
+      </div>
+      <footer class="statusbar"><span>当前路径：Windows 用户级字体管理</span><span>设置项只覆盖已启用的本地能力和官方字体源</span></footer>
+    </section>
+  </main>
+  <div class="toast"></div>
+  <script src="js/glyphstash.js"></script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "kind": "html",
+  "title": "GlyphStash Desktop Prototype",
+  "entry": "glyphstash-prototype.html",
+  "renderer": "html",
+  "status": "complete",
+  "exports": [
+    "html",
+    "pdf",
+    "zip"
+  ],
+  "createdAt": "2026-05-18T09:08:14.576Z",
+  "updatedAt": "2026-05-18T09:08:14.586Z",
+  "metadata": {
+    "identifier": "glyphstash-prototype",
+    "artifactType": "text/html",
+    "inferred": false
+  }
+}

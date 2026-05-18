@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GlyphStash - 字体库</title>
+  <link rel="stylesheet" href="css/glyphstash.css">
+</head>
+<body>
+  <main class="shell">
+    <aside class="nav">
+      <div class="brand"><div class="brand-mark">G</div><div><strong>GlyphStash</strong><span>字体资产工作台</span></div></div>
+      <nav class="nav-section" aria-label="主导航">
+        <a class="nav-link" href="index.html"><i class="nav-dot"></i><span>总览</span></a>
+        <a class="nav-link active" href="font-library.html"><i class="nav-dot"></i><span>字体库</span></a>
+        <a class="nav-link" href="collections.html"><i class="nav-dot"></i><span>集合</span></a>
+        <a class="nav-link" href="online-fonts.html"><i class="nav-dot"></i><span>在线字体</span></a>
+        <a class="nav-link" href="merge-tool.html"><i class="nav-dot"></i><span>合并工具</span></a>
+        <a class="nav-link" href="glyph-browser.html"><i class="nav-dot"></i><span>字形浏览</span></a>
+        <a class="nav-link" href="settings.html"><i class="nav-dot"></i><span>设置</span></a>
+      </nav>
+      <div class="nav-footer"><div class="caption">当前会话</div><strong>4 个临时字体启用</strong><p class="muted">退出应用后释放，不写成永久安装。</p></div>
+    </aside>
+    <section class="workspace">
+      <header class="topbar">
+        <div>
+          <h1>字体库</h1>
+          <p data-scan-status>索引就绪：1,284 个字体族，最近扫描 16:42</p>
+        </div>
+        <div class="actions">
+          <button class="btn" data-start-scan>重新扫描</button>
+          <button class="btn primary" data-open-import>导入字体</button>
+        </div>
+      </header>
+      <div class="content">
+        <div class="main-grid">
+          <aside class="filter panel panel-pad">
+            <div class="field">
+              <label for="font-search">搜索字体或标签</label>
+              <input id="font-search" class="input" data-font-search placeholder="Inter、中文、等宽">
+            </div>
+            <div class="field">
+              <label>来源</label>
+              <select class="select" data-source-filter>
+                <option>全部来源</option>
+                <option>系统字体</option>
+                <option>用户级安装</option>
+                <option>GlyphStash 管理</option>
+                <option>临时字体</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>激活状态</label>
+              <select class="select" data-state-filter>
+                <option>全部状态</option>
+                <option>已安装</option>
+                <option>已临时启用</option>
+                <option>未启用</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>标签</label>
+              <div class="chips">
+                <button class="chip active">无衬线</button>
+                <button class="chip">中文</button>
+                <button class="chip">等宽</button>
+                <button class="chip">可商用</button>
+              </div>
+            </div>
+            <div class="field">
+              <label>集合</label>
+              <div class="chips">
+                <button class="chip">官网改版</button>
+                <button class="chip">游戏 UI</button>
+                <button class="chip">开发文档</button>
+              </div>
+            </div>
+            <button class="btn" data-open-tags>管理标签</button>
+          </aside>
+          <section class="panel panel-pad">
+            <div class="section-title">
+              <div>
+                <h2>本地字体</h2>
+                <p class="muted">列表区分系统字体、用户级安装、GlyphStash 管理和临时字体。</p>
+              </div>
+              <div class="segmented">
+                <button class="active" data-preview-mode>单行</button>
+                <button data-preview-mode>段落</button>
+                <button data-preview-mode>字符集</button>
+              </div>
+            </div>
+            <div class="list" data-font-list></div>
+          </section>
+        </div>
+      </div>
+      <footer class="statusbar">
+        <span>预览文本 <input class="input" data-preview-text value="GlyphStash 字体预览 Aa 123 你好" style="width:280px;min-height:30px;margin-left:8px"></span>
+        <span>字号 <input type="range" data-font-size min="18" max="48" value="30"> <b data-font-size-label>30px</b></span>
+      </footer>
+    </section>
+    <aside class="detail">
+      <div class="detail-inner">
+        <section class="detail-hero">
+          <div class="row-head">
+            <div>
+              <h2 data-detail-name>Inter</h2>
+              <div class="chips" style="margin-top:8px"><span class="pill" data-detail-source>GlyphStash 管理</span><span data-detail-state class="pill ok">已临时启用</span></div>
+            </div>
+            <button class="btn">收藏</button>
+          </div>
+          <p class="font-preview preview-sans" data-detail-preview style="font-size:30px">GlyphStash 字体预览 Aa 123 你好</p>
+        </section>
+        <section>
+          <div class="section-title"><h3>管理操作</h3></div>
+          <div class="actions">
+            <button class="btn primary">临时启用/关闭</button>
+            <button class="btn">用户级安装</button>
+            <button class="btn danger" data-uninstall-font>卸载管理字体</button>
+            <a class="btn" href="glyph-browser.html">查看字形</a>
+          </div>
+          <p class="muted">临时启用可能只保证 GlyphStash 内部预览可用，外部应用可见性取决于系统行为。</p>
+        </section>
+        <section>
+          <div class="section-title"><h3>基础信息</h3><span data-detail-license class="pill ok">SIL Open Font License 1.1</span></div>
+          <div class="meta-grid" data-detail-meta></div>
+        </section>
+        <section>
+          <div class="section-title"><h3>样式列表</h3><button class="btn" data-open-tags>标签/集合</button></div>
+          <table class="table">
+            <tr><th>样式</th><th>状态</th><th>PostScript</th></tr>
+            <tr><td>Regular</td><td><span class="pill ok">可预览</span></td><td>Inter-Regular</td></tr>
+            <tr><td>Semibold</td><td><span class="pill ok">可预览</span></td><td>Inter-SemiBold</td></tr>
+            <tr><td>Italic</td><td><span class="pill warn">未启用</span></td><td>Inter-Italic</td></tr>
+          </table>
+        </section>
+      </div>
+    </aside>
+  </main>
+
+  <div class="modal-backdrop" id="import-modal">
+    <section class="modal">
+      <h2>导入字体</h2>
+      <p class="muted">解析结果会先展示重复、同名不同版本、损坏文件和授权状态，再决定是否安装或临时启用。</p>
+      <table class="table">
+        <tr><th>文件</th><th>格式</th><th>解析状态</th><th>授权</th></tr>
+        <tr><td>BrandSans-Regular.otf</td><td>OTF</td><td><span class="pill ok">可导入</span></td><td>未知授权</td></tr>
+        <tr><td>BrandSans-Bold.otf</td><td>OTF</td><td><span class="pill warn">同名不同版本</span></td><td>OFL</td></tr>
+        <tr><td>broken-font.ttf</td><td>TTF</td><td><span class="pill danger">文件损坏</span></td><td>无法读取</td></tr>
+      </table>
+      <div class="two-col" style="margin-top:14px">
+        <label class="row"><input type="checkbox" checked> 加入 GlyphStash 管理目录</label>
+        <label class="row"><input type="checkbox"> 用户级安装</label>
+        <label class="row"><input type="checkbox" checked> 当前会话临时启用</label>
+        <label class="row"><input type="checkbox"> 加入集合：官网改版</label>
+      </div>
+      <div class="actions" style="justify-content:flex-end;margin-top:16px">
+        <button class="btn" data-close-modal="import-modal">取消</button>
+        <button class="btn primary" data-start-import>开始导入</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" id="tags-modal">
+    <section class="modal">
+      <h2>标签</h2>
+      <div class="field"><label>搜索标签</label><input class="input" placeholder="衬线、中文、项目A"></div>
+      <div class="section-title" style="margin-top:16px"><h3>已选标签</h3></div>
+      <div class="chips"><span class="chip active">无衬线</span><span class="chip active">UI</span><span class="chip active">可商用</span></div>
+      <div class="section-title" style="margin-top:16px"><h3>全部标签</h3><button class="btn">新建标签</button></div>
+      <table class="table">
+        <tr><th>标签名称</th><th>关联字体</th><th>操作</th></tr>
+        <tr><td>中文</td><td>86</td><td><button class="btn">重命名</button> <button class="btn danger">删除</button></td></tr>
+        <tr><td>等宽</td><td>24</td><td><button class="btn">重命名</button> <button class="btn danger">删除</button></td></tr>
+      </table>
+      <p class="muted">删除标签只移除标签和字体的关联，不删除字体。</p>
+      <div class="actions" style="justify-content:flex-end"><button class="btn primary" data-close-modal="tags-modal">完成</button></div>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" id="uninstall-modal">
+    <section class="modal">
+      <h2>卸载字体</h2>
+      <p>将卸载当前 GlyphStash 管理的用户级字体。系统字体不会被删除，非 GlyphStash 管理字体也不会执行卸载。</p>
+      <div class="actions" style="justify-content:flex-end"><button class="btn" data-close-modal="uninstall-modal">取消</button><button class="btn danger" data-confirm-uninstall>确认卸载</button></div>
+    </section>
+  </div>
+  <div class="toast"></div>
+  <script src="js/glyphstash.js"></script>
+</body>
+</html>

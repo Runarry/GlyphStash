@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GlyphStash - 字形浏览</title>
+  <link rel="stylesheet" href="css/glyphstash.css">
+</head>
+<body>
+  <main class="shell">
+    <aside class="nav">
+      <div class="brand"><div class="brand-mark">G</div><div><strong>GlyphStash</strong><span>字体资产工作台</span></div></div>
+      <nav class="nav-section">
+        <a class="nav-link" href="index.html"><i class="nav-dot"></i><span>总览</span></a>
+        <a class="nav-link" href="font-library.html"><i class="nav-dot"></i><span>字体库</span></a>
+        <a class="nav-link" href="collections.html"><i class="nav-dot"></i><span>集合</span></a>
+        <a class="nav-link" href="online-fonts.html"><i class="nav-dot"></i><span>在线字体</span></a>
+        <a class="nav-link" href="merge-tool.html"><i class="nav-dot"></i><span>合并工具</span></a>
+        <a class="nav-link active" href="glyph-browser.html"><i class="nav-dot"></i><span>字形浏览</span></a>
+        <a class="nav-link" href="settings.html"><i class="nav-dot"></i><span>设置</span></a>
+      </nav>
+    </aside>
+    <section class="workspace">
+      <header class="topbar">
+        <div><h1>字形浏览：Noto Serif CJK SC</h1><p>查看 Unicode 映射字符，搜索字符或码位，并复制字形信息。</p></div>
+        <div class="actions"><a class="btn" href="font-library.html">返回字体详情</a></div>
+      </header>
+      <div class="content">
+        <div class="main-grid">
+          <aside class="panel panel-pad filter">
+            <div class="field"><label>搜索字符 / Unicode / 输入文本</label><input class="input" data-glyph-search placeholder="你、U+4F60、Latin"></div>
+            <div class="field"><label>Unicode 区块</label><div class="chips"><button class="chip active">CJK Unified</button><button class="chip">Basic Latin</button><button class="chip">Symbols</button></div></div>
+            <div class="field"><label>映射状态</label><select class="select"><option>Unicode 映射字形</option><option>未映射字形</option></select></div>
+            <div class="row">
+              <h3>分页</h3>
+              <p class="muted">当前显示 1-120 / 20,992。大型 CJK 字体按页或虚拟滚动渲染，避免一次性绘制全部字形。</p>
+            </div>
+          </aside>
+          <section class="panel panel-pad">
+            <div class="section-title"><h2>字形网格</h2><span class="pill">固定单元 78px</span></div>
+            <div class="glyph-grid" data-glyph-grid></div>
+          </section>
+        </div>
+      </div>
+      <footer class="statusbar"><span>缺字搜索会显示当前字体不包含该字符/码位</span><span>未映射 glyph 预留在筛选项中</span></footer>
+    </section>
+    <aside class="detail">
+      <div class="detail-inner">
+        <section class="detail-hero">
+          <h2>选中字形</h2>
+          <p class="font-preview preview-serif" data-glyph-char style="font-size:76px">你</p>
+        </section>
+        <div class="meta-grid">
+          <div class="meta"><span>Unicode</span><b data-glyph-code>U+4F60</b></div>
+          <div class="meta"><span>Glyph name</span><b data-glyph-name>uni4F60</b></div>
+          <div class="meta"><span>Glyph ID</span><b data-glyph-id>14882</b></div>
+          <div class="meta"><span>所属样式</span><b>Regular</b></div>
+        </div>
+        <div class="actions"><button class="btn primary" data-copy="字符">复制字符</button><button class="btn" data-copy="Unicode 码位">复制 Unicode</button></div>
+      </div>
+    </aside>
+  </main>
+  <div class="toast"></div>
+  <script src="js/glyphstash.js"></script>
+</body>
+</html>

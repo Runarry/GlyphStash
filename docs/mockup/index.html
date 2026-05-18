@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GlyphStash Prototype</title>
+  <link rel="stylesheet" href="css/glyphstash.css">
+</head>
+<body>
+  <main class="app">
+    <aside class="nav">
+      <div class="brand">
+        <div class="brand-mark">G</div>
+        <div>
+          <strong>GlyphStash</strong>
+          <span>字体资产工作台</span>
+        </div>
+      </div>
+      <nav class="nav-section" aria-label="主导航">
+        <a class="nav-link active" href="index.html"><i class="nav-dot"></i><span>总览</span></a>
+        <a class="nav-link" href="font-library.html"><i class="nav-dot"></i><span>字体库</span></a>
+        <a class="nav-link" href="collections.html"><i class="nav-dot"></i><span>集合</span></a>
+        <a class="nav-link" href="online-fonts.html"><i class="nav-dot"></i><span>在线字体</span></a>
+        <a class="nav-link" href="merge-tool.html"><i class="nav-dot"></i><span>合并工具</span></a>
+        <a class="nav-link" href="glyph-browser.html"><i class="nav-dot"></i><span>字形浏览</span></a>
+        <a class="nav-link" href="settings.html"><i class="nav-dot"></i><span>设置</span></a>
+      </nav>
+      <div class="nav-footer">
+        <div class="caption">后台任务</div>
+        <strong>字体索引已就绪</strong>
+        <div class="meter" style="margin-top:10px"><span style="width:82%"></span></div>
+      </div>
+    </aside>
+    <section class="workspace">
+      <header class="topbar">
+        <div>
+          <h1>GlyphStash 桌面原型</h1>
+          <p>Windows 优先的字体查看、管理、下载、字形浏览与合并工作台。</p>
+        </div>
+        <div class="actions">
+          <a class="btn" href="settings.html">检查诊断</a>
+          <a class="btn primary" href="font-library.html">进入字体库</a>
+        </div>
+      </header>
+      <div class="content">
+        <div class="launcher">
+          <a class="screen-card" href="font-library.html">
+            <span class="pill ok">默认首页</span>
+            <h2>字体库</h2>
+            <p class="muted">系统字体、本地管理字体、临时字体同屏浏览；包含搜索、筛选、预览、导入、安装、卸载、标签与集合入口。</p>
+            <div class="chips"><span class="chip">列表 + 详情</span><span class="chip">导入流程</span><span class="chip">风险确认</span></div>
+          </a>
+          <a class="screen-card" href="collections.html">
+            <span class="pill blue">项目组织</span>
+            <h2>集合</h2>
+            <p class="muted">管理项目字体包，支持批量临时启用、关闭、导出清单，并清楚说明删除集合不会删除字体文件。</p>
+            <div class="chips"><span class="chip">批量操作</span><span class="chip">授权摘要</span></div>
+          </a>
+          <a class="screen-card" href="online-fonts.html">
+            <span class="pill warn">授权同屏</span>
+            <h2>在线字体</h2>
+            <p class="muted">Google Fonts 搜索、license 信息、样式选择、下载后加入集合和安装/临时启用操作。</p>
+            <div class="chips"><span class="chip">API key 状态</span><span class="chip">下载记录</span></div>
+          </a>
+          <a class="screen-card" href="merge-tool.html">
+            <span class="pill danger">高级任务</span>
+            <h2>合并工具</h2>
+            <p class="muted">五步向导完成字体选择、Unicode 范围、冲突预览、授权确认和导出报告。</p>
+            <div class="chips"><span class="chip">冲突策略</span><span class="chip">报告保留</span></div>
+          </a>
+          <a class="screen-card" href="glyph-browser.html">
+            <span class="pill">覆盖验证</span>
+            <h2>字形浏览</h2>
+            <p class="muted">固定尺寸字形网格、Unicode 区块筛选、缺字反馈、字形详情和复制操作。</p>
+            <div class="chips"><span class="chip">分页思路</span><span class="chip">复制码位</span></div>
+          </a>
+          <a class="screen-card" href="settings.html">
+            <span class="pill">本地配置</span>
+            <h2>设置</h2>
+            <p class="muted">管理目录、缓存、Google Fonts API key、授权提示偏好和诊断日志集中在一个设置界面。</p>
+            <div class="chips"><span class="chip">目录状态</span><span class="chip">错误日志</span></div>
+          </a>
+        </div>
+      </div>
+      <footer class="statusbar">
+        <span>最近操作：扫描完成，缓存刷新 18 项</span>
+        <span>SQLite 索引 · Windows 用户级字体路径</span>
+      </footer>
+    </section>
+  </main>
+</body>
+</html>

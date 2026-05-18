@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GlyphStash - 集合</title>
+  <link rel="stylesheet" href="css/glyphstash.css">
+</head>
+<body>
+  <main class="shell">
+    <aside class="nav">
+      <div class="brand"><div class="brand-mark">G</div><div><strong>GlyphStash</strong><span>字体资产工作台</span></div></div>
+      <nav class="nav-section">
+        <a class="nav-link" href="index.html"><i class="nav-dot"></i><span>总览</span></a>
+        <a class="nav-link" href="font-library.html"><i class="nav-dot"></i><span>字体库</span></a>
+        <a class="nav-link active" href="collections.html"><i class="nav-dot"></i><span>集合</span></a>
+        <a class="nav-link" href="online-fonts.html"><i class="nav-dot"></i><span>在线字体</span></a>
+        <a class="nav-link" href="merge-tool.html"><i class="nav-dot"></i><span>合并工具</span></a>
+        <a class="nav-link" href="glyph-browser.html"><i class="nav-dot"></i><span>字形浏览</span></a>
+        <a class="nav-link" href="settings.html"><i class="nav-dot"></i><span>设置</span></a>
+      </nav>
+    </aside>
+    <section class="workspace">
+      <header class="topbar">
+        <div><h1>集合</h1><p>项目字体包、批量临时启用、关闭与导出清单。</p></div>
+        <div class="actions"><button class="btn">搜索集合</button><button class="btn primary">新建集合</button></div>
+      </header>
+      <div class="content">
+        <div class="split-list">
+          <aside class="panel panel-pad filter">
+            <div class="field"><label>搜索集合</label><input class="input" value="官网"></div>
+            <article class="row selectable active" data-collection="官网改版" data-note="24 个字体 · 9 个已临时启用 · 1 个未知授权">
+              <h3>官网改版</h3><p class="muted">24 个字体 · 9 个已临时启用</p>
+            </article>
+            <article class="row selectable" data-collection="游戏 UI" data-note="18 个字体 · 0 个已临时启用 · 3 个未知授权">
+              <h3>游戏 UI</h3><p class="muted">18 个字体 · 3 个未知授权</p>
+            </article>
+            <article class="row selectable" data-collection="开发文档" data-note="12 个字体 · 4 个已临时启用 · 授权完整">
+              <h3>开发文档</h3><p class="muted">12 个字体 · 授权完整</p>
+            </article>
+          </aside>
+          <section class="panel panel-pad">
+            <div class="section-title">
+              <div><h2 data-collection-title>官网改版</h2><p class="muted" data-collection-note>24 个字体 · 9 个已临时启用 · 1 个未知授权</p></div>
+              <div class="actions"><button class="btn">重命名</button><button class="btn danger">删除</button></div>
+            </div>
+            <div class="actions" style="margin-bottom:14px">
+              <button class="btn primary" data-bulk-action="集合内字体已加入当前会话临时启用队列">临时启用全部</button>
+              <button class="btn" data-bulk-action="只关闭当前会话由 GlyphStash 临时启用的字体">关闭全部</button>
+              <button class="btn" data-bulk-action="集合清单已导出为 CSV，包含字体、样式、状态和 license">导出清单</button>
+            </div>
+            <table class="table">
+              <tr><th>字体</th><th>样式</th><th>状态</th><th>授权</th><th>操作</th></tr>
+              <tr><td>Inter</td><td>18</td><td><span class="pill ok">临时启用</span></td><td>OFL</td><td><button class="btn">移除</button></td></tr>
+              <tr><td>Noto Serif CJK SC</td><td>7</td><td><span class="pill blue">已安装</span></td><td>OFL</td><td><button class="btn">移除</button></td></tr>
+              <tr><td>Brand Sans</td><td>4</td><td><span class="pill warn">未启用</span></td><td>未知授权</td><td><button class="btn">移除</button></td></tr>
+              <tr><td>Cascadia Code</td><td>6</td><td><span class="pill ok">临时启用</span></td><td>OFL</td><td><button class="btn">移除</button></td></tr>
+            </table>
+            <p class="muted">删除集合或移除字体只删除关系，不删除字体文件；批量关闭不会执行卸载。</p>
+          </section>
+        </div>
+      </div>
+      <footer class="statusbar"><span>集合操作记录会写入诊断日志</span><span>当前会话临时启用：9</span></footer>
+    </section>
+    <aside class="detail">
+      <div class="detail-inner">
+        <section class="detail-hero"><h2>集合摘要</h2><p class="muted">用于在项目之间切换字体资产，不污染永久安装列表。</p></section>
+        <div class="meta-grid">
+          <div class="meta"><span>字体数量</span>24</div>
+          <div class="meta"><span>已临时启用</span>9</div>
+          <div class="meta"><span>未知授权</span>1</div>
+          <div class="meta"><span>最近导出</span>2026-05-18 16:31</div>
+        </div>
+        <section class="panel panel-pad"><h3>授权提示</h3><p class="muted">集合导出只生成清单，不代表其中字体可再分发或可商用。</p></section>
+      </div>
+    </aside>
+  </main>
+  <div class="toast"></div>
+  <script src="js/glyphstash.js"></script>
+</body>
+</html>

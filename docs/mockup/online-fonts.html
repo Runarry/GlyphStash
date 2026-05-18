@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GlyphStash - 在线字体</title>
+  <link rel="stylesheet" href="css/glyphstash.css">
+</head>
+<body>
+  <main class="shell">
+    <aside class="nav">
+      <div class="brand"><div class="brand-mark">G</div><div><strong>GlyphStash</strong><span>字体资产工作台</span></div></div>
+      <nav class="nav-section">
+        <a class="nav-link" href="index.html"><i class="nav-dot"></i><span>总览</span></a>
+        <a class="nav-link" href="font-library.html"><i class="nav-dot"></i><span>字体库</span></a>
+        <a class="nav-link" href="collections.html"><i class="nav-dot"></i><span>集合</span></a>
+        <a class="nav-link active" href="online-fonts.html"><i class="nav-dot"></i><span>在线字体</span></a>
+        <a class="nav-link" href="merge-tool.html"><i class="nav-dot"></i><span>合并工具</span></a>
+        <a class="nav-link" href="glyph-browser.html"><i class="nav-dot"></i><span>字形浏览</span></a>
+        <a class="nav-link" href="settings.html"><i class="nav-dot"></i><span>设置</span></a>
+      </nav>
+    </aside>
+    <section class="workspace">
+      <header class="topbar">
+        <div><h1>在线字体</h1><p>官方字体源：Google Fonts Developer API。</p></div>
+        <div class="actions"><a class="btn" href="settings.html">配置 API key</a><button class="btn primary" data-remote-search>搜索</button></div>
+      </header>
+      <div class="content">
+        <div class="two-col">
+          <section class="panel panel-pad">
+            <div class="field" style="margin-bottom:14px">
+              <label>搜索 family 名称</label>
+              <div class="range-row"><input class="input" value="Noto Sans" aria-label="搜索在线字体"><button class="btn primary" data-remote-search>搜索</button></div>
+            </div>
+            <div class="row" style="margin-bottom:12px">
+              <div class="row-head"><strong>API key 状态</strong><span class="pill warn">未配置</span></div>
+              <p class="muted">当前可展示缓存结果；实时搜索需要在设置页配置 Google Fonts API key。</p>
+            </div>
+            <div class="list" data-remote-results>
+              <article class="row selectable active" data-remote-font data-family="Noto Sans" data-category="sans-serif · 72 styles" data-license="SIL Open Font License 1.1">
+                <h3>Noto Sans</h3><p class="muted">sans-serif · 72 styles · 支持 latin, cyrillic, greek</p><span class="pill ok">OFL</span>
+              </article>
+              <article class="row selectable" data-remote-font data-family="Roboto Flex" data-category="sans-serif variable · 1 axis set" data-license="Apache License 2.0">
+                <h3>Roboto Flex</h3><p class="muted">variable · 更新时间 2024-09-12</p><span class="pill ok">Apache 2.0</span>
+              </article>
+              <article class="row selectable" data-remote-font data-family="IBM Plex Mono" data-category="monospace · 14 styles" data-license="SIL Open Font License 1.1">
+                <h3>IBM Plex Mono</h3><p class="muted">monospace · 支持 latin extended</p><span class="pill ok">OFL</span>
+              </article>
+            </div>
+          </section>
+          <section class="panel panel-pad">
+            <div class="section-title">
+              <div><h2 data-remote-title>Noto Sans</h2><p class="muted" data-remote-category>sans-serif · 72 styles</p></div>
+              <span class="pill ok" data-remote-license>SIL Open Font License 1.1</span>
+            </div>
+            <p class="muted">下载不代表可商用，license 信息必须随下载记录保存，并在字体详情中继续可见。</p>
+            <table class="table">
+              <tr><th>样式</th><th>文件</th><th>选择</th></tr>
+              <tr><td>Regular 400</td><td>noto-sans-v36-latin-regular.ttf</td><td><input type="checkbox" checked></td></tr>
+              <tr><td>Semibold 600</td><td>noto-sans-v36-latin-600.ttf</td><td><input type="checkbox" checked></td></tr>
+              <tr><td>Bold 700</td><td>noto-sans-v36-latin-700.ttf</td><td><input type="checkbox" checked></td></tr>
+            </table>
+            <div class="section-title" style="margin-top:14px"><h3>下载后操作</h3></div>
+            <div class="two-col">
+              <label class="row"><input type="checkbox" checked> 加入 GlyphStash 管理目录</label>
+              <label class="row"><input type="checkbox"> 用户级安装</label>
+              <label class="row"><input type="checkbox" checked> 加入集合：官网改版</label>
+              <label class="row"><input type="checkbox"> 当前会话临时启用</label>
+            </div>
+            <p class="muted" data-download-state>等待下载。来源、license、下载 URL 与本地文件路径会写入下载记录。</p>
+            <button class="btn primary" data-download-font>下载所选样式</button>
+          </section>
+        </div>
+      </div>
+      <footer class="statusbar"><span>只显示 v1 已接入的官方 API 来源</span><span>网络失败、限流和权限错误会保留诊断入口</span></footer>
+    </section>
+    <aside class="detail">
+      <div class="detail-inner">
+        <section class="detail-hero"><h2>远程字体详情</h2><p class="font-preview preview-sans" style="font-size:34px">The quick brown fox 跃过 123</p></section>
+        <div class="meta-grid">
+          <div class="meta"><span>Provider</span>Google Fonts</div>
+          <div class="meta"><span>License 来源</span>API metadata</div>
+          <div class="meta"><span>支持子集</span>latin, latin-ext</div>
+          <div class="meta"><span>本地状态</span>未下载</div>
+        </div>
+      </div>
+    </aside>
+  </main>
+  <div class="toast"></div>
+  <script src="js/glyphstash.js"></script>
+</body>
+</html>
