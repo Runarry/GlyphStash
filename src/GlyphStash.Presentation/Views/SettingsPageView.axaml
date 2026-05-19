@@ -1,0 +1,92 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="GlyphStash.Presentation.Views.SettingsPageView"
+             x:CompileBindings="False">
+  <Grid RowDefinitions="76,*,Auto">
+    <Border Grid.Row="0"
+            Background="{DynamicResource GlyphSurfaceBrush}"
+            BorderBrush="{DynamicResource GlyphBorderBrush}"
+            BorderThickness="0,0,0,1"
+            Padding="24,0">
+      <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+        <StackPanel>
+          <TextBlock Text="设置" Classes="h1" />
+          <TextBlock Text="M2 只开放管理目录、临时字体兼容性矩阵和诊断日志。" Classes="muted" Margin="0,5,0,0" />
+        </StackPanel>
+        <Button Grid.Column="1" Content="选择管理目录" Classes="primary" Command="{Binding ChooseManagedDirectoryCommand}" />
+      </Grid>
+    </Border>
+
+    <ScrollViewer Grid.Row="1">
+      <StackPanel Margin="{StaticResource GlyphPagePadding}" Spacing="16">
+        <Grid ColumnDefinitions="*,*" ColumnSpacing="16">
+          <Border Grid.Column="0" Classes="panel" Padding="{StaticResource GlyphPanelPadding}">
+            <StackPanel Spacing="12">
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Text="本地管理目录" Classes="h2" />
+                <Border Grid.Column="1" Classes="badge ok"><TextBlock Text="{Binding ManagedDirectoryStatus}" FontSize="12" /></Border>
+              </Grid>
+              <TextBlock Text="{Binding ManagedFontDirectory}" TextWrapping="Wrap" />
+              <TextBlock Text="所有导入文件默认限制在 GlyphStash 管理目录；用户级安装会再复制到 Windows 当前用户字体目录。" Classes="muted" TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+
+          <Border Grid.Column="1" Classes="panel" Padding="{StaticResource GlyphPanelPadding}">
+            <StackPanel Spacing="12">
+              <TextBlock Text="M2 支持格式" Classes="h2" />
+              <WrapPanel>
+                <Border Classes="badge ok" Margin="0,0,7,7"><TextBlock Text="TTF" /></Border>
+                <Border Classes="badge ok" Margin="0,0,7,7"><TextBlock Text="OTF" /></Border>
+                <Border Classes="badge ok" Margin="0,0,7,7"><TextBlock Text="TTC" /></Border>
+                <Border Classes="badge ok" Margin="0,0,7,7"><TextBlock Text="OTC" /></Border>
+                <Border Classes="badge warn" Margin="0,0,7,7"><TextBlock Text="WOFF/WOFF2 仅识别" /></Border>
+              </WrapPanel>
+              <TextBlock Text="WOFF/WOFF2 不执行 Windows 本地安装或会话级临时启用。" Classes="muted" TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+        </Grid>
+
+        <Border Classes="panel" Padding="{StaticResource GlyphPanelPadding}">
+          <StackPanel Spacing="12">
+            <TextBlock Text="临时字体外部应用兼容性矩阵" Classes="h2" />
+            <ItemsControl ItemsSource="{Binding CompatibilityMatrix}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Border Classes="card" Margin="0,0,0,8">
+                    <TextBlock Text="{Binding .}" TextWrapping="Wrap" />
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </Border>
+
+        <Border Classes="panel" Padding="{StaticResource GlyphPanelPadding}">
+          <StackPanel Spacing="12">
+            <TextBlock Text="诊断日志" Classes="h2" />
+            <ItemsControl ItemsSource="{Binding OperationLogs}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Grid ColumnDefinitions="60,90,*,70" Margin="0,0,0,8" ColumnSpacing="10">
+                    <TextBlock Text="{Binding TimeLabel}" Classes="caption" />
+                    <TextBlock Grid.Column="1" Text="{Binding Category}" />
+                    <TextBlock Grid.Column="2" Text="{Binding Message}" TextWrapping="Wrap" />
+                    <TextBlock Grid.Column="3" Text="{Binding StateLabel}" Classes="muted" />
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </Border>
+      </StackPanel>
+    </ScrollViewer>
+
+    <Border Grid.Row="2"
+            Background="{DynamicResource GlyphSurfaceBrush}"
+            BorderBrush="{DynamicResource GlyphBorderBrush}"
+            BorderThickness="0,1,0,0"
+            Padding="24,9">
+      <TextBlock Text="当前路径：Windows 用户级字体管理；临时启用不会写成永久安装。" Classes="muted" />
+    </Border>
+  </Grid>
+</UserControl>

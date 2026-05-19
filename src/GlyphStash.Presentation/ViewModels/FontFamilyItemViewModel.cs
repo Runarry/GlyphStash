@@ -5,7 +5,7 @@ namespace GlyphStash.Presentation.ViewModels;
 
 public sealed partial class FontFamilyItemViewModel : ObservableObject
 {
-    private readonly FontFamilyRecord _record;
+    private FontFamilyRecord _record;
 
     [ObservableProperty]
     private bool _isFavorite;
@@ -21,6 +21,8 @@ public sealed partial class FontFamilyItemViewModel : ObservableObject
         _record = record;
         IsFavorite = record.IsFavorite;
     }
+
+    public FontFamilyRecord ToRecord() => _record with { IsFavorite = IsFavorite };
 
     public string FamilyName => _record.FamilyName;
 
@@ -77,10 +79,38 @@ public sealed partial class FontFamilyItemViewModel : ObservableObject
 
     public string FavoriteLabel => IsFavorite ? "已收藏" : "收藏";
 
+    public string TemporaryActivationLabel => _record.ActivationState == FontActivationState.TemporarilyEnabled ? "关闭临时启用" : "临时启用";
+
+    public bool CanTemporarilyActivate => _record.ActivationState != FontActivationState.Installed;
+
+    public string TemporaryActivationDisabledReason => _record.ActivationState == FontActivationState.Installed ? "已安装，无需临时启用" : "";
+
+    public string InstallLabel => _record.ActivationState == FontActivationState.Installed ? "已安装" : "用户级安装";
+
     public void SetPreview(string text, double fontSize)
     {
         PreviewText = text;
         PreviewFontSize = fontSize;
+    }
+
+    public void SetActivationState(FontActivationState state)
+    {
+        _record = _record with { ActivationState = state };
+        OnPropertyChanged(nameof(StateLabel));
+        OnPropertyChanged(nameof(IsOkState));
+        OnPropertyChanged(nameof(IsWarningState));
+        OnPropertyChanged(nameof(TemporaryActivationLabel));
+        OnPropertyChanged(nameof(CanTemporarilyActivate));
+        OnPropertyChanged(nameof(TemporaryActivationDisabledReason));
+        OnPropertyChanged(nameof(InstallLabel));
+    }
+
+    public void SetTagsAndCollections(IReadOnlyList<string> tags, IReadOnlyList<string> collections)
+    {
+        _record = _record with { Tags = tags, Collections = collections };
+        OnPropertyChanged(nameof(TagsLabel));
+        OnPropertyChanged(nameof(Tags));
+        OnPropertyChanged(nameof(Collections));
     }
 
     partial void OnIsFavoriteChanged(bool value)

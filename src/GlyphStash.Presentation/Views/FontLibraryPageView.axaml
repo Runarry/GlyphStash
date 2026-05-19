@@ -111,11 +111,18 @@
                             </Border>
                           </WrapPanel>
                         </StackPanel>
-                        <Button Grid.Column="1"
-                                Classes="ghost sm"
-                                Content="{Binding FavoriteLabel}"
-                                Command="{Binding $parent[UserControl].DataContext.ToggleFavoriteCommand}"
-                                CommandParameter="{Binding .}" />
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
+                          <Button Classes="ghost sm"
+                                  Content="{Binding TemporaryActivationLabel}"
+                                  IsEnabled="{Binding CanTemporarilyActivate}"
+                                  ToolTip.Tip="{Binding TemporaryActivationDisabledReason}"
+                                  Command="{Binding $parent[UserControl].DataContext.ToggleTemporaryActivationCommand}"
+                                  CommandParameter="{Binding .}" />
+                          <Button Classes="ghost sm"
+                                  Content="{Binding FavoriteLabel}"
+                                  Command="{Binding $parent[UserControl].DataContext.ToggleFavoriteCommand}"
+                                  CommandParameter="{Binding .}" />
+                        </StackPanel>
                       </Grid>
                       <TextBlock Text="{Binding PreviewText}"
                                  FontFamily="{Binding FamilyName}"
@@ -150,23 +157,44 @@
       </Grid>
     </Border>
 
-    <Grid Grid.RowSpan="3" Background="#99000000" IsVisible="{Binding IsImportDialogOpen}">
+    <Grid Grid.RowSpan="3" Background="{DynamicResource GlyphModalScrimBrush}" IsVisible="{Binding IsImportDialogOpen}">
       <Border Width="720" MaxHeight="620" Classes="panel" Padding="18" HorizontalAlignment="Center" VerticalAlignment="Center">
         <StackPanel Spacing="14">
           <TextBlock Text="导入字体" Classes="h1" />
-          <TextBlock Text="解析结果会先展示重复、损坏文件和授权状态。M1 不执行真实安装或临时启用。" Classes="muted" TextWrapping="Wrap" />
+          <TextBlock Text="{Binding ImportStatus}" Classes="muted" TextWrapping="Wrap" />
           <Border Classes="card">
-            <StackPanel Spacing="8">
-              <TextBlock Text="BrandSans-Regular.otf · OTF · 可导入 · 未知授权" />
-              <TextBlock Text="BrandSans-Bold.otf · OTF · 同名不同版本 · OFL" />
-              <TextBlock Text="broken-font.ttf · TTF · 文件损坏 · 无法读取" Foreground="{DynamicResource GlyphDangerBrush}" />
-            </StackPanel>
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+              <StackPanel>
+                <TextBlock Text="GlyphStash 管理目录" Classes="caption" />
+                <TextBlock Text="{Binding ManagedFontDirectory}" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding ManagedDirectoryStatus}" Classes="muted" />
+              </StackPanel>
+              <Button Grid.Column="1" Content="选择目录" Command="{Binding ChooseManagedDirectoryCommand}" />
+            </Grid>
+          </Border>
+          <Border Classes="card">
+            <ItemsControl ItemsSource="{Binding ImportPreviewItems}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Grid ColumnDefinitions="1.4*,.5*,1*,1.2*" Margin="0,0,0,8" ColumnSpacing="10">
+                    <TextBlock Text="{Binding FileName}" />
+                    <TextBlock Grid.Column="1" Text="{Binding Format}" Classes="muted" />
+                    <TextBlock Grid.Column="2" Text="{Binding Status}" TextWrapping="Wrap" />
+                    <TextBlock Grid.Column="3" Text="{Binding LicenseLabel}" Classes="muted" TextWrapping="Wrap" />
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
           </Border>
           <UniformGrid Columns="2">
             <CheckBox Content="加入 GlyphStash 管理目录" IsChecked="True" />
-            <CheckBox Content="用户级安装" IsEnabled="False" />
-            <CheckBox Content="当前会话临时启用" IsEnabled="False" />
-            <CheckBox Content="加入集合：官网改版" />
+            <CheckBox Content="用户级安装" IsChecked="{Binding ImportInstallForCurrentUser, Mode=TwoWay}" />
+            <CheckBox Content="当前会话临时启用"
+                      IsChecked="{Binding ImportTemporarilyActivate, Mode=TwoWay}"
+                      IsEnabled="{Binding CanImportTemporarilyActivate}"
+                      ToolTip.Tip="{Binding ImportTemporaryActivationReason}" />
+            <TextBox PlaceholderText="导入标签：无衬线, UI" Text="{Binding ImportTagsText, Mode=TwoWay}" />
+            <TextBox PlaceholderText="加入集合：官网改版" Text="{Binding ImportCollectionsText, Mode=TwoWay}" />
           </UniformGrid>
           <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
             <Button Content="取消" Command="{Binding CloseImportDialogCommand}" />
@@ -176,20 +204,19 @@
       </Border>
     </Grid>
 
-    <Grid Grid.RowSpan="3" Background="#99000000" IsVisible="{Binding IsTagsDialogOpen}">
+    <Grid Grid.RowSpan="3" Background="{DynamicResource GlyphModalScrimBrush}" IsVisible="{Binding IsTagsDialogOpen}">
       <Border Width="620" Classes="panel" Padding="18" HorizontalAlignment="Center" VerticalAlignment="Center">
         <StackPanel Spacing="14">
           <TextBlock Text="标签" Classes="h1" />
-          <TextBox PlaceholderText="衬线、中文、项目A" />
-          <TextBlock Text="已选标签" Classes="h2" />
-          <WrapPanel>
-            <Border Classes="badge ok" Margin="0,0,7,7"><TextBlock Text="无衬线" /></Border>
-            <Border Classes="badge ok" Margin="0,0,7,7"><TextBlock Text="UI" /></Border>
-            <Border Classes="badge ok" Margin="0,0,7,7"><TextBlock Text="可商用" /></Border>
-          </WrapPanel>
+          <TextBlock Text="用逗号或换行分隔标签与集合；删除标签或集合关系不会删除字体文件。" Classes="muted" TextWrapping="Wrap" />
+          <TextBlock Text="标签" Classes="h2" />
+          <TextBox PlaceholderText="衬线、中文、项目A" Text="{Binding TagEditorText, Mode=TwoWay}" />
+          <TextBlock Text="集合" Classes="h2" />
+          <TextBox PlaceholderText="官网改版、游戏 UI" Text="{Binding CollectionEditorText, Mode=TwoWay}" />
           <TextBlock Text="删除标签只移除标签和字体的关联，不删除字体。" Classes="muted" />
-          <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-            <Button Content="完成" Classes="primary" Command="{Binding CloseTagsDialogCommand}" />
+          <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
+            <Button Content="取消" Command="{Binding CloseTagsDialogCommand}" />
+            <Button Content="保存" Classes="primary" Command="{Binding SaveTagsDialogCommand}" />
           </StackPanel>
         </StackPanel>
       </Border>

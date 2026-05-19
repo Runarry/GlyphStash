@@ -10,5 +10,9 @@ public sealed record NavigationItemViewModel(
 {
     public bool IsFontLibrary => Key == "font-library";
 
+    public bool IsCollections => Key == "collections";
+
+    public bool IsSettings => Key == "settings";
+
     public bool IsComponentDemo => Key == "component-demo";
 }

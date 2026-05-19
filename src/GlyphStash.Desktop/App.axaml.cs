@@ -5,8 +5,10 @@ using System.Runtime.Versioning;
 using GlyphStash.Application.Abstractions.Fonts;
 using GlyphStash.Application.Abstractions.Storage;
 using GlyphStash.Application.Fonts;
+using GlyphStash.Infrastructure.Fonts;
 using GlyphStash.Infrastructure.Storage.Sqlite;
 using GlyphStash.Platform.Windows.Fonts;
+using GlyphStash.Presentation.Services;
 using GlyphStash.Presentation.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -29,13 +31,32 @@ public partial class App : Avalonia.Application
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             var shellViewModel = _serviceProvider.GetRequiredService<ShellViewModel>();
-            desktop.MainWindow = new MainWindow
+            var mainWindow = new MainWindow
             {
                 DataContext = shellViewModel
             };
+            _serviceProvider.GetRequiredService<DesktopStorageDialogService>().TopLevel = mainWindow;
+            desktop.MainWindow = mainWindow;
 
-            desktop.MainWindow.Opened += async (_, _) => await shellViewModel.InitializeAsync();
-            desktop.Exit += (_, _) => _serviceProvider.Dispose();
+            desktop.MainWindow.Opened += async (_, _) =>
+            {
+                await _serviceProvider.GetRequiredService<FontActivationCoordinator>().MarkRestartedActivationsStaleAsync(CancellationToken.None);
+                await shellViewModel.InitializeAsync();
+            };
+            desktop.Exit += (_, _) =>
+            {
+                try
+                {
+                    _serviceProvider.GetRequiredService<FontActivationCoordinator>()
+                        .DeactivateAllOwnedActivationsAsync(CancellationToken.None)
+                        .GetAwaiter()
+                        .GetResult();
+                }
+                finally
+                {
+                    _serviceProvider.Dispose();
+                }
+            };
         }
 
         base.OnFrameworkInitializationCompleted();
@@ -48,9 +69,24 @@ public partial class App : Avalonia.Application
         var dataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "GlyphStash");
         var dbPath = Path.Combine(dataDir, "glyphstash.db");
 
+        services.AddSingleton<SqliteFontMetadataStore>(_ => new SqliteFontMetadataStore(dbPath));
+        services.AddSingleton<IFontMetadataStore>(provider => provider.GetRequiredService<SqliteFontMetadataStore>());
+        services.AddSingleton<IAppSettingsStore>(provider => provider.GetRequiredService<SqliteFontMetadataStore>());
+        services.AddSingleton<IFontLibraryMutationStore>(provider => provider.GetRequiredService<SqliteFontMetadataStore>());
+        services.AddSingleton<ICollectionStore>(provider => provider.GetRequiredService<SqliteFontMetadataStore>());
+        services.AddSingleton<IActivationStore>(provider => provider.GetRequiredService<SqliteFontMetadataStore>());
+        services.AddSingleton<IOperationLogStore>(provider => provider.GetRequiredService<SqliteFontMetadataStore>());
         services.AddSingleton<IFontInventoryService, WindowsFontInventoryService>();
-        services.AddSingleton<IFontMetadataStore>(_ => new SqliteFontMetadataStore(dbPath));
+        services.AddSingleton<IFontMetadataReader, OpenTypeFontMetadataReader>();
+        services.AddSingleton<IManagedFontFileStore, ManagedFontFileStore>();
+        services.AddSingleton<IWindowsFontApi, WindowsFontApi>();
+        services.AddSingleton<IFontInstallService, WindowsFontInstallService>();
+        services.AddSingleton<ITemporaryFontActivationService, WindowsTemporaryFontActivationService>();
         services.AddSingleton<FontLibraryService>();
+        services.AddSingleton<FontActivationCoordinator>();
+        services.AddSingleton<LocalFontManagementService>();
+        services.AddSingleton<DesktopStorageDialogService>();
+        services.AddSingleton<IUserFileDialogService>(provider => provider.GetRequiredService<DesktopStorageDialogService>());
         services.AddSingleton<ShellViewModel>();
 
         return services.BuildServiceProvider();

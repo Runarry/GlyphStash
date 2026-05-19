@@ -1,3 +1,4 @@
+using GlyphStash.Application.Abstractions.Storage;
 using GlyphStash.Domain.Fonts;
 using GlyphStash.Infrastructure.Storage.Sqlite;
 
@@ -396,6 +397,101 @@ public sealed class SqliteFontMetadataStoreTests
         Assert.Single(result);
         Assert.Single(result[0].Faces);
         Assert.Equal("C:/Fonts/Shared.ttc", result[0].PrimaryFilePath);
+    }
+
+    [Fact]
+    public async Task M2Stores_PersistSettingsCollectionsActivationAndLogs()
+    {
+        var dbPath = Path.Combine(Path.GetTempPath(), "GlyphStash.Tests", $"{Guid.NewGuid():N}.db");
+        var store = new SqliteFontMetadataStore(dbPath);
+        var settingsStore = (IAppSettingsStore)store;
+        var collectionStore = (ICollectionStore)store;
+        var activationStore = (IActivationStore)store;
+        var logStore = (IOperationLogStore)store;
+
+        await store.InitializeAsync(CancellationToken.None);
+        await store.SaveFontIndexAsync([CreateInstalledFamily("Inter")], CancellationToken.None);
+        await settingsStore.SaveSettingsAsync(new UserFontSettings("C:/GlyphStash/fonts"), CancellationToken.None);
+        await collectionStore.CreateCollectionAsync("官网改版", CancellationToken.None);
+        await collectionStore.AddFontToCollectionAsync("官网改版", "Inter", CancellationToken.None);
+        await activationStore.UpsertActivationAsync(new ActivationRecord("C:/GlyphStash/fonts/Inter.otf", "collection:官网改版", 1, 0, DateTimeOffset.UtcNow, "Active", ""), CancellationToken.None);
+        await logStore.AppendOperationAsync(new OperationLogEntry(DateTimeOffset.UtcNow, "collection", "add-font", "Inter added", "Inter"), CancellationToken.None);
+
+        var settings = await settingsStore.GetSettingsAsync(CancellationToken.None);
+        var collections = await collectionStore.GetCollectionsAsync(CancellationToken.None);
+        var activations = await activationStore.GetOwnedActivationsAsync(CancellationToken.None);
+        var logs = await logStore.GetRecentOperationsAsync(5, CancellationToken.None);
+
+        Assert.Equal("C:/GlyphStash/fonts", settings?.ManagedFontDirectory);
+        Assert.Single(collections);
+        Assert.Contains("Inter", collections[0].FamilyNames);
+        Assert.Single(activations);
+        Assert.Single(logs);
+
+        await activationStore.MarkAllOwnedStaleAsync(CancellationToken.None);
+        Assert.Empty(await activationStore.GetOwnedActivationsAsync(CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task SaveFontIndex_DoesNotRestoreTemporaryStateFromManagedFontRecord()
+    {
+        var dbPath = Path.Combine(Path.GetTempPath(), "GlyphStash.Tests", $"{Guid.NewGuid():N}.db");
+        var store = new SqliteFontMetadataStore(dbPath);
+        var mutationStore = (IFontLibraryMutationStore)store;
+        var managedFile = new FontFileRecord("C:/GlyphStash/fonts/BrandSans.ttf", "TTF", "hash-brand", FontSourceKind.GlyphStashManaged, DateTimeOffset.UtcNow);
+        var family = new FontFamilyRecord(
+            "Brand Sans",
+            [new FontFaceRecord("Brand Sans", "Regular", "Brand Sans Regular", "BrandSans-Regular", 400, "Normal", "Normal", managedFile)],
+            FontSourceKind.GlyphStashManaged,
+            FontActivationState.TemporarilyEnabled,
+            LicenseStatus.Unknown,
+            "未知授权",
+            [],
+            [],
+            false);
+
+        await store.InitializeAsync(CancellationToken.None);
+        await mutationStore.UpsertManagedFontAsync(
+            new ManagedFontRecord("Brand Sans", managedFile.Path, managedFile.Format, managedFile.Sha256, null, FontActivationState.TemporarilyEnabled, DateTimeOffset.UtcNow, null),
+            family,
+            CancellationToken.None);
+        await store.SaveFontIndexAsync([], CancellationToken.None);
+
+        var result = await store.SearchAsync(new FontSearchQuery(SearchText: "Brand Sans"), CancellationToken.None);
+
+        var font = Assert.Single(result);
+        Assert.Equal(FontActivationState.NotEnabled, font.ActivationState);
+    }
+
+    [Fact]
+    public async Task Initialize_RebuildsIncompatibleM2RelationshipTables()
+    {
+        var dbPath = Path.Combine(Path.GetTempPath(), "GlyphStash.Tests", $"{Guid.NewGuid():N}.db");
+        var first = new SqliteFontMetadataStore(dbPath);
+        await first.InitializeAsync(CancellationToken.None);
+        await first.SaveFontIndexAsync([CreateInstalledFamily("Inter")], CancellationToken.None);
+
+        await using (var connection = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={dbPath}"))
+        {
+            await connection.OpenAsync();
+            var command = connection.CreateCommand();
+            command.CommandText = """
+                DROP TABLE font_tags;
+                CREATE TABLE font_tags (
+                    font_family TEXT NOT NULL,
+                    tag TEXT NOT NULL
+                );
+                """;
+            await command.ExecuteNonQueryAsync();
+        }
+
+        var repaired = new SqliteFontMetadataStore(dbPath);
+        await repaired.InitializeAsync(CancellationToken.None);
+        await ((IFontLibraryMutationStore)repaired).SetTagsAsync("Inter", ["UI"], CancellationToken.None);
+
+        var result = await repaired.SearchAsync(new FontSearchQuery(SearchText: "Inter"), CancellationToken.None);
+        Assert.Single(result);
+        Assert.Contains("UI", result[0].Tags);
     }
 
     [Fact]

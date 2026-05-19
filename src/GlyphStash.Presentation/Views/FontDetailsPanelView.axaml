@@ -29,12 +29,12 @@
         <StackPanel Spacing="10">
           <TextBlock Text="管理操作" Classes="h2" />
           <WrapPanel>
-            <Button Content="临时启用/关闭" Classes="primary sm" IsEnabled="False" Margin="0,0,8,8" />
-            <Button Content="用户级安装" Classes="sm" IsEnabled="False" Margin="0,0,8,8" />
+            <Button Content="{Binding SelectedFont.TemporaryActivationLabel}" Classes="primary sm" Command="{Binding ToggleTemporaryActivationCommand}" CommandParameter="{Binding SelectedFont}" IsEnabled="{Binding SelectedFont.CanTemporarilyActivate}" ToolTip.Tip="{Binding SelectedFont.TemporaryActivationDisabledReason}" Margin="0,0,8,8" />
+            <Button Content="{Binding SelectedFont.InstallLabel}" Classes="sm" Command="{Binding InstallSelectedFontCommand}" Margin="0,0,8,8" />
             <Button Content="卸载管理字体" Classes="danger sm" Command="{Binding OpenUninstallDialogCommand}" Margin="0,0,8,8" />
             <Button Content="查看字形" Classes="sm" IsEnabled="False" Margin="0,0,8,8" />
           </WrapPanel>
-          <TextBlock Text="临时启用、安装和卸载在 M1 只展示入口与安全提示，真实系统修改将在 M2 实现。" Classes="muted" TextWrapping="Wrap" />
+          <TextBlock Text="临时启用属于当前用户会话，退出应用后会释放；外部应用可见性取决于 Windows 和目标应用刷新行为。" Classes="muted" TextWrapping="Wrap" />
         </StackPanel>
 
         <StackPanel Spacing="10">
@@ -86,11 +86,11 @@
       </StackPanel>
     </ScrollViewer>
 
-    <Grid Background="#99000000" IsVisible="{Binding IsUninstallDialogOpen}">
+    <Grid Background="{DynamicResource GlyphModalScrimBrush}" IsVisible="{Binding IsUninstallDialogOpen}">
       <Border Width="520" Classes="panel" Padding="18" HorizontalAlignment="Center" VerticalAlignment="Center">
         <StackPanel Spacing="14">
           <TextBlock Text="卸载字体" Classes="h1" />
-          <TextBlock Text="M1 不执行真实卸载。v1 中系统字体不会被删除，非 GlyphStash 管理字体也不会直接卸载。" Classes="muted" TextWrapping="Wrap" />
+          <TextBlock Text="将卸载 GlyphStash 管理的用户级字体。系统字体不会被删除，非 GlyphStash 管理字体会被阻止或提示失败。" Classes="muted" TextWrapping="Wrap" />
           <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
             <Button Content="取消" Command="{Binding CloseUninstallDialogCommand}" />
             <Button Content="确认卸载" Classes="danger" Command="{Binding ConfirmUninstallCommand}" />

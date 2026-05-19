@@ -1,0 +1,125 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="GlyphStash.Presentation.Views.CollectionsPageView"
+             x:CompileBindings="False">
+  <Grid RowDefinitions="76,*,Auto">
+    <Border Grid.Row="0"
+            Background="{DynamicResource GlyphSurfaceBrush}"
+            BorderBrush="{DynamicResource GlyphBorderBrush}"
+            BorderThickness="0,0,0,1"
+            Padding="24,0">
+      <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+        <StackPanel>
+          <TextBlock Text="集合" Classes="h1" />
+          <TextBlock Text="项目字体包、批量临时启用、关闭与导出清单。" Classes="muted" Margin="0,5,0,0" />
+        </StackPanel>
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
+          <TextBox Width="190" PlaceholderText="新建集合名称" Text="{Binding NewCollectionName, Mode=TwoWay}" />
+          <Button Content="新建集合" Classes="primary" Command="{Binding CreateCollectionCommand}" />
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <Grid Grid.Row="1" ColumnDefinitions="280,*,320" ColumnSpacing="16" Margin="{StaticResource GlyphPagePadding}">
+      <Border Grid.Column="0" Classes="panel" Padding="{StaticResource GlyphPanelPadding}">
+        <StackPanel Spacing="14">
+          <StackPanel Spacing="7">
+            <TextBlock Text="搜索集合" Classes="caption" FontWeight="Bold" />
+            <TextBox Text="{Binding CollectionSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="官网、项目、文档" />
+          </StackPanel>
+          <ListBox ItemsSource="{Binding Collections}"
+                   SelectedItem="{Binding SelectedCollection, Mode=TwoWay}"
+                   Background="Transparent"
+                   BorderThickness="0">
+            <ListBox.ItemTemplate>
+              <DataTemplate>
+                <Border Classes="card" Margin="0,0,0,8">
+                  <StackPanel Spacing="6">
+                    <TextBlock Text="{Binding Name}" Classes="h2" />
+                    <TextBlock Text="{Binding Summary}" Classes="muted" TextWrapping="Wrap" />
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </StackPanel>
+      </Border>
+
+      <Border Grid.Column="1" Classes="panel" Padding="{StaticResource GlyphPanelPadding}">
+        <Grid RowDefinitions="Auto,Auto,*">
+          <Grid ColumnDefinitions="*,Auto">
+            <StackPanel>
+              <TextBlock Text="{Binding SelectedCollection.Name}" Classes="h1" />
+              <TextBlock Text="{Binding SelectedCollection.Summary}" Classes="muted" Margin="0,5,0,0" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+              <Button Content="临时启用全部" Classes="primary sm" Command="{Binding ActivateSelectedCollectionCommand}" />
+              <Button Content="关闭全部" Classes="sm" Command="{Binding DeactivateSelectedCollectionCommand}" />
+              <Button Content="导出清单" Classes="sm" Command="{Binding ExportSelectedCollectionCommand}" />
+            </StackPanel>
+          </Grid>
+          <TextBlock Grid.Row="1"
+                     Text="删除集合或移除字体只删除关系，不删除字体文件；批量关闭不会执行卸载。"
+                     Classes="muted"
+                     Margin="0,10,0,12"
+                     TextWrapping="Wrap" />
+          <ScrollViewer Grid.Row="2">
+            <ItemsControl ItemsSource="{Binding CollectionFonts}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Border Classes="card" Margin="0,0,0,8">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                      <StackPanel>
+                        <TextBlock Text="{Binding FamilyName}" Classes="h2" />
+                        <WrapPanel Margin="0,7,0,0">
+                          <Border Classes="badge ok" Margin="0,0,7,0"><TextBlock Text="{Binding StateLabel}" FontSize="12" /></Border>
+                          <Border Classes="badge" Margin="0,0,7,0"><TextBlock Text="{Binding SourceLabel}" FontSize="12" /></Border>
+                          <Border Classes="badge" Margin="0,0,7,0"><TextBlock Text="{Binding LicenseLabel}" FontSize="12" /></Border>
+                        </WrapPanel>
+                      </StackPanel>
+                      <Button Grid.Column="1"
+                              Content="移除"
+                              Classes="sm"
+                              Command="{Binding $parent[UserControl].DataContext.RemoveFontFromCollectionCommand}"
+                              CommandParameter="{Binding .}" />
+                    </Grid>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </Grid>
+      </Border>
+
+      <Border Grid.Column="2" Classes="panel" Padding="{StaticResource GlyphPanelPadding}">
+        <StackPanel Spacing="14">
+          <TextBlock Text="集合摘要" Classes="h1" />
+          <TextBlock Text="用于在项目之间切换字体资产，不污染永久安装列表。" Classes="muted" TextWrapping="Wrap" />
+          <UniformGrid Columns="2">
+            <Border Classes="card" Margin="0,0,8,8"><StackPanel><TextBlock Text="字体数量" Classes="caption" /><TextBlock Text="{Binding SelectedCollection.FontCount}" /></StackPanel></Border>
+            <Border Classes="card" Margin="0,0,0,8"><StackPanel><TextBlock Text="未知授权" Classes="caption" /><TextBlock Text="{Binding SelectedCollection.UnknownLicenseLabel}" /></StackPanel></Border>
+            <Border Classes="card" Margin="0,0,8,0"><StackPanel><TextBlock Text="最近导出" Classes="caption" /><TextBlock Text="{Binding SelectedCollection.LastExportedLabel}" /></StackPanel></Border>
+            <Border Classes="card"><StackPanel><TextBlock Text="当前会话" Classes="caption" /><TextBlock Text="按引用计数关闭" /></StackPanel></Border>
+          </UniformGrid>
+          <Border Classes="card">
+            <StackPanel>
+              <TextBlock Text="授权提示" Classes="h2" />
+              <TextBlock Text="集合导出只生成清单，不代表其中字体可再分发或可商用。" Classes="muted" TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+        </StackPanel>
+      </Border>
+    </Grid>
+
+    <Border Grid.Row="2"
+            Background="{DynamicResource GlyphSurfaceBrush}"
+            BorderBrush="{DynamicResource GlyphBorderBrush}"
+            BorderThickness="0,1,0,0"
+            Padding="24,9">
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBlock Text="集合操作记录会写入诊断日志" Classes="muted" />
+        <TextBlock Grid.Column="1" Text="{Binding StatusMessage}" Classes="muted" />
+      </Grid>
+    </Border>
+  </Grid>
+</UserControl>

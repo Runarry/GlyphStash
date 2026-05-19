@@ -32,6 +32,7 @@
       <SolidColorBrush x:Key="GlyphWarnSoftBrush" Color="{StaticResource GlyphColorWarnSoft}" />
       <SolidColorBrush x:Key="GlyphDangerBrush" Color="{StaticResource GlyphColorDanger}" />
       <SolidColorBrush x:Key="GlyphDangerSoftBrush" Color="{StaticResource GlyphColorDangerSoft}" />
+      <SolidColorBrush x:Key="GlyphModalScrimBrush" Color="#99000000" />
     </ResourceDictionary>
 
     <ResourceDictionary x:Key="Dark">
@@ -64,6 +65,7 @@
       <SolidColorBrush x:Key="GlyphWarnSoftBrush" Color="{StaticResource GlyphColorWarnSoft}" />
       <SolidColorBrush x:Key="GlyphDangerBrush" Color="{StaticResource GlyphColorDanger}" />
       <SolidColorBrush x:Key="GlyphDangerSoftBrush" Color="{StaticResource GlyphColorDangerSoft}" />
+      <SolidColorBrush x:Key="GlyphModalScrimBrush" Color="#99000000" />
     </ResourceDictionary>
   </ResourceDictionary.ThemeDictionaries>
 
