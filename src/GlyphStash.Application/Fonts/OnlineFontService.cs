@@ -82,14 +82,17 @@ public sealed class OnlineFontService
         foreach (var file in result.Files)
         {
             var fontFile = new FontFileRecord(file.LocalPath, file.Format, file.Sha256, FontSourceKind.GlyphStashManaged, DateTimeOffset.UtcNow);
+            var styleLabel = FontStyleVariantFormatter.FormatGoogleFontsVariant(file.Style.Variant);
+            var weight = FontStyleVariantFormatter.WeightFromGoogleFontsVariant(file.Style.Variant);
+            var slant = FontStyleVariantFormatter.SlantFromGoogleFontsVariant(file.Style.Variant);
             var face = new FontFaceRecord(
                 family.FamilyName,
-                NormalizeSubfamily(file.Style.Variant),
-                $"{family.FamilyName} {NormalizeSubfamily(file.Style.Variant)}".Trim(),
+                styleLabel,
+                $"{family.FamilyName} {styleLabel}".Trim(),
                 $"{family.FamilyName.Replace(' ', '-')}-{file.Style.Variant}",
-                WeightFromVariant(file.Style.Variant),
+                weight,
                 "Normal",
-                file.Style.Variant.Contains("italic", StringComparison.OrdinalIgnoreCase) ? "Italic" : "Normal",
+                slant,
                 fontFile);
             var installResult = options.InstallForCurrentUser
                 ? await _installService.InstallForCurrentUserAsync(new FontFileRef(file.LocalPath, file.Format, file.Sha256), cancellationToken).ConfigureAwait(false)
@@ -160,26 +163,6 @@ public sealed class OnlineFontService
     private Task LogAsync(string category, string action, string message, string? target, bool succeeded, CancellationToken cancellationToken) =>
         _operationLogStore.AppendOperationAsync(new OperationLogEntry(DateTimeOffset.UtcNow, category, action, message, target, succeeded), cancellationToken);
 
-    private static string NormalizeSubfamily(string variant)
-    {
-        if (string.Equals(variant, "regular", StringComparison.OrdinalIgnoreCase))
-        {
-            return "Regular";
-        }
-
-        if (string.Equals(variant, "italic", StringComparison.OrdinalIgnoreCase))
-        {
-            return "Italic";
-        }
-
-        return variant;
-    }
-
-    private static int WeightFromVariant(string variant)
-    {
-        var digits = new string(variant.TakeWhile(char.IsDigit).ToArray());
-        return int.TryParse(digits, out var weight) ? weight : 400;
-    }
 }
 
 public sealed record OnlineFontImportOptions(

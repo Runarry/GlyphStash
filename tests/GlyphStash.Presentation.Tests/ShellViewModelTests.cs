@@ -135,6 +135,78 @@ public sealed class ShellViewModelTests
     }
 
     [Fact]
+    public void SelectedFont_DefaultsPreviewFaceToRegular400()
+    {
+        var font = CreateFontWithFaces("Noto Sans", ("Thin 100", 100, "Normal", "C:/Fonts/NotoSans-Thin.ttf"), ("Regular 400", 400, "Normal", "C:/Fonts/NotoSans-Regular.ttf"));
+        var vm = new ShellViewModel(new FontLibraryService(new FakeInventory([]), new FakeStore([])));
+
+        vm.SelectedFont = new FontFamilyItemViewModel(font);
+
+        Assert.NotNull(vm.SelectedPreviewFace);
+        Assert.Equal("Regular 400", vm.SelectedPreviewFace!.StyleLabel);
+    }
+
+    [Fact]
+    public void SelectedFont_DefaultsPreviewFaceToFirstWhenRegularMissing()
+    {
+        var font = CreateFontWithFaces("Noto Sans", ("Thin 100", 100, "Normal", "C:/Fonts/NotoSans-Thin.ttf"), ("Bold 700", 700, "Normal", "C:/Fonts/NotoSans-Bold.ttf"));
+        var vm = new ShellViewModel(new FontLibraryService(new FakeInventory([]), new FakeStore([])));
+
+        vm.SelectedFont = new FontFamilyItemViewModel(font);
+
+        Assert.NotNull(vm.SelectedPreviewFace);
+        Assert.Equal("Thin 100", vm.SelectedPreviewFace!.StyleLabel);
+    }
+
+    [Fact]
+    public async Task OpenGlyphBrowser_UsesSelectedPreviewFace()
+    {
+        var regularPath = Path.Combine(Path.GetTempPath(), "GlyphStash.Tests", $"{Guid.NewGuid():N}-regular.ttf");
+        var boldPath = Path.Combine(Path.GetTempPath(), "GlyphStash.Tests", $"{Guid.NewGuid():N}-bold.ttf");
+        Directory.CreateDirectory(Path.GetDirectoryName(regularPath)!);
+        await File.WriteAllBytesAsync(regularPath, [0], CancellationToken.None);
+        await File.WriteAllBytesAsync(boldPath, [0], CancellationToken.None);
+        var font = new FontFamilyItemViewModel(CreateFontWithFaces("Noto Sans", ("Regular 400", 400, "Normal", regularPath), ("Bold 700", 700, "Normal", boldPath)));
+        var glyphService = new CapturingGlyphCatalogService();
+        var vm = new ShellViewModel(
+            new FontLibraryService(new FakeInventory([]), new FakeStore([])),
+            null,
+            NullUserFileDialogService.Instance,
+            glyphCatalogService: glyphService)
+        {
+            SelectedFont = font,
+            SelectedPreviewFace = font.Faces.Single(face => face.StyleLabel == "Bold 700")
+        };
+
+        await vm.OpenGlyphBrowserCommand.ExecuteAsync(null);
+
+        Assert.NotNull(glyphService.LastQuery);
+        Assert.Equal(boldPath, glyphService.LastQuery!.FontFilePath);
+        Assert.Equal("Bold 700", glyphService.LastQuery.FaceName);
+    }
+
+    [Fact]
+    public async Task OpenGlyphBrowser_ShowsUnavailableReasonWhenSelectedFaceHasNoPhysicalPath()
+    {
+        var font = new FontFamilyItemViewModel(CreateFontWithFaces("Noto Sans", ("Regular 400", 400, "Normal", "installed://Noto%20Sans")));
+        var vm = new ShellViewModel(
+            new FontLibraryService(new FakeInventory([]), new FakeStore([])),
+            null,
+            NullUserFileDialogService.Instance,
+            glyphCatalogService: new CapturingGlyphCatalogService())
+        {
+            SelectedFont = font,
+            SelectedPreviewFace = font.Faces[0]
+        };
+
+        await vm.OpenGlyphBrowserCommand.ExecuteAsync(null);
+
+        Assert.Contains("Regular 400", vm.GlyphStatus, StringComparison.Ordinal);
+        Assert.Contains("没有可读取的本地文件路径", vm.GlyphStatus, StringComparison.Ordinal);
+        Assert.False(vm.IsGlyphBrowserOpen);
+    }
+
+    [Fact]
     public async Task ActivateSelectedCollection_SkipsInstalledAndAlreadyEnabledFonts()
     {
         var fonts = new[]
@@ -569,6 +641,22 @@ public sealed class ShellViewModelTests
             false);
     }
 
+    private static FontFamilyRecord CreateFontWithFaces(string family, params (string Style, int Weight, string Slant, string Path)[] faces) =>
+        new(
+            family,
+            faces.Select(face =>
+            {
+                var file = new FontFileRecord(face.Path, "TTF", null, FontSourceKind.GlyphStashManaged, DateTimeOffset.UtcNow);
+                return new FontFaceRecord(family, face.Style, $"{family} {face.Style}", $"{family.Replace(' ', '-')}-{face.Style.Replace(' ', '-')}", face.Weight, "Normal", face.Slant, file);
+            }).ToList(),
+            FontSourceKind.GlyphStashManaged,
+            FontActivationState.NotEnabled,
+            LicenseStatus.Unknown,
+            "未知授权",
+            [],
+            [],
+            false);
+
     private static RemoteFontFamily CreateRemoteFont(string family) =>
         new(
             "google-fonts",
@@ -735,6 +823,17 @@ public sealed class ShellViewModelTests
 
         public Task<RemoteFontDownloadResult> DownloadAsync(RemoteFontDownloadRequest request, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
+    }
+
+    private sealed class CapturingGlyphCatalogService : IGlyphCatalogService
+    {
+        public GlyphQuery? LastQuery { get; private set; }
+
+        public Task<GlyphPage> GetGlyphsAsync(GlyphQuery query, CancellationToken cancellationToken)
+        {
+            LastQuery = query;
+            return Task.FromResult(new GlyphPage([], [new UnicodeBlockOption("全部区块", 0, 0)], 1, 120, 0, "empty"));
+        }
     }
 
     private sealed class QueueingFontSourceProvider : IFontSourceProvider

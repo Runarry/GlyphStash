@@ -23,7 +23,12 @@
             </StackPanel>
             <Button Grid.Column="1" Classes="sm" Content="{Binding SelectedFont.FavoriteLabel}" Command="{Binding ToggleFavoriteCommand}" CommandParameter="{Binding SelectedFont}" />
           </Grid>
-          <TextBlock Text="{Binding PreviewText}" FontFamily="{Binding SelectedFont.FamilyName}" FontSize="{Binding PreviewFontSize}" TextWrapping="Wrap" />
+          <TextBlock Text="{Binding PreviewText}"
+                     FontFamily="{Binding SelectedPreviewFace.PreviewFontFamily}"
+                     FontWeight="{Binding SelectedPreviewFace.FontWeightName}"
+                     FontStyle="{Binding SelectedPreviewFace.FontStyleName}"
+                     FontSize="{Binding PreviewFontSize}"
+                     TextWrapping="Wrap" />
         </StackPanel>
 
         <StackPanel Spacing="10">
@@ -65,23 +70,24 @@
             <TextBlock Text="样式列表" Classes="h2" />
             <Button Grid.Column="1" Classes="sm" Content="标签/集合" Command="{Binding OpenTagsDialogCommand}" />
           </Grid>
-          <ItemsControl ItemsSource="{Binding SelectedFont.Faces}">
-            <ItemsControl.ItemTemplate>
+          <ListBox ItemsSource="{Binding SelectedFont.Faces}" SelectedItem="{Binding SelectedPreviewFace, Mode=TwoWay}">
+            <ListBox.ItemTemplate>
               <DataTemplate>
                 <Border Classes="card" Margin="0,0,0,8">
                   <Grid ColumnDefinitions="*,Auto">
                     <StackPanel>
-                      <TextBlock Text="{Binding SubfamilyName}" FontWeight="SemiBold" />
+                      <TextBlock Text="{Binding StyleLabel}" FontWeight="SemiBold" />
                       <TextBlock Text="{Binding PostScriptName}" Classes="muted" />
+                      <TextBlock Text="{Binding FilePath}" Classes="muted" TextWrapping="Wrap" />
                     </StackPanel>
                     <Border Grid.Column="1" Classes="badge ok" VerticalAlignment="Center">
-                      <TextBlock Text="可预览" FontSize="12" />
+                      <TextBlock Text="当前预览可选" FontSize="12" />
                     </Border>
                   </Grid>
                 </Border>
               </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
+            </ListBox.ItemTemplate>
+          </ListBox>
         </StackPanel>
       </StackPanel>
     </ScrollViewer>

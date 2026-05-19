@@ -20,6 +20,7 @@ public sealed partial class FontFamilyItemViewModel : ObservableObject
     {
         _record = record;
         IsFavorite = record.IsFavorite;
+        Faces = record.Faces.Select(face => new FontFaceItemViewModel(face)).ToList();
     }
 
     public FontFamilyRecord ToRecord() => _record with { IsFavorite = IsFavorite };
@@ -53,7 +54,7 @@ public sealed partial class FontFamilyItemViewModel : ObservableObject
 
     public IReadOnlyList<string> Collections => _record.Collections;
 
-    public IReadOnlyList<FontFaceRecord> Faces => _record.Faces;
+    public IReadOnlyList<FontFaceItemViewModel> Faces { get; private set; } = [];
 
     public string VersionLabel => "待解析";
 

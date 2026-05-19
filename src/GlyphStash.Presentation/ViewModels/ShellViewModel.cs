@@ -51,6 +51,9 @@ public sealed partial class ShellViewModel : ObservableObject
     private FontFamilyItemViewModel? _selectedFont;
 
     [ObservableProperty]
+    private FontFaceItemViewModel? _selectedPreviewFace;
+
+    [ObservableProperty]
     private bool _isBusy;
 
     [ObservableProperty]
@@ -317,6 +320,8 @@ public sealed partial class ShellViewModel : ObservableObject
     public bool HasSelectedFont => SelectedFont is not null;
 
     public bool HasNoSelectedFont => SelectedFont is null;
+
+    public bool HasSelectedPreviewFace => SelectedPreviewFace is not null;
 
     public string FontCountLabel => _allFonts.Count == 0 ? "字体索引为空" : $"索引就绪：{_allFonts.Count:N0} 个字体族";
 
@@ -707,9 +712,17 @@ public sealed partial class ShellViewModel : ObservableObject
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(SelectedFont.FilePath) || !File.Exists(SelectedFont.FilePath))
+        SelectedPreviewFace ??= SelectDefaultPreviewFace(SelectedFont);
+        if (SelectedPreviewFace is null)
         {
-            GlyphStatus = "当前字体没有可读取的本地文件路径。";
+            GlyphStatus = "当前字体没有可读取的样式。";
+            ShowToast(GlyphStatus);
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(SelectedPreviewFace.FilePath) || !File.Exists(SelectedPreviewFace.FilePath))
+        {
+            GlyphStatus = $"当前样式 {SelectedPreviewFace.StyleLabel} 没有可读取的本地文件路径。";
             ShowToast(GlyphStatus);
             return;
         }
@@ -1177,9 +1190,12 @@ public sealed partial class ShellViewModel : ObservableObject
 
     partial void OnSelectedFontChanged(FontFamilyItemViewModel? value)
     {
+        SelectedPreviewFace = SelectDefaultPreviewFace(value);
         OnPropertyChanged(nameof(HasSelectedFont));
         OnPropertyChanged(nameof(HasNoSelectedFont));
     }
+
+    partial void OnSelectedPreviewFaceChanged(FontFaceItemViewModel? value) => OnPropertyChanged(nameof(HasSelectedPreviewFace));
 
     partial void OnImportInstallForCurrentUserChanged(bool value)
     {
@@ -1289,13 +1305,19 @@ public sealed partial class ShellViewModel : ObservableObject
             return;
         }
 
+        if (SelectedPreviewFace is null)
+        {
+            GlyphStatus = "当前字体没有可读取的样式。";
+            return;
+        }
+
         try
         {
             GlyphStatus = "正在读取字体字形...";
             var page = await _glyphCatalogService.GetGlyphsAsync(
                 new GlyphQuery(
-                    SelectedFont.FilePath,
-                    SelectedFont.Faces.FirstOrDefault()?.SubfamilyName ?? "Regular",
+                    SelectedPreviewFace?.FilePath ?? SelectedFont.FilePath,
+                    SelectedPreviewFace?.StyleLabel ?? "Regular 400",
                     GlyphSearchText,
                     SelectedUnicodeBlock,
                     false,
@@ -1513,6 +1535,19 @@ public sealed partial class ShellViewModel : ObservableObject
 
     private static string NormalizeFilter(string? value, string fallback) =>
         string.IsNullOrWhiteSpace(value) ? fallback : value;
+
+    private static FontFaceItemViewModel? SelectDefaultPreviewFace(FontFamilyItemViewModel? font)
+    {
+        if (font is null)
+        {
+            return null;
+        }
+
+        return font.Faces.FirstOrDefault(face =>
+                face.Weight == 400 && !string.Equals(face.Slant, "Italic", StringComparison.OrdinalIgnoreCase))
+            ?? font.Faces.FirstOrDefault(face => face.StyleLabel.Contains("Regular 400", StringComparison.OrdinalIgnoreCase))
+            ?? font.Faces.FirstOrDefault();
+    }
 
     private static string NormalizeOnlineFilter(string value, string allValue) =>
         string.Equals(value, allValue, StringComparison.CurrentCultureIgnoreCase) ? "" : value;
