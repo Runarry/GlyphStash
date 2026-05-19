@@ -56,6 +56,10 @@
               <Button Content="临时启用全部" Classes="primary sm" Command="{Binding ActivateSelectedCollectionCommand}" />
               <Button Content="关闭全部" Classes="sm" Command="{Binding DeactivateSelectedCollectionCommand}" />
               <Button Content="导出清单" Classes="sm" Command="{Binding ExportSelectedCollectionCommand}" />
+              <Button Content="删除集合"
+                      Classes="danger sm"
+                      IsEnabled="{Binding HasSelectedCollection}"
+                      Command="{Binding OpenDeleteCollectionDialogCommand}" />
             </StackPanel>
           </Grid>
           <TextBlock Grid.Row="1"
@@ -121,5 +125,19 @@
         <TextBlock Grid.Column="1" Text="{Binding StatusMessage}" Classes="muted" />
       </Grid>
     </Border>
+
+    <Grid Grid.RowSpan="3" Background="{DynamicResource GlyphModalScrimBrush}" IsVisible="{Binding IsDeleteCollectionDialogOpen}">
+      <Border Width="460" Classes="panel" Padding="18" HorizontalAlignment="Center" VerticalAlignment="Center">
+        <StackPanel Spacing="14">
+          <TextBlock Text="删除集合" Classes="h1" />
+          <TextBlock Text="{Binding SelectedCollection.Name}" Classes="h2" />
+          <TextBlock Text="只会删除集合和字体关联，不会删除字体文件，也不会卸载字体。" Classes="muted" TextWrapping="Wrap" />
+          <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
+            <Button Content="取消" Command="{Binding CloseDeleteCollectionDialogCommand}" />
+            <Button Content="确认删除" Classes="danger" Command="{Binding ConfirmDeleteCollectionCommand}" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+    </Grid>
   </Grid>
 </UserControl>

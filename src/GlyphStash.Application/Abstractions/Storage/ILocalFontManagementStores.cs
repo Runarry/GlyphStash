@@ -20,6 +20,17 @@ public interface IFontLibraryMutationStore
     Task UpsertManagedFontAsync(ManagedFontRecord managedFont, FontFamilyRecord family, CancellationToken cancellationToken);
 }
 
+public interface ITagStore
+{
+    Task<IReadOnlyList<TagRecord>> GetTagsAsync(CancellationToken cancellationToken);
+
+    Task CreateTagAsync(string name, CancellationToken cancellationToken);
+
+    Task RenameTagAsync(string oldName, string newName, CancellationToken cancellationToken);
+
+    Task DeleteTagAsync(string name, CancellationToken cancellationToken);
+}
+
 public interface ICollectionStore
 {
     Task<IReadOnlyList<FontCollectionRecord>> GetCollectionsAsync(CancellationToken cancellationToken);

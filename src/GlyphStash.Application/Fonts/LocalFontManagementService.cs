@@ -14,6 +14,7 @@ public sealed class LocalFontManagementService
     private readonly IAppSettingsStore _settingsStore;
     private readonly IFontMetadataStore _metadataStore;
     private readonly IFontLibraryMutationStore _mutationStore;
+    private readonly ITagStore _tagStore;
     private readonly ICollectionStore _collectionStore;
     private readonly IFontInstallService _installService;
     private readonly FontActivationCoordinator _activationCoordinator;
@@ -25,6 +26,7 @@ public sealed class LocalFontManagementService
         IAppSettingsStore settingsStore,
         IFontMetadataStore metadataStore,
         IFontLibraryMutationStore mutationStore,
+        ITagStore tagStore,
         ICollectionStore collectionStore,
         IFontInstallService installService,
         FontActivationCoordinator activationCoordinator,
@@ -35,6 +37,7 @@ public sealed class LocalFontManagementService
         _settingsStore = settingsStore;
         _metadataStore = metadataStore;
         _mutationStore = mutationStore;
+        _tagStore = tagStore;
         _collectionStore = collectionStore;
         _installService = installService;
         _activationCoordinator = activationCoordinator;
@@ -213,6 +216,27 @@ public sealed class LocalFontManagementService
         await LogAsync("tags", "set-tags", $"已更新标签：{familyName}", familyName, true, cancellationToken).ConfigureAwait(false);
     }
 
+    public Task<IReadOnlyList<TagRecord>> GetTagsAsync(CancellationToken cancellationToken) =>
+        _tagStore.GetTagsAsync(cancellationToken);
+
+    public async Task CreateTagAsync(string name, CancellationToken cancellationToken)
+    {
+        await _tagStore.CreateTagAsync(name, cancellationToken).ConfigureAwait(false);
+        await LogAsync("tags", "create", $"已创建标签：{name}", name, true, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task RenameTagAsync(string oldName, string newName, CancellationToken cancellationToken)
+    {
+        await _tagStore.RenameTagAsync(oldName, newName, cancellationToken).ConfigureAwait(false);
+        await LogAsync("tags", "rename", $"已重命名标签：{oldName} -> {newName}", oldName, true, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task DeleteTagAsync(string name, CancellationToken cancellationToken)
+    {
+        await _tagStore.DeleteTagAsync(name, cancellationToken).ConfigureAwait(false);
+        await LogAsync("tags", "delete", $"已删除标签：{name}", name, true, cancellationToken).ConfigureAwait(false);
+    }
+
     public async Task SetCollectionsAsync(string familyName, IReadOnlyList<string> collections, CancellationToken cancellationToken)
     {
         await _mutationStore.SetCollectionsAsync(familyName, collections, cancellationToken).ConfigureAwait(false);
@@ -226,6 +250,18 @@ public sealed class LocalFontManagementService
     {
         await _collectionStore.CreateCollectionAsync(name, cancellationToken).ConfigureAwait(false);
         await LogAsync("collection", "create", $"已创建集合：{name}", name, true, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task RenameCollectionAsync(string oldName, string newName, CancellationToken cancellationToken)
+    {
+        await _collectionStore.RenameCollectionAsync(oldName, newName, cancellationToken).ConfigureAwait(false);
+        await LogAsync("collection", "rename", $"已重命名集合：{oldName} -> {newName}", oldName, true, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task DeleteCollectionAsync(string name, CancellationToken cancellationToken)
+    {
+        await _collectionStore.DeleteCollectionAsync(name, cancellationToken).ConfigureAwait(false);
+        await LogAsync("collection", "delete", $"已删除集合：{name}", name, true, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task AddFontToCollectionAsync(string collectionName, string familyName, CancellationToken cancellationToken)

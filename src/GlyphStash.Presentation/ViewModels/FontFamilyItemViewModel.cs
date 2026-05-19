@@ -113,16 +113,31 @@ public sealed partial class FontFamilyItemViewModel : ObservableObject
         OnPropertyChanged(nameof(Collections));
     }
 
+    public void RemoveTag(string tagName)
+    {
+        var tags = Tags
+            .Where(tag => !string.Equals(tag, tagName, StringComparison.CurrentCultureIgnoreCase))
+            .ToList();
+        if (tags.Count == Tags.Count)
+        {
+            return;
+        }
+
+        SetTagsAndCollections(tags, Collections);
+    }
+
     partial void OnIsFavoriteChanged(bool value)
     {
         OnPropertyChanged(nameof(FavoriteLabel));
     }
 
-    public bool Matches(string searchText, string sourceFilter, string stateFilter)
+    public bool Matches(string searchText, string sourceFilter, string stateFilter, string tagFilter, string collectionFilter)
     {
         var sourceMatches = sourceFilter == "全部来源" || SourceLabel == sourceFilter;
         var stateMatches = stateFilter == "全部状态" || StateLabel == stateFilter;
-        if (!sourceMatches || !stateMatches)
+        var tagMatches = tagFilter == "全部标签" || Tags.Contains(tagFilter, StringComparer.CurrentCultureIgnoreCase);
+        var collectionMatches = collectionFilter == "全部集合" || Collections.Contains(collectionFilter, StringComparer.CurrentCultureIgnoreCase);
+        if (!sourceMatches || !stateMatches || !tagMatches || !collectionMatches)
         {
             return false;
         }

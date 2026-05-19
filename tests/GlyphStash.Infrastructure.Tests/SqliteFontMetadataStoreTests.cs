@@ -433,6 +433,111 @@ public sealed class SqliteFontMetadataStoreTests
     }
 
     [Fact]
+    public async Task TagStore_SeedsDefaultsAndCountsAssignedTags()
+    {
+        var dbPath = Path.Combine(Path.GetTempPath(), "GlyphStash.Tests", $"{Guid.NewGuid():N}.db");
+        var store = new SqliteFontMetadataStore(dbPath);
+        var tagStore = (ITagStore)store;
+        var mutationStore = (IFontLibraryMutationStore)store;
+
+        await store.InitializeAsync(CancellationToken.None);
+        await store.SaveFontIndexAsync([CreateInstalledFamily("Inter")], CancellationToken.None);
+        await mutationStore.SetTagsAsync("Inter", ["UI", "中文"], CancellationToken.None);
+
+        var tags = await tagStore.GetTagsAsync(CancellationToken.None);
+
+        Assert.Contains(tags, tag => tag.Name == "可商用" && tag.FontCount == 0);
+        Assert.Contains(tags, tag => tag.Name == "中文" && tag.FontCount == 1);
+        Assert.Contains(tags, tag => tag.Name == "UI" && tag.FontCount == 1);
+    }
+
+    [Fact]
+    public async Task DeleteTag_RemovesRelationshipsButKeepsFont()
+    {
+        var dbPath = Path.Combine(Path.GetTempPath(), "GlyphStash.Tests", $"{Guid.NewGuid():N}.db");
+        var store = new SqliteFontMetadataStore(dbPath);
+        var tagStore = (ITagStore)store;
+        var mutationStore = (IFontLibraryMutationStore)store;
+
+        await store.InitializeAsync(CancellationToken.None);
+        await store.SaveFontIndexAsync([CreateInstalledFamily("Inter")], CancellationToken.None);
+        await mutationStore.SetTagsAsync("Inter", ["UI"], CancellationToken.None);
+        await tagStore.DeleteTagAsync("UI", CancellationToken.None);
+
+        var fonts = await store.SearchAsync(new FontSearchQuery(SearchText: "Inter"), CancellationToken.None);
+        var tags = await tagStore.GetTagsAsync(CancellationToken.None);
+
+        var font = Assert.Single(fonts);
+        Assert.Empty(font.Tags);
+        Assert.DoesNotContain(tags, tag => tag.Name == "UI");
+    }
+
+    [Fact]
+    public async Task DeleteCollection_RemovesRelationshipsButKeepsFont()
+    {
+        var dbPath = Path.Combine(Path.GetTempPath(), "GlyphStash.Tests", $"{Guid.NewGuid():N}.db");
+        var store = new SqliteFontMetadataStore(dbPath);
+        var collectionStore = (ICollectionStore)store;
+
+        await store.InitializeAsync(CancellationToken.None);
+        await store.SaveFontIndexAsync([CreateInstalledFamily("Inter")], CancellationToken.None);
+        await collectionStore.CreateCollectionAsync("官网改版", CancellationToken.None);
+        await collectionStore.AddFontToCollectionAsync("官网改版", "Inter", CancellationToken.None);
+        await collectionStore.DeleteCollectionAsync("官网改版", CancellationToken.None);
+
+        var fonts = await store.SearchAsync(new FontSearchQuery(SearchText: "Inter"), CancellationToken.None);
+        var collections = await collectionStore.GetCollectionsAsync(CancellationToken.None);
+
+        var font = Assert.Single(fonts);
+        Assert.Empty(font.Collections);
+        Assert.Empty(collections);
+    }
+
+    [Fact]
+    public async Task Initialize_RemovesLegacyFontCollectionItemsTableWithMismatchedForeignKey()
+    {
+        var dbPath = Path.Combine(Path.GetTempPath(), "GlyphStash.Tests", $"{Guid.NewGuid():N}.db");
+        var first = new SqliteFontMetadataStore(dbPath);
+        var collectionStore = (ICollectionStore)first;
+
+        await first.InitializeAsync(CancellationToken.None);
+        await first.SaveFontIndexAsync([CreateInstalledFamily("Inter")], CancellationToken.None);
+        await collectionStore.CreateCollectionAsync("官网改版", CancellationToken.None);
+        await collectionStore.AddFontToCollectionAsync("官网改版", "Inter", CancellationToken.None);
+
+        await using (var connection = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={dbPath}"))
+        {
+            await connection.OpenAsync();
+            var command = connection.CreateCommand();
+            command.CommandText = """
+                PRAGMA foreign_keys = OFF;
+                CREATE TABLE font_collection_items (
+                    collection_name TEXT NOT NULL,
+                    family_name TEXT NOT NULL,
+                    FOREIGN KEY(collection_name) REFERENCES collections(id)
+                );
+                INSERT INTO font_collection_items(collection_name, family_name)
+                VALUES('官网改版', 'Inter');
+                PRAGMA foreign_keys = ON;
+                """;
+            await command.ExecuteNonQueryAsync();
+        }
+
+        var repaired = new SqliteFontMetadataStore(dbPath);
+        var repairedCollections = (ICollectionStore)repaired;
+
+        await repaired.InitializeAsync(CancellationToken.None);
+        await repairedCollections.DeleteCollectionAsync("官网改版", CancellationToken.None);
+
+        await using var verifyConnection = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={dbPath}");
+        await verifyConnection.OpenAsync();
+        var verifyCommand = verifyConnection.CreateCommand();
+        verifyCommand.CommandText = "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'font_collection_items';";
+        Assert.Null(await verifyCommand.ExecuteScalarAsync());
+        Assert.Empty(await repairedCollections.GetCollectionsAsync(CancellationToken.None));
+    }
+
+    [Fact]
     public async Task SaveFontIndex_DoesNotRestoreTemporaryStateFromManagedFontRecord()
     {
         var dbPath = Path.Combine(Path.GetTempPath(), "GlyphStash.Tests", $"{Guid.NewGuid():N}.db");

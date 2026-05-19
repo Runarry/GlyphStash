@@ -49,8 +49,9 @@ public sealed class FontLibraryService
         installedFonts = FilterTemporaryEnumerationInstalledFonts(installedFonts, managedFonts, active);
         var fonts = MergeFonts(installedFonts, managedFonts);
         fonts = ApplyCurrentTemporaryActivations(fonts, active);
+        fonts = ApplyAutomaticTags(fonts);
         await _metadataStore.SaveFontIndexAsync(fonts, cancellationToken).ConfigureAwait(false);
-        return fonts;
+        return await _metadataStore.SearchAsync(new FontSearchQuery(), cancellationToken).ConfigureAwait(false);
     }
 
     private async Task<IReadOnlyList<FontFamilyRecord>> ScanManagedFontsAsync(CancellationToken cancellationToken)
@@ -227,6 +228,52 @@ public sealed class FontLibraryService
                 : font;
         }).ToList();
     }
+
+    private static IReadOnlyList<FontFamilyRecord> ApplyAutomaticTags(IReadOnlyList<FontFamilyRecord> fonts) =>
+        fonts.Select(font =>
+        {
+            if (!LooksLikeCjkFont(font))
+            {
+                return font;
+            }
+
+            var tags = font.Tags
+                .Concat(["中文"])
+                .Distinct(StringComparer.CurrentCultureIgnoreCase)
+                .ToList();
+            return font with { Tags = tags };
+        }).ToList();
+
+    private static bool LooksLikeCjkFont(FontFamilyRecord font)
+    {
+        var searchableText = string.Join(
+            ' ',
+            font.FamilyName,
+            string.Join(' ', font.Faces.Select(face => $"{face.SubfamilyName} {face.FullName} {face.PostScriptName}")));
+
+        return searchableText.Contains("CJK", StringComparison.OrdinalIgnoreCase)
+            || ContainsSeparatedToken(searchableText, "SC")
+            || ContainsSeparatedToken(searchableText, "TC")
+            || ContainsSeparatedToken(searchableText, "CN")
+            || ContainsSeparatedToken(searchableText, "GB")
+            || ContainsSeparatedToken(searchableText, "GBK")
+            || searchableText.Contains("Hans", StringComparison.OrdinalIgnoreCase)
+            || searchableText.Contains("Hant", StringComparison.OrdinalIgnoreCase)
+            || searchableText.Contains("Chinese", StringComparison.OrdinalIgnoreCase)
+            || searchableText.Contains("中文", StringComparison.Ordinal)
+            || searchableText.Contains("宋体", StringComparison.Ordinal)
+            || searchableText.Contains("黑体", StringComparison.Ordinal)
+            || searchableText.Contains("楷体", StringComparison.Ordinal)
+            || searchableText.Contains("仿宋", StringComparison.Ordinal)
+            || searchableText.Contains("雅黑", StringComparison.Ordinal)
+            || searchableText.Contains("思源", StringComparison.Ordinal)
+            || searchableText.Contains("方正", StringComparison.Ordinal)
+            || searchableText.Contains("华文", StringComparison.Ordinal);
+    }
+
+    private static bool ContainsSeparatedToken(string value, string token) =>
+        value.Split([' ', '-', '_', '.', '(', ')', '[', ']'], StringSplitOptions.RemoveEmptyEntries)
+            .Any(part => string.Equals(part, token, StringComparison.OrdinalIgnoreCase));
 
     private static bool FontMatchesActiveIdentity(
         FontFamilyRecord font,

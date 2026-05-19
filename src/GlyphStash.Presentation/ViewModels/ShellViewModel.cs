@@ -28,6 +28,12 @@ public sealed partial class ShellViewModel : ObservableObject
     private string _selectedStateFilter = "全部状态";
 
     [ObservableProperty]
+    private string _selectedTagFilter = "全部标签";
+
+    [ObservableProperty]
+    private string _selectedCollectionFilter = "全部集合";
+
+    [ObservableProperty]
     private string _previewText = "GlyphStash 字体预览 Aa 123 你好";
 
     [ObservableProperty]
@@ -50,6 +56,15 @@ public sealed partial class ShellViewModel : ObservableObject
 
     [ObservableProperty]
     private bool _isUninstallDialogOpen;
+
+    [ObservableProperty]
+    private bool _isDeleteCollectionDialogOpen;
+
+    [ObservableProperty]
+    private bool _isDeleteTagDialogOpen;
+
+    [ObservableProperty]
+    private string _pendingDeleteTagName = "";
 
     [ObservableProperty]
     private string _scanStatus = "准备加载字体索引";
@@ -116,6 +131,18 @@ public sealed partial class ShellViewModel : ObservableObject
     public ObservableCollection<CollectionItemViewModel> Collections { get; } = [];
 
     public ObservableCollection<FontFamilyItemViewModel> CollectionFonts { get; } = [];
+
+    public ObservableCollection<TagRecord> AvailableTags { get; } = [];
+
+    public ObservableCollection<string> AvailableCollections { get; } = [];
+
+    public ObservableCollection<string> TagFilters { get; } = ["全部标签"];
+
+    public ObservableCollection<string> CollectionFilters { get; } = ["全部集合"];
+
+    public ObservableCollection<NameOptionViewModel> TagOptions { get; } = [];
+
+    public ObservableCollection<NameOptionViewModel> CollectionOptions { get; } = [];
 
     public ObservableCollection<ImportPreviewItemViewModel> ImportPreviewItems { get; } = [];
 
@@ -201,6 +228,8 @@ public sealed partial class ShellViewModel : ObservableObject
 
     public bool HasCollections => Collections.Count > 0;
 
+    public bool HasSelectedCollection => SelectedCollection is not null;
+
     public string PreviewFontSizeLabel => $"{PreviewFontSize:0}px";
 
     [RelayCommand]
@@ -254,6 +283,8 @@ public sealed partial class ShellViewModel : ObservableObject
             SearchText = "";
             SelectedSourceFilter = "全部来源";
             SelectedStateFilter = "全部状态";
+            SelectedTagFilter = "全部标签";
+            SelectedCollectionFilter = "全部集合";
             ReplaceFonts(fonts);
             await ReloadM2StateAsync();
             ScanStatus = $"扫描完成：{_allFonts.Count:N0} 个字体族，SQLite 缓存已刷新";
@@ -410,13 +441,24 @@ public sealed partial class ShellViewModel : ObservableObject
     [RelayCommand]
     private void OpenTagsDialog()
     {
-        TagEditorText = SelectedFont is null ? "" : string.Join(", ", SelectedFont.Tags);
-        CollectionEditorText = SelectedFont is null ? "" : string.Join(", ", SelectedFont.Collections);
+        if (SelectedFont is null)
+        {
+            ShowToast("请先选择一个字体");
+            return;
+        }
+
+        TagEditorText = "";
+        CollectionEditorText = "";
+        RebuildManagementOptions();
         IsTagsDialogOpen = true;
     }
 
     [RelayCommand]
-    private void CloseTagsDialog() => IsTagsDialogOpen = false;
+    private void CloseTagsDialog()
+    {
+        IsTagsDialogOpen = false;
+        CloseDeleteTagDialog();
+    }
 
     [RelayCommand]
     private async Task SaveTagsDialogAsync()
@@ -426,8 +468,10 @@ public sealed partial class ShellViewModel : ObservableObject
             return;
         }
 
-        var tags = ParseNames(TagEditorText);
-        var collections = ParseNames(CollectionEditorText);
+        var tags = MergeNames(TagOptions.Where(option => option.IsSelected).Select(option => option.Name), ParseNames(TagEditorText));
+        var collections = MergeNames(CollectionOptions.Where(option => option.IsSelected).Select(option => option.Name), ParseNames(CollectionEditorText));
+        var tagFilter = NormalizeFilter(SelectedTagFilter, "全部标签");
+        var collectionFilter = NormalizeFilter(SelectedCollectionFilter, "全部集合");
         if (_localManagementService is not null)
         {
             await _localManagementService.SetTagsAsync(SelectedFont.FamilyName, tags, CancellationToken.None);
@@ -435,9 +479,58 @@ public sealed partial class ShellViewModel : ObservableObject
         }
 
         SelectedFont.SetTagsAndCollections(tags, collections);
-        await ReloadM2StateAsync();
+        await ReloadM2StateAsync(tagFilter, collectionFilter);
+        ApplyFilters();
         IsTagsDialogOpen = false;
         ShowToast("标签和集合已更新");
+    }
+
+    [RelayCommand]
+    private void OpenDeleteTagDialog(string? tagName)
+    {
+        if (string.IsNullOrWhiteSpace(tagName))
+        {
+            return;
+        }
+
+        PendingDeleteTagName = tagName;
+        IsDeleteTagDialogOpen = true;
+    }
+
+    [RelayCommand]
+    private void CloseDeleteTagDialog()
+    {
+        IsDeleteTagDialogOpen = false;
+        PendingDeleteTagName = "";
+    }
+
+    [RelayCommand]
+    private async Task ConfirmDeleteTagAsync()
+    {
+        if (_localManagementService is null || string.IsNullOrWhiteSpace(PendingDeleteTagName))
+        {
+            CloseDeleteTagDialog();
+            return;
+        }
+
+        var deletedName = PendingDeleteTagName;
+        await _localManagementService.DeleteTagAsync(deletedName, CancellationToken.None);
+        foreach (var font in _allFonts)
+        {
+            font.RemoveTag(deletedName);
+        }
+
+        if (string.Equals(SelectedTagFilter, deletedName, StringComparison.CurrentCultureIgnoreCase))
+        {
+            SelectedTagFilter = "全部标签";
+        }
+
+        CloseDeleteTagDialog();
+        await ReloadTagsAsync(SelectedTagFilter);
+        await ReloadOperationLogsAsync();
+        RebuildManagementOptions();
+        ApplyFilters();
+        ShowToast("标签已删除，字体文件不会被删除");
     }
 
     [RelayCommand]
@@ -526,7 +619,46 @@ public sealed partial class ShellViewModel : ObservableObject
         await _localManagementService.CreateCollectionAsync(NewCollectionName, CancellationToken.None);
         NewCollectionName = "";
         await ReloadCollectionsAsync();
+        ApplyFilters();
         ShowToast("集合已创建");
+    }
+
+    [RelayCommand]
+    private void OpenDeleteCollectionDialog()
+    {
+        if (SelectedCollection is null)
+        {
+            ShowToast("请先选择一个集合");
+            return;
+        }
+
+        IsDeleteCollectionDialogOpen = true;
+    }
+
+    [RelayCommand]
+    private void CloseDeleteCollectionDialog() => IsDeleteCollectionDialogOpen = false;
+
+    [RelayCommand]
+    private async Task ConfirmDeleteCollectionAsync()
+    {
+        if (SelectedCollection is null || _localManagementService is null)
+        {
+            IsDeleteCollectionDialogOpen = false;
+            return;
+        }
+
+        var deletedName = SelectedCollection.Name;
+        await _localManagementService.DeleteCollectionAsync(deletedName, CancellationToken.None);
+        if (SelectedCollectionFilter == deletedName)
+        {
+            SelectedCollectionFilter = "全部集合";
+        }
+
+        IsDeleteCollectionDialogOpen = false;
+        await ReloadCollectionsAsync();
+        await ReloadOperationLogsAsync();
+        ApplyFilters();
+        ShowToast("集合已删除，字体文件不会被删除");
     }
 
     [RelayCommand]
@@ -626,9 +758,35 @@ public sealed partial class ShellViewModel : ObservableObject
 
     partial void OnSelectedStateFilterChanged(string value) => ApplyFilters();
 
+    partial void OnSelectedTagFilterChanged(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            SelectedTagFilter = "全部标签";
+            return;
+        }
+
+        ApplyFilters();
+    }
+
+    partial void OnSelectedCollectionFilterChanged(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            SelectedCollectionFilter = "全部集合";
+            return;
+        }
+
+        ApplyFilters();
+    }
+
     partial void OnCollectionSearchTextChanged(string value) => ApplyCollectionFilter();
 
-    partial void OnSelectedCollectionChanged(CollectionItemViewModel? value) => RefreshCollectionFonts();
+    partial void OnSelectedCollectionChanged(CollectionItemViewModel? value)
+    {
+        RefreshCollectionFonts();
+        OnPropertyChanged(nameof(HasSelectedCollection));
+    }
 
     partial void OnManagedFontDirectoryChanged(string value)
     {
@@ -717,7 +875,7 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         var selectedName = SelectedFont?.FamilyName;
         Fonts.Clear();
-        foreach (var font in _allFonts.Where(font => font.Matches(SearchText, SelectedSourceFilter, SelectedStateFilter)))
+        foreach (var font in _allFonts.Where(font => font.Matches(SearchText, SelectedSourceFilter, SelectedStateFilter, SelectedTagFilter, SelectedCollectionFilter)))
         {
             Fonts.Add(font);
         }
@@ -736,13 +894,36 @@ public sealed partial class ShellViewModel : ObservableObject
         _ = ReloadCollectionsAsync();
     }
 
-    private async Task ReloadM2StateAsync()
+    private async Task ReloadM2StateAsync(string? preferredTagFilter = null, string? preferredCollectionFilter = null)
     {
-        await ReloadCollectionsAsync();
+        await ReloadTagsAsync(preferredTagFilter);
+        await ReloadCollectionsAsync(preferredCollectionFilter);
         await ReloadOperationLogsAsync();
     }
 
-    private async Task ReloadCollectionsAsync()
+    private async Task ReloadTagsAsync(string? preferredFilter = null)
+    {
+        if (_localManagementService is null)
+        {
+            return;
+        }
+
+        var selectedTag = NormalizeFilter(preferredFilter ?? SelectedTagFilter, "全部标签");
+        var tags = await _localManagementService.GetTagsAsync(CancellationToken.None);
+        AvailableTags.Clear();
+        foreach (var tag in tags)
+        {
+            AvailableTags.Add(tag);
+        }
+
+        ReplaceFilterOptions(
+            TagFilters,
+            ["全部标签", .. AvailableTags.Select(tag => tag.Name).OrderBy(name => name, StringComparer.CurrentCultureIgnoreCase)]);
+
+        SelectTagFilter(selectedTag);
+    }
+
+    private async Task ReloadCollectionsAsync(string? preferredFilter = null)
     {
         if (_localManagementService is null)
         {
@@ -751,6 +932,21 @@ public sealed partial class ShellViewModel : ObservableObject
 
         var selectedName = SelectedCollection?.Name;
         var collections = await _localManagementService.GetCollectionsAsync(CancellationToken.None);
+        var selectedFilter = NormalizeFilter(preferredFilter ?? SelectedCollectionFilter, "全部集合");
+        AvailableCollections.Clear();
+        var collectionNames = collections
+            .Select(collection => collection.Name)
+            .OrderBy(name => name, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
+        foreach (var collectionName in collectionNames)
+        {
+            AvailableCollections.Add(collectionName);
+        }
+
+        ReplaceFilterOptions(CollectionFilters, ["全部集合", .. collectionNames]);
+
+        SelectCollectionFilter(selectedFilter);
+
         Collections.Clear();
         foreach (var collection in collections.Where(collection =>
                      string.IsNullOrWhiteSpace(CollectionSearchText)
@@ -762,6 +958,7 @@ public sealed partial class ShellViewModel : ObservableObject
         SelectedCollection = Collections.FirstOrDefault(collection => collection.Name == selectedName) ?? Collections.FirstOrDefault();
         RefreshCollectionFonts();
         OnPropertyChanged(nameof(HasCollections));
+        OnPropertyChanged(nameof(HasSelectedCollection));
     }
 
     private async Task ReloadOperationLogsAsync()
@@ -794,12 +991,42 @@ public sealed partial class ShellViewModel : ObservableObject
         }
     }
 
+    private void RebuildManagementOptions()
+    {
+        TagOptions.Clear();
+        CollectionOptions.Clear();
+
+        var selectedTags = SelectedFont?.Tags.ToHashSet(StringComparer.CurrentCultureIgnoreCase) ?? [];
+        var selectedCollections = SelectedFont?.Collections.ToHashSet(StringComparer.CurrentCultureIgnoreCase) ?? [];
+
+        foreach (var tag in AvailableTags
+                     .Select(tag => new NameOptionViewModel(tag.Name, tag.FontCount, selectedTags.Contains(tag.Name)))
+                     .Concat(selectedTags
+                         .Where(tag => AvailableTags.All(available => !string.Equals(available.Name, tag, StringComparison.CurrentCultureIgnoreCase)))
+                         .Select(tag => new NameOptionViewModel(tag, 0, true)))
+                     .OrderBy(option => option.Name, StringComparer.CurrentCultureIgnoreCase))
+        {
+            TagOptions.Add(tag);
+        }
+
+        foreach (var collection in AvailableCollections
+                     .Select(collection => new NameOptionViewModel(collection, 0, selectedCollections.Contains(collection)))
+                     .Concat(selectedCollections
+                         .Where(collection => AvailableCollections.All(available => !string.Equals(available, collection, StringComparison.CurrentCultureIgnoreCase)))
+                         .Select(collection => new NameOptionViewModel(collection, 0, true)))
+                     .OrderBy(option => option.Name, StringComparer.CurrentCultureIgnoreCase))
+        {
+            CollectionOptions.Add(collection);
+        }
+    }
+
     private void NotifyCollectionState()
     {
         OnPropertyChanged(nameof(HasFonts));
         OnPropertyChanged(nameof(IsEmpty));
         OnPropertyChanged(nameof(HasSelectedFont));
         OnPropertyChanged(nameof(HasNoSelectedFont));
+        OnPropertyChanged(nameof(HasSelectedCollection));
         OnPropertyChanged(nameof(FontCountLabel));
         OnPropertyChanged(nameof(EmptyStateMessage));
     }
@@ -808,6 +1035,82 @@ public sealed partial class ShellViewModel : ObservableObject
         text.Split([',', ';', '，', '；', '\r', '\n'], StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
             .Distinct(StringComparer.CurrentCultureIgnoreCase)
             .ToList();
+
+    private static IReadOnlyList<string> MergeNames(IEnumerable<string> first, IEnumerable<string> second) =>
+        first.Concat(second)
+            .Select(name => name.Trim())
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .Distinct(StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
+
+    private static string NormalizeFilter(string? value, string fallback) =>
+        string.IsNullOrWhiteSpace(value) ? fallback : value;
+
+    private static void ReplaceFilterOptions(ObservableCollection<string> target, IReadOnlyList<string> values)
+    {
+        for (var index = 0; index < values.Count; index++)
+        {
+            var value = values[index];
+            var existingIndex = IndexOfFilterOption(target, value);
+            if (existingIndex < 0)
+            {
+                target.Insert(index, value);
+                continue;
+            }
+
+            if (existingIndex != index)
+            {
+                target.Move(existingIndex, index);
+            }
+
+            if (!string.Equals(target[index], value, StringComparison.Ordinal))
+            {
+                target[index] = value;
+            }
+        }
+
+        while (target.Count > values.Count)
+        {
+            target.RemoveAt(target.Count - 1);
+        }
+    }
+
+    private static int IndexOfFilterOption(IReadOnlyList<string> options, string value)
+    {
+        for (var index = 0; index < options.Count; index++)
+        {
+            if (string.Equals(options[index], value, StringComparison.CurrentCultureIgnoreCase))
+            {
+                return index;
+            }
+        }
+
+        return -1;
+    }
+
+    private void SelectTagFilter(string preferredFilter)
+    {
+        var filter = TagFilters.FirstOrDefault(candidate => string.Equals(candidate, preferredFilter, StringComparison.CurrentCultureIgnoreCase)) ?? "全部标签";
+        if (SelectedTagFilter == filter)
+        {
+            OnPropertyChanged(nameof(SelectedTagFilter));
+            return;
+        }
+
+        SelectedTagFilter = filter;
+    }
+
+    private void SelectCollectionFilter(string preferredFilter)
+    {
+        var filter = CollectionFilters.FirstOrDefault(candidate => string.Equals(candidate, preferredFilter, StringComparison.CurrentCultureIgnoreCase)) ?? "全部集合";
+        if (SelectedCollectionFilter == filter)
+        {
+            OnPropertyChanged(nameof(SelectedCollectionFilter));
+            return;
+        }
+
+        SelectedCollectionFilter = filter;
+    }
 
     private static string BuildErrorMessage(Exception exception)
     {

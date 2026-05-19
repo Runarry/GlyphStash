@@ -38,20 +38,11 @@
             </StackPanel>
             <StackPanel Spacing="7">
               <TextBlock Text="标签" Classes="caption" FontWeight="Bold" />
-              <WrapPanel>
-                <Border Classes="badge ok" Margin="0,0,7,7"><TextBlock Text="无衬线" FontSize="12" /></Border>
-                <Border Classes="badge" Margin="0,0,7,7"><TextBlock Text="中文" FontSize="12" /></Border>
-                <Border Classes="badge" Margin="0,0,7,7"><TextBlock Text="等宽" FontSize="12" /></Border>
-                <Border Classes="badge" Margin="0,0,7,7"><TextBlock Text="可商用" FontSize="12" /></Border>
-              </WrapPanel>
+              <ComboBox ItemsSource="{Binding TagFilters}" SelectedItem="{Binding SelectedTagFilter}" HorizontalAlignment="Stretch" />
             </StackPanel>
             <StackPanel Spacing="7">
               <TextBlock Text="集合" Classes="caption" FontWeight="Bold" />
-              <WrapPanel>
-                <Border Classes="badge" Margin="0,0,7,7"><TextBlock Text="官网改版" FontSize="12" /></Border>
-                <Border Classes="badge" Margin="0,0,7,7"><TextBlock Text="游戏 UI" FontSize="12" /></Border>
-                <Border Classes="badge" Margin="0,0,7,7"><TextBlock Text="开发文档" FontSize="12" /></Border>
-              </WrapPanel>
+              <ComboBox ItemsSource="{Binding CollectionFilters}" SelectedItem="{Binding SelectedCollectionFilter}" HorizontalAlignment="Stretch" />
             </StackPanel>
             <Button Content="管理标签" Command="{Binding OpenTagsDialogCommand}" />
           </StackPanel>
@@ -128,7 +119,20 @@
                                  FontFamily="{Binding FamilyName}"
                                  FontSize="{Binding PreviewFontSize}"
                                  TextWrapping="Wrap" />
-                      <TextBlock Text="{Binding TagsLabel}" Classes="muted" />
+                      <ItemsControl ItemsSource="{Binding Tags}">
+                        <ItemsControl.ItemsPanel>
+                          <ItemsPanelTemplate>
+                            <WrapPanel />
+                          </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate>
+                            <Border Classes="badge" Margin="0,0,7,7">
+                              <TextBlock Text="{Binding .}" FontSize="12" />
+                            </Border>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
                     </StackPanel>
                   </Border>
                 </DataTemplate>
@@ -208,11 +212,56 @@
       <Border Width="620" Classes="panel" Padding="18" HorizontalAlignment="Center" VerticalAlignment="Center">
         <StackPanel Spacing="14">
           <TextBlock Text="标签" Classes="h1" />
-          <TextBlock Text="用逗号或换行分隔标签与集合；删除标签或集合关系不会删除字体文件。" Classes="muted" TextWrapping="Wrap" />
-          <TextBlock Text="标签" Classes="h2" />
-          <TextBox PlaceholderText="衬线、中文、项目A" Text="{Binding TagEditorText, Mode=TwoWay}" />
-          <TextBlock Text="集合" Classes="h2" />
-          <TextBox PlaceholderText="官网改版、游戏 UI" Text="{Binding CollectionEditorText, Mode=TwoWay}" />
+          <TextBlock Text="优先勾选已有标签和集合；也可以在输入框中新增。删除标签或集合关系不会删除字体文件。" Classes="muted" TextWrapping="Wrap" />
+          <Grid ColumnDefinitions="*,*" ColumnSpacing="16">
+            <StackPanel Spacing="8">
+              <TextBlock Text="已有标签" Classes="h2" />
+              <Border Classes="card" Padding="10" MaxHeight="180">
+                <ScrollViewer>
+                  <ItemsControl ItemsSource="{Binding TagOptions}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate>
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,0,0,6">
+                          <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                              <TextBlock Text="{Binding Name}" />
+                              <TextBlock Text="{Binding CountLabel}" Classes="muted" FontSize="12" />
+                            </StackPanel>
+                          </CheckBox>
+                          <Button Grid.Column="1"
+                                  Classes="sm"
+                                  Content="删除"
+                                  Command="{Binding DataContext.OpenDeleteTagDialogCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                  CommandParameter="{Binding Name}" />
+                        </Grid>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </ScrollViewer>
+              </Border>
+              <TextBox PlaceholderText="新增标签：衬线、中文、项目A" Text="{Binding TagEditorText, Mode=TwoWay}" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Spacing="8">
+              <TextBlock Text="已有集合" Classes="h2" />
+              <Border Classes="card" Padding="10" MaxHeight="180">
+                <ScrollViewer>
+                  <ItemsControl ItemsSource="{Binding CollectionOptions}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate>
+                        <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}" Margin="0,0,0,6">
+                          <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock Text="{Binding Name}" />
+                            <TextBlock Text="{Binding CountLabel}" Classes="muted" FontSize="12" />
+                          </StackPanel>
+                        </CheckBox>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </ScrollViewer>
+              </Border>
+              <TextBox PlaceholderText="新增集合：官网改版、游戏 UI" Text="{Binding CollectionEditorText, Mode=TwoWay}" />
+            </StackPanel>
+          </Grid>
           <TextBlock Text="删除标签只移除标签和字体的关联，不删除字体。" Classes="muted" />
           <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
             <Button Content="取消" Command="{Binding CloseTagsDialogCommand}" />
@@ -220,6 +269,23 @@
           </StackPanel>
         </StackPanel>
       </Border>
+      <Grid Background="{DynamicResource GlyphModalScrimBrush}" IsVisible="{Binding IsDeleteTagDialogOpen}">
+        <Border Width="380"
+                Classes="panel"
+                Padding="18"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center">
+          <StackPanel Spacing="14">
+            <TextBlock Text="删除标签" Classes="h2" />
+            <TextBlock Text="{Binding PendingDeleteTagName, StringFormat='确定删除标签 {0}？'}" TextWrapping="Wrap" />
+            <TextBlock Text="此操作会从所有字体移除该标签，不删除字体文件。" Classes="muted" TextWrapping="Wrap" />
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
+              <Button Content="取消" Command="{Binding CloseDeleteTagDialogCommand}" />
+              <Button Content="删除" Classes="primary" Command="{Binding ConfirmDeleteTagCommand}" />
+            </StackPanel>
+          </StackPanel>
+        </Border>
+      </Grid>
     </Grid>
   </Grid>
 </UserControl>

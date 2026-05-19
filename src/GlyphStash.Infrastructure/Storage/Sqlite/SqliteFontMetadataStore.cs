@@ -8,10 +8,13 @@ public sealed class SqliteFontMetadataStore :
     IFontMetadataStore,
     IAppSettingsStore,
     IFontLibraryMutationStore,
+    ITagStore,
     ICollectionStore,
     IActivationStore,
     IOperationLogStore
 {
+    private static readonly string[] DefaultTags = ["中文", "英文", "衬线", "无衬线", "等宽", "可商用", "开源", "品牌项目"];
+
     private const string SchemaVersionTable = "schema_version";
     private const string FontFilesTable = "font_files";
     private const string FontFamiliesTable = "font_families";
@@ -22,6 +25,7 @@ public sealed class SqliteFontMetadataStore :
     private const string FontTagsTable = "font_tags";
     private const string CollectionsTable = "collections";
     private const string CollectionFontsTable = "collection_fonts";
+    private const string LegacyFontCollectionItemsTable = "font_collection_items";
     private const string ActivationRecordsTable = "activation_records";
     private const string OperationLogsTable = "operation_logs";
 
@@ -215,7 +219,7 @@ public sealed class SqliteFontMetadataStore :
                     updated_at = excluded.updated_at;
                 """;
             preservedFamilies.TryGetValue(family.FamilyName, out var preservedFamily);
-            var tags = preservedFamily is null ? family.Tags : preservedFamily.Tags;
+            var tags = MergeNames(preservedFamily is null ? family.Tags : preservedFamily.Tags, InferAutomaticTags(family));
             var collections = preservedFamily is null ? family.Collections : preservedFamily.Collections;
             var isFavorite = preservedFamily is null ? family.IsFavorite : preservedFamily.IsFavorite;
             familyCommand.Parameters.AddWithValue("$familyName", family.FamilyName);
@@ -227,6 +231,8 @@ public sealed class SqliteFontMetadataStore :
             familyCommand.Parameters.AddWithValue("$collections", JoinList(collections));
             familyCommand.Parameters.AddWithValue("$isFavorite", isFavorite ? 1 : 0);
             await familyCommand.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+            await ReplaceFamilyTagsAsync(connection, transaction, family.FamilyName, tags, cancellationToken).ConfigureAwait(false);
+            await ReplaceFamilyCollectionsAsync(connection, transaction, family.FamilyName, collections, cancellationToken).ConfigureAwait(false);
 
             foreach (var face in family.Faces)
             {
@@ -371,24 +377,7 @@ public sealed class SqliteFontMetadataStore :
         var dbTransaction = await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
         await using var transaction = (SqliteTransaction)dbTransaction;
 
-        await ExecuteAsync(connection, transaction, "DELETE FROM font_tags WHERE family_name = $familyName;", [new("$familyName", familyName)], cancellationToken).ConfigureAwait(false);
-        foreach (var tag in NormalizeNames(tags))
-        {
-            await UpsertTagAsync(connection, transaction, tag, cancellationToken).ConfigureAwait(false);
-            await ExecuteAsync(
-                connection,
-                transaction,
-                "INSERT OR IGNORE INTO font_tags(family_name, tag_name) VALUES($familyName, $tagName);",
-                [new("$familyName", familyName), new("$tagName", tag)],
-                cancellationToken).ConfigureAwait(false);
-        }
-
-        await ExecuteAsync(
-            connection,
-            transaction,
-            "UPDATE font_families SET tags = $tags, updated_at = datetime('now') WHERE family_name = $familyName;",
-            [new("$tags", JoinList(NormalizeNames(tags))), new("$familyName", familyName)],
-            cancellationToken).ConfigureAwait(false);
+        await ReplaceFamilyTagsAsync(connection, transaction, familyName, tags, cancellationToken).ConfigureAwait(false);
         await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
     }
 
@@ -400,24 +389,7 @@ public sealed class SqliteFontMetadataStore :
         var dbTransaction = await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
         await using var transaction = (SqliteTransaction)dbTransaction;
 
-        await ExecuteAsync(connection, transaction, "DELETE FROM collection_fonts WHERE family_name = $familyName;", [new("$familyName", familyName)], cancellationToken).ConfigureAwait(false);
-        foreach (var collection in NormalizeNames(collections))
-        {
-            await UpsertCollectionAsync(connection, transaction, collection, cancellationToken).ConfigureAwait(false);
-            await ExecuteAsync(
-                connection,
-                transaction,
-                "INSERT OR IGNORE INTO collection_fonts(collection_name, family_name) VALUES($collectionName, $familyName);",
-                [new("$collectionName", collection), new("$familyName", familyName)],
-                cancellationToken).ConfigureAwait(false);
-        }
-
-        await ExecuteAsync(
-            connection,
-            transaction,
-            "UPDATE font_families SET collections = $collections, updated_at = datetime('now') WHERE family_name = $familyName;",
-            [new("$collections", JoinList(NormalizeNames(collections))), new("$familyName", familyName)],
-            cancellationToken).ConfigureAwait(false);
+        await ReplaceFamilyCollectionsAsync(connection, transaction, familyName, collections, cancellationToken).ConfigureAwait(false);
         await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
     }
 
@@ -537,6 +509,78 @@ public sealed class SqliteFontMetadataStore :
         await SetCollectionsAsync(family.FamilyName, family.Collections, cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task<IReadOnlyList<TagRecord>> GetTagsAsync(CancellationToken cancellationToken)
+    {
+        await InitializeAsync(cancellationToken).ConfigureAwait(false);
+        await using var connection = CreateConnection();
+        await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+
+        var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT t.name, COUNT(ft.family_name)
+            FROM tags t
+            LEFT JOIN font_tags ft ON ft.tag_name = t.name
+            GROUP BY t.name
+            ORDER BY t.name COLLATE NOCASE;
+            """;
+        var tags = new List<TagRecord>();
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+        while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+        {
+            tags.Add(new TagRecord(reader.GetString(0), Convert.ToInt32(reader.GetInt64(1))));
+        }
+
+        return tags;
+    }
+
+    public async Task CreateTagAsync(string name, CancellationToken cancellationToken)
+    {
+        await InitializeAsync(cancellationToken).ConfigureAwait(false);
+        await using var connection = CreateConnection();
+        await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+        await UpsertTagAsync(connection, null, name, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task RenameTagAsync(string oldName, string newName, CancellationToken cancellationToken)
+    {
+        await InitializeAsync(cancellationToken).ConfigureAwait(false);
+        await using var connection = CreateConnection();
+        await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+        var dbTransaction = await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+        await using var transaction = (SqliteTransaction)dbTransaction;
+
+        await UpsertTagAsync(connection, transaction, newName, cancellationToken).ConfigureAwait(false);
+        await ExecuteAsync(
+            connection,
+            transaction,
+            """
+            INSERT OR IGNORE INTO font_tags(family_name, tag_name)
+            SELECT family_name, $newName
+            FROM font_tags
+            WHERE tag_name = $oldName;
+            """,
+            [new("$newName", newName.Trim()), new("$oldName", oldName.Trim())],
+            cancellationToken).ConfigureAwait(false);
+        await ExecuteAsync(connection, transaction, "DELETE FROM font_tags WHERE tag_name = $oldName;", [new("$oldName", oldName.Trim())], cancellationToken).ConfigureAwait(false);
+        await ExecuteAsync(connection, transaction, "DELETE FROM tags WHERE name = $oldName;", [new("$oldName", oldName.Trim())], cancellationToken).ConfigureAwait(false);
+        await RebuildFamilyTagSummariesAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
+        await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task DeleteTagAsync(string name, CancellationToken cancellationToken)
+    {
+        await InitializeAsync(cancellationToken).ConfigureAwait(false);
+        await using var connection = CreateConnection();
+        await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+        var dbTransaction = await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+        await using var transaction = (SqliteTransaction)dbTransaction;
+
+        await ExecuteAsync(connection, transaction, "DELETE FROM font_tags WHERE tag_name = $name;", [new("$name", name.Trim())], cancellationToken).ConfigureAwait(false);
+        await ExecuteAsync(connection, transaction, "DELETE FROM tags WHERE name = $name;", [new("$name", name.Trim())], cancellationToken).ConfigureAwait(false);
+        await RebuildFamilyTagSummariesAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
+        await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+    }
+
     public async Task<IReadOnlyList<FontCollectionRecord>> GetCollectionsAsync(CancellationToken cancellationToken)
     {
         await InitializeAsync(cancellationToken).ConfigureAwait(false);
@@ -604,7 +648,18 @@ public sealed class SqliteFontMetadataStore :
         var dbTransaction = await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
         await using var transaction = (SqliteTransaction)dbTransaction;
         await UpsertCollectionAsync(connection, transaction, newName, cancellationToken).ConfigureAwait(false);
-        await ExecuteAsync(connection, transaction, "UPDATE collection_fonts SET collection_name = $newName WHERE collection_name = $oldName;", [new("$newName", newName.Trim()), new("$oldName", oldName.Trim())], cancellationToken).ConfigureAwait(false);
+        await ExecuteAsync(
+            connection,
+            transaction,
+            """
+            INSERT OR IGNORE INTO collection_fonts(collection_name, family_name)
+            SELECT $newName, family_name
+            FROM collection_fonts
+            WHERE collection_name = $oldName;
+            """,
+            [new("$newName", newName.Trim()), new("$oldName", oldName.Trim())],
+            cancellationToken).ConfigureAwait(false);
+        await ExecuteAsync(connection, transaction, "DELETE FROM collection_fonts WHERE collection_name = $oldName;", [new("$oldName", oldName.Trim())], cancellationToken).ConfigureAwait(false);
         await ExecuteAsync(connection, transaction, "DELETE FROM collections WHERE name = $oldName;", [new("$oldName", oldName.Trim())], cancellationToken).ConfigureAwait(false);
         await RebuildFamilyCollectionSummariesAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
         await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
@@ -908,6 +963,8 @@ public sealed class SqliteFontMetadataStore :
         }
 
         await MigrateFamilyMetadataToM2TablesAsync(connection, cancellationToken).ConfigureAwait(false);
+        await RemoveLegacyCollectionRelationshipTablesAsync(connection, cancellationToken).ConfigureAwait(false);
+        await EnsureDefaultTagsAsync(connection, cancellationToken).ConfigureAwait(false);
         await ExecuteAsync(connection, "INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES(2, datetime('now'));", cancellationToken).ConfigureAwait(false);
     }
 
@@ -1010,6 +1067,91 @@ public sealed class SqliteFontMetadataStore :
                 await ExecuteAsync(connection, transaction, "INSERT OR IGNORE INTO collection_fonts(collection_name, family_name) VALUES($collectionName, $familyName);", [new("$collectionName", collection), new("$familyName", family.FamilyName)], cancellationToken).ConfigureAwait(false);
             }
         }
+
+        await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    private static async Task RemoveLegacyCollectionRelationshipTablesAsync(SqliteConnection connection, CancellationToken cancellationToken)
+    {
+        if (!await TableExistsAsync(connection, LegacyFontCollectionItemsTable, cancellationToken).ConfigureAwait(false))
+        {
+            return;
+        }
+
+        await ExecuteAsync(connection, "PRAGMA foreign_keys = OFF;", cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var dbTransaction = await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+            await using var transaction = (SqliteTransaction)dbTransaction;
+            await MigrateLegacyFontCollectionItemsAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
+            await ExecuteAsync(connection, transaction, $"DROP TABLE IF EXISTS {QuoteIdentifier(LegacyFontCollectionItemsTable)};", cancellationToken).ConfigureAwait(false);
+            await RebuildFamilyCollectionSummariesAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
+            await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            await ExecuteAsync(connection, "PRAGMA foreign_keys = ON;", cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private static async Task MigrateLegacyFontCollectionItemsAsync(SqliteConnection connection, SqliteTransaction transaction, CancellationToken cancellationToken)
+    {
+        var columns = await ReadTableColumnsAsync(connection, LegacyFontCollectionItemsTable, cancellationToken).ConfigureAwait(false);
+        if (!HasColumn(columns, "collection_name") || !HasColumn(columns, "family_name"))
+        {
+            return;
+        }
+
+        await ExecuteAsync(
+            connection,
+            transaction,
+            $"""
+            INSERT OR IGNORE INTO collection_fonts(collection_name, family_name)
+            SELECT collection_name, family_name
+            FROM {QuoteIdentifier(LegacyFontCollectionItemsTable)}
+            WHERE collection_name IS NOT NULL
+              AND trim(collection_name) <> ''
+              AND family_name IS NOT NULL
+              AND trim(family_name) <> '';
+            """,
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    private static async Task<bool> TableExistsAsync(SqliteConnection connection, string tableName, CancellationToken cancellationToken)
+    {
+        var command = connection.CreateCommand();
+        command.CommandText = "SELECT name FROM sqlite_master WHERE type = 'table' AND name = $tableName;";
+        command.Parameters.AddWithValue("$tableName", tableName);
+        var existing = await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false) as string;
+        return !string.IsNullOrWhiteSpace(existing);
+    }
+
+    private static async Task EnsureDefaultTagsAsync(SqliteConnection connection, CancellationToken cancellationToken)
+    {
+        var seededCommand = connection.CreateCommand();
+        seededCommand.CommandText = "SELECT value FROM app_settings WHERE key = 'default_tags_seeded';";
+        var seeded = await seededCommand.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false) as string;
+        if (seeded == "1")
+        {
+            return;
+        }
+
+        var dbTransaction = await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+        await using var transaction = (SqliteTransaction)dbTransaction;
+        foreach (var tag in DefaultTags)
+        {
+            await UpsertTagAsync(connection, transaction, tag, cancellationToken).ConfigureAwait(false);
+        }
+
+        await ExecuteAsync(
+            connection,
+            transaction,
+            """
+            INSERT INTO app_settings(key, value, updated_at)
+            VALUES('default_tags_seeded', '1', datetime('now'))
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at;
+            """,
+            cancellationToken).ConfigureAwait(false);
 
         await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
     }
@@ -1374,6 +1516,92 @@ public sealed class SqliteFontMetadataStore :
             cancellationToken).ConfigureAwait(false);
     }
 
+    private static async Task ReplaceFamilyTagsAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        string familyName,
+        IReadOnlyList<string> tags,
+        CancellationToken cancellationToken)
+    {
+        var normalizedTags = NormalizeNames(tags);
+        await ExecuteAsync(connection, transaction, "DELETE FROM font_tags WHERE family_name = $familyName;", [new("$familyName", familyName)], cancellationToken).ConfigureAwait(false);
+        foreach (var tag in normalizedTags)
+        {
+            await UpsertTagAsync(connection, transaction, tag, cancellationToken).ConfigureAwait(false);
+            await ExecuteAsync(
+                connection,
+                transaction,
+                "INSERT OR IGNORE INTO font_tags(family_name, tag_name) VALUES($familyName, $tagName);",
+                [new("$familyName", familyName), new("$tagName", tag)],
+                cancellationToken).ConfigureAwait(false);
+        }
+
+        await ExecuteAsync(
+            connection,
+            transaction,
+            "UPDATE font_families SET tags = $tags, updated_at = datetime('now') WHERE family_name = $familyName;",
+            [new("$tags", JoinList(normalizedTags)), new("$familyName", familyName)],
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    private static async Task ReplaceFamilyCollectionsAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        string familyName,
+        IReadOnlyList<string> collections,
+        CancellationToken cancellationToken)
+    {
+        var normalizedCollections = NormalizeNames(collections);
+        await ExecuteAsync(connection, transaction, "DELETE FROM collection_fonts WHERE family_name = $familyName;", [new("$familyName", familyName)], cancellationToken).ConfigureAwait(false);
+        foreach (var collection in normalizedCollections)
+        {
+            await UpsertCollectionAsync(connection, transaction, collection, cancellationToken).ConfigureAwait(false);
+            await ExecuteAsync(
+                connection,
+                transaction,
+                "INSERT OR IGNORE INTO collection_fonts(collection_name, family_name) VALUES($collectionName, $familyName);",
+                [new("$collectionName", collection), new("$familyName", familyName)],
+                cancellationToken).ConfigureAwait(false);
+        }
+
+        await ExecuteAsync(
+            connection,
+            transaction,
+            "UPDATE font_families SET collections = $collections, updated_at = datetime('now') WHERE family_name = $familyName;",
+            [new("$collections", JoinList(normalizedCollections)), new("$familyName", familyName)],
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    private static async Task RebuildFamilyTagSummariesAsync(SqliteConnection connection, SqliteTransaction transaction, CancellationToken cancellationToken)
+    {
+        var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            SELECT family_name, group_concat(tag_name, char(31))
+            FROM font_tags
+            GROUP BY family_name;
+            """;
+        var summaries = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        await using (var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false))
+        {
+            while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+            {
+                summaries[reader.GetString(0)] = reader.IsDBNull(1) ? string.Empty : reader.GetString(1);
+            }
+        }
+
+        await ExecuteAsync(connection, transaction, "UPDATE font_families SET tags = '';", cancellationToken).ConfigureAwait(false);
+        foreach (var summary in summaries)
+        {
+            await ExecuteAsync(
+                connection,
+                transaction,
+                "UPDATE font_families SET tags = $tags, updated_at = datetime('now') WHERE family_name = $familyName;",
+                [new("$tags", summary.Value), new("$familyName", summary.Key)],
+                cancellationToken).ConfigureAwait(false);
+        }
+    }
+
     private static async Task RebuildFamilyCollectionSummariesAsync(SqliteConnection connection, SqliteTransaction transaction, CancellationToken cancellationToken)
     {
         var command = connection.CreateCommand();
@@ -1414,6 +1642,47 @@ public sealed class SqliteFontMetadataStore :
             .Where(item => !string.IsNullOrWhiteSpace(item))
             .Distinct(StringComparer.CurrentCultureIgnoreCase)
             .ToList();
+
+    private static IReadOnlyList<string> MergeNames(IEnumerable<string> first, IEnumerable<string> second) =>
+        first.Concat(second)
+            .Select(item => item.Trim())
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Distinct(StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
+
+    private static IReadOnlyList<string> InferAutomaticTags(FontFamilyRecord family)
+    {
+        var searchableText = string.Join(
+            ' ',
+            family.FamilyName,
+            string.Join(' ', family.Faces.Select(face => $"{face.SubfamilyName} {face.FullName} {face.PostScriptName}")));
+
+        return LooksLikeCjkFont(searchableText) ? ["中文"] : [];
+    }
+
+    private static bool LooksLikeCjkFont(string value) =>
+        value.Contains("CJK", StringComparison.OrdinalIgnoreCase)
+        || ContainsSeparatedToken(value, "SC")
+        || ContainsSeparatedToken(value, "TC")
+        || ContainsSeparatedToken(value, "CN")
+        || ContainsSeparatedToken(value, "GB")
+        || ContainsSeparatedToken(value, "GBK")
+        || value.Contains("Hans", StringComparison.OrdinalIgnoreCase)
+        || value.Contains("Hant", StringComparison.OrdinalIgnoreCase)
+        || value.Contains("Chinese", StringComparison.OrdinalIgnoreCase)
+        || value.Contains("中文", StringComparison.Ordinal)
+        || value.Contains("宋体", StringComparison.Ordinal)
+        || value.Contains("黑体", StringComparison.Ordinal)
+        || value.Contains("楷体", StringComparison.Ordinal)
+        || value.Contains("仿宋", StringComparison.Ordinal)
+        || value.Contains("雅黑", StringComparison.Ordinal)
+        || value.Contains("思源", StringComparison.Ordinal)
+        || value.Contains("方正", StringComparison.Ordinal)
+        || value.Contains("华文", StringComparison.Ordinal);
+
+    private static bool ContainsSeparatedToken(string value, string token) =>
+        value.Split([' ', '-', '_', '.', '(', ')', '[', ']'], StringSplitOptions.RemoveEmptyEntries)
+            .Any(part => string.Equals(part, token, StringComparison.OrdinalIgnoreCase));
 
     private static string ReadStringOrEmpty(SqliteDataReader reader, int ordinal) =>
         reader.IsDBNull(ordinal) ? string.Empty : Convert.ToString(reader.GetValue(ordinal)) ?? string.Empty;

@@ -73,6 +73,7 @@ public partial class App : Avalonia.Application
         services.AddSingleton<IFontMetadataStore>(provider => provider.GetRequiredService<SqliteFontMetadataStore>());
         services.AddSingleton<IAppSettingsStore>(provider => provider.GetRequiredService<SqliteFontMetadataStore>());
         services.AddSingleton<IFontLibraryMutationStore>(provider => provider.GetRequiredService<SqliteFontMetadataStore>());
+        services.AddSingleton<ITagStore>(provider => provider.GetRequiredService<SqliteFontMetadataStore>());
         services.AddSingleton<ICollectionStore>(provider => provider.GetRequiredService<SqliteFontMetadataStore>());
         services.AddSingleton<IActivationStore>(provider => provider.GetRequiredService<SqliteFontMetadataStore>());
         services.AddSingleton<IOperationLogStore>(provider => provider.GetRequiredService<SqliteFontMetadataStore>());

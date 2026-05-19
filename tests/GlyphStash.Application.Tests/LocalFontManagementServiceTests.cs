@@ -58,18 +58,44 @@ public sealed class LocalFontManagementServiceTests
         Assert.Equal(FontActivationState.Installed, mutationStore.Family?.ActivationState);
     }
 
+    [Fact]
+    public async Task TagAndCollectionManagement_WritesThroughAndLogs()
+    {
+        var platform = new FakePlatformActivation();
+        var tagStore = new FakeTagStore();
+        var collectionStore = new FakeCollectionStore();
+        var logStore = new FakeOperationLogStore();
+        var service = CreateService(platform, tagStore: tagStore, collectionStore: collectionStore, logStore: logStore);
+
+        await service.CreateTagAsync("中文", CancellationToken.None);
+        await service.RenameTagAsync("中文", "CJK", CancellationToken.None);
+        await service.DeleteTagAsync("CJK", CancellationToken.None);
+        await service.CreateCollectionAsync("官网改版", CancellationToken.None);
+        await service.RenameCollectionAsync("官网改版", "品牌官网", CancellationToken.None);
+        await service.DeleteCollectionAsync("品牌官网", CancellationToken.None);
+
+        Assert.Equal(["create:中文", "rename:中文->CJK", "delete:CJK"], tagStore.Operations);
+        Assert.Equal(["create:官网改版", "rename:官网改版->品牌官网", "delete:品牌官网"], collectionStore.Operations);
+        Assert.Contains(logStore.Entries, entry => entry.Category == "tags" && entry.Action == "delete");
+        Assert.Contains(logStore.Entries, entry => entry.Category == "collection" && entry.Action == "delete");
+    }
+
     private static LocalFontManagementService CreateService(
         FakePlatformActivation platform,
-        FakeMutationStore? mutationStore = null)
+        FakeMutationStore? mutationStore = null,
+        FakeTagStore? tagStore = null,
+        FakeCollectionStore? collectionStore = null,
+        FakeOperationLogStore? logStore = null)
     {
-        var logStore = new FakeOperationLogStore();
+        logStore ??= new FakeOperationLogStore();
         return new LocalFontManagementService(
             new FakeMetadataReader(),
             new FakeManagedFontFileStore(),
             new FakeSettingsStore(),
             new FakeMetadataStore(),
             mutationStore ?? new FakeMutationStore(),
-            new FakeCollectionStore(),
+            tagStore ?? new FakeTagStore(),
+            collectionStore ?? new FakeCollectionStore(),
             new FakeInstallService(),
             new FontActivationCoordinator(platform, new FakeActivationStore(), logStore),
             logStore);
@@ -173,18 +199,58 @@ public sealed class LocalFontManagementServiceTests
 
     private sealed class FakeCollectionStore : ICollectionStore
     {
+        public List<string> Operations { get; } = [];
+
         public Task<IReadOnlyList<FontCollectionRecord>> GetCollectionsAsync(CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<FontCollectionRecord>>([]);
 
-        public Task CreateCollectionAsync(string name, CancellationToken cancellationToken) => Task.CompletedTask;
+        public Task CreateCollectionAsync(string name, CancellationToken cancellationToken)
+        {
+            Operations.Add($"create:{name}");
+            return Task.CompletedTask;
+        }
 
-        public Task RenameCollectionAsync(string oldName, string newName, CancellationToken cancellationToken) => Task.CompletedTask;
+        public Task RenameCollectionAsync(string oldName, string newName, CancellationToken cancellationToken)
+        {
+            Operations.Add($"rename:{oldName}->{newName}");
+            return Task.CompletedTask;
+        }
 
-        public Task DeleteCollectionAsync(string name, CancellationToken cancellationToken) => Task.CompletedTask;
+        public Task DeleteCollectionAsync(string name, CancellationToken cancellationToken)
+        {
+            Operations.Add($"delete:{name}");
+            return Task.CompletedTask;
+        }
 
         public Task AddFontToCollectionAsync(string collectionName, string familyName, CancellationToken cancellationToken) => Task.CompletedTask;
 
         public Task RemoveFontFromCollectionAsync(string collectionName, string familyName, CancellationToken cancellationToken) => Task.CompletedTask;
+    }
+
+    private sealed class FakeTagStore : ITagStore
+    {
+        public List<string> Operations { get; } = [];
+
+        public Task<IReadOnlyList<TagRecord>> GetTagsAsync(CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<TagRecord>>([]);
+
+        public Task CreateTagAsync(string name, CancellationToken cancellationToken)
+        {
+            Operations.Add($"create:{name}");
+            return Task.CompletedTask;
+        }
+
+        public Task RenameTagAsync(string oldName, string newName, CancellationToken cancellationToken)
+        {
+            Operations.Add($"rename:{oldName}->{newName}");
+            return Task.CompletedTask;
+        }
+
+        public Task DeleteTagAsync(string name, CancellationToken cancellationToken)
+        {
+            Operations.Add($"delete:{name}");
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class FakeInstallService : IFontInstallService
@@ -198,9 +264,15 @@ public sealed class LocalFontManagementServiceTests
 
     private sealed class FakeOperationLogStore : IOperationLogStore
     {
-        public Task AppendOperationAsync(OperationLogEntry entry, CancellationToken cancellationToken) => Task.CompletedTask;
+        public List<OperationLogEntry> Entries { get; } = [];
+
+        public Task AppendOperationAsync(OperationLogEntry entry, CancellationToken cancellationToken)
+        {
+            Entries.Add(entry);
+            return Task.CompletedTask;
+        }
 
         public Task<IReadOnlyList<OperationLogEntry>> GetRecentOperationsAsync(int limit, CancellationToken cancellationToken) =>
-            Task.FromResult<IReadOnlyList<OperationLogEntry>>([]);
+            Task.FromResult<IReadOnlyList<OperationLogEntry>>(Entries.Take(limit).ToList());
     }
 }

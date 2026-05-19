@@ -1,3 +1,4 @@
+using System.Collections.Specialized;
 using GlyphStash.Application.Abstractions.Fonts;
 using GlyphStash.Application.Abstractions.Storage;
 using GlyphStash.Application.Fonts;
@@ -150,10 +151,273 @@ public sealed class ShellViewModelTests
         Assert.Contains("跳过 2", vm.ToastMessage, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task FontLibrary_FiltersBySelectedTagAndCollection()
+    {
+        var fonts = new[]
+        {
+            CreateFont("Inter", tags: ["无衬线", "UI"], collections: ["官网改版"]),
+            CreateFont("Serif Sans", tags: ["衬线"], collections: ["书籍"])
+        };
+        var vm = new ShellViewModel(new FontLibraryService(new FakeInventory([]), new FakeStore(fonts)));
+
+        await vm.InitializeAsync();
+        vm.SelectedTagFilter = "UI";
+        vm.SelectedCollectionFilter = "官网改版";
+
+        Assert.Single(vm.Fonts);
+        Assert.Equal("Inter", vm.SelectedFont?.FamilyName);
+    }
+
+    [Fact]
+    public async Task SaveTagsDialog_UsesExistingSelectionsAndAllowsNewNames()
+    {
+        var fonts = new[] { CreateFont("Inter", tags: ["无衬线"], collections: []) };
+        var tagStore = new FakeTagStore();
+        var collectionStore = new FakeCollectionStore([new FontCollectionRecord("官网改版", [])]);
+        var mutationStore = new FakeMutationStore(tagStore, collectionStore);
+        var platform = new FakePlatformActivation();
+        var service = CreateLocalService(
+            platform,
+            collectionStore.Collections,
+            mutationStore: mutationStore,
+            collectionStore: collectionStore,
+            tagStore: tagStore);
+        var vm = new ShellViewModel(
+            new FontLibraryService(new FakeInventory([]), new FakeStore(fonts)),
+            service,
+            NullUserFileDialogService.Instance);
+
+        await vm.InitializeAsync();
+        vm.OpenTagsDialogCommand.Execute(null);
+        vm.TagOptions.Single(option => option.Name == "UI").IsSelected = true;
+        vm.CollectionOptions.Single(option => option.Name == "官网改版").IsSelected = true;
+        vm.TagEditorText = "项目A";
+        vm.CollectionEditorText = "品牌包";
+        await vm.SaveTagsDialogCommand.ExecuteAsync(null);
+
+        Assert.Equal(3, mutationStore.Tags.Count);
+        Assert.Contains("无衬线", mutationStore.Tags);
+        Assert.Contains("UI", mutationStore.Tags);
+        Assert.Contains("项目A", mutationStore.Tags);
+        Assert.Equal(2, mutationStore.Collections.Count);
+        Assert.Contains("官网改版", mutationStore.Collections);
+        Assert.Contains("品牌包", mutationStore.Collections);
+        Assert.Contains("项目A", vm.SelectedFont?.Tags ?? []);
+        Assert.Contains("品牌包", vm.SelectedFont?.Collections ?? []);
+    }
+
+    [Fact]
+    public async Task SaveTagsDialog_PreservesExistingTagAndCollectionFilters()
+    {
+        var fonts = new[]
+        {
+            CreateFont("Inter", tags: ["UI"], collections: ["官网改版"]),
+            CreateFont("Serif Sans", tags: ["衬线"], collections: ["书籍"])
+        };
+        var tagStore = new FakeTagStore([new TagRecord("UI", 1), new TagRecord("衬线", 1)]);
+        var collectionStore = new FakeCollectionStore([new FontCollectionRecord("官网改版", ["Inter"]), new FontCollectionRecord("书籍", ["Serif Sans"])]);
+        var mutationStore = new FakeMutationStore();
+        var platform = new FakePlatformActivation();
+        var service = CreateLocalService(
+            platform,
+            collectionStore.Collections,
+            mutationStore: mutationStore,
+            collectionStore: collectionStore,
+            tagStore: tagStore);
+        var vm = new ShellViewModel(
+            new FontLibraryService(new FakeInventory([]), new FakeStore(fonts)),
+            service,
+            NullUserFileDialogService.Instance);
+
+        await vm.InitializeAsync();
+        vm.SelectedTagFilter = "UI";
+        vm.SelectedCollectionFilter = "官网改版";
+        vm.OpenTagsDialogCommand.Execute(null);
+        await vm.SaveTagsDialogCommand.ExecuteAsync(null);
+
+        Assert.Equal("UI", vm.SelectedTagFilter);
+        Assert.Equal("官网改版", vm.SelectedCollectionFilter);
+        Assert.Single(vm.Fonts);
+        Assert.Equal("Inter", vm.SelectedFont?.FamilyName);
+    }
+
+    [Fact]
+    public async Task SaveTagsDialog_NotifiesCurrentFiltersAfterReloadingOptions()
+    {
+        var fonts = new[]
+        {
+            CreateFont("Inter", tags: ["UI"], collections: ["官网改版"]),
+            CreateFont("Serif Sans", tags: ["衬线"], collections: ["书籍"])
+        };
+        var tagStore = new FakeTagStore([new TagRecord("UI", 1), new TagRecord("衬线", 1)]);
+        var collectionStore = new FakeCollectionStore([new FontCollectionRecord("官网改版", ["Inter"]), new FontCollectionRecord("书籍", ["Serif Sans"])]);
+        var service = CreateLocalService(
+            new FakePlatformActivation(),
+            collectionStore.Collections,
+            collectionStore: collectionStore,
+            tagStore: tagStore);
+        var vm = new ShellViewModel(
+            new FontLibraryService(new FakeInventory([]), new FakeStore(fonts)),
+            service,
+            NullUserFileDialogService.Instance);
+        var notifiedProperties = new List<string?>();
+
+        await vm.InitializeAsync();
+        vm.SelectedTagFilter = "UI";
+        vm.SelectedCollectionFilter = "官网改版";
+        vm.OpenTagsDialogCommand.Execute(null);
+        vm.PropertyChanged += (_, args) => notifiedProperties.Add(args.PropertyName);
+
+        await vm.SaveTagsDialogCommand.ExecuteAsync(null);
+
+        Assert.Equal("UI", vm.SelectedTagFilter);
+        Assert.Equal("官网改版", vm.SelectedCollectionFilter);
+        Assert.Contains(nameof(vm.SelectedTagFilter), notifiedProperties);
+        Assert.Contains(nameof(vm.SelectedCollectionFilter), notifiedProperties);
+    }
+
+    [Fact]
+    public async Task SaveTagsDialog_DoesNotTemporarilyRemoveCurrentFilterOptions()
+    {
+        var fonts = new[]
+        {
+            CreateFont("Inter", tags: ["UI"], collections: ["官网改版"]),
+            CreateFont("Serif Sans", tags: ["衬线"], collections: ["书籍"])
+        };
+        var tagStore = new FakeTagStore([new TagRecord("UI", 1), new TagRecord("衬线", 1)]);
+        var collectionStore = new FakeCollectionStore([new FontCollectionRecord("官网改版", ["Inter"]), new FontCollectionRecord("书籍", ["Serif Sans"])]);
+        var mutationStore = new FakeMutationStore(tagStore, collectionStore);
+        var service = CreateLocalService(
+            new FakePlatformActivation(),
+            collectionStore.Collections,
+            mutationStore: mutationStore,
+            collectionStore: collectionStore,
+            tagStore: tagStore);
+        var vm = new ShellViewModel(
+            new FontLibraryService(new FakeInventory([]), new FakeStore(fonts)),
+            service,
+            NullUserFileDialogService.Instance);
+        var removedSelectedTag = false;
+        var removedSelectedCollection = false;
+
+        await vm.InitializeAsync();
+        vm.SelectedTagFilter = "UI";
+        vm.SelectedCollectionFilter = "官网改版";
+        vm.OpenTagsDialogCommand.Execute(null);
+        vm.TagEditorText = "项目A";
+        vm.CollectionEditorText = "品牌包";
+        vm.TagFilters.CollectionChanged += (_, args) => removedSelectedTag |= RemovesFilterOption(args, "UI");
+        vm.CollectionFilters.CollectionChanged += (_, args) => removedSelectedCollection |= RemovesFilterOption(args, "官网改版");
+
+        await vm.SaveTagsDialogCommand.ExecuteAsync(null);
+
+        Assert.False(removedSelectedTag);
+        Assert.False(removedSelectedCollection);
+        Assert.Contains("项目A", vm.TagFilters);
+        Assert.Contains("品牌包", vm.CollectionFilters);
+    }
+
+    [Fact]
+    public async Task SaveTagsDialog_AddsNewFilterNamesWithoutClearingCurrentFilters()
+    {
+        var fonts = new[]
+        {
+            CreateFont("Inter", tags: ["UI"], collections: ["官网改版"]),
+            CreateFont("Serif Sans", tags: ["衬线"], collections: ["书籍"])
+        };
+        var tagStore = new FakeTagStore([new TagRecord("UI", 1), new TagRecord("衬线", 1)]);
+        var collectionStore = new FakeCollectionStore([new FontCollectionRecord("官网改版", ["Inter"]), new FontCollectionRecord("书籍", ["Serif Sans"])]);
+        var mutationStore = new FakeMutationStore(tagStore, collectionStore);
+        var platform = new FakePlatformActivation();
+        var service = CreateLocalService(
+            platform,
+            collectionStore.Collections,
+            mutationStore: mutationStore,
+            collectionStore: collectionStore,
+            tagStore: tagStore);
+        var vm = new ShellViewModel(
+            new FontLibraryService(new FakeInventory([]), new FakeStore(fonts)),
+            service,
+            NullUserFileDialogService.Instance);
+
+        await vm.InitializeAsync();
+        vm.SelectedTagFilter = "UI";
+        vm.SelectedCollectionFilter = "官网改版";
+        vm.OpenTagsDialogCommand.Execute(null);
+        vm.TagEditorText = "项目A";
+        vm.CollectionEditorText = "品牌包";
+        await vm.SaveTagsDialogCommand.ExecuteAsync(null);
+
+        Assert.Contains("项目A", vm.TagFilters);
+        Assert.Contains("品牌包", vm.CollectionFilters);
+        Assert.Equal("UI", vm.SelectedTagFilter);
+        Assert.Equal("官网改版", vm.SelectedCollectionFilter);
+    }
+
+    [Fact]
+    public async Task ConfirmDeleteTag_RemovesTagAndClearsMatchingFilter()
+    {
+        var fonts = new[]
+        {
+            CreateFont("Inter", tags: ["UI"], collections: []),
+            CreateFont("Serif Sans", tags: ["UI", "衬线"], collections: [])
+        };
+        var tagStore = new FakeTagStore([new TagRecord("UI", 2), new TagRecord("衬线", 1)]);
+        var platform = new FakePlatformActivation();
+        var service = CreateLocalService(
+            platform,
+            [],
+            tagStore: tagStore);
+        var vm = new ShellViewModel(
+            new FontLibraryService(new FakeInventory([]), new FakeStore(fonts)),
+            service,
+            NullUserFileDialogService.Instance);
+
+        await vm.InitializeAsync();
+        vm.SelectedTagFilter = "UI";
+        vm.OpenTagsDialogCommand.Execute(null);
+        vm.OpenDeleteTagDialogCommand.Execute("UI");
+        await vm.ConfirmDeleteTagCommand.ExecuteAsync(null);
+
+        Assert.Contains("UI", tagStore.DeletedTags);
+        Assert.False(vm.IsDeleteTagDialogOpen);
+        Assert.Equal("", vm.PendingDeleteTagName);
+        Assert.Equal("全部标签", vm.SelectedTagFilter);
+        Assert.DoesNotContain("UI", vm.TagFilters);
+        Assert.All(vm.Fonts, font => Assert.DoesNotContain("UI", font.Tags));
+    }
+
+    [Fact]
+    public async Task DeleteSelectedCollection_RemovesCollectionAndClearsFilter()
+    {
+        var collectionStore = new FakeCollectionStore([new FontCollectionRecord("官网改版", ["Inter"])]);
+        var platform = new FakePlatformActivation();
+        var service = CreateLocalService(
+            platform,
+            collectionStore.Collections,
+            collectionStore: collectionStore);
+        var vm = new ShellViewModel(
+            new FontLibraryService(new FakeInventory([]), new FakeStore([CreateFont("Inter", collections: ["官网改版"])])),
+            service,
+            NullUserFileDialogService.Instance);
+
+        await vm.InitializeAsync();
+        vm.SelectedCollectionFilter = "官网改版";
+        vm.OpenDeleteCollectionDialogCommand.Execute(null);
+        await vm.ConfirmDeleteCollectionCommand.ExecuteAsync(null);
+
+        Assert.Empty(vm.Collections);
+        Assert.Equal("全部集合", vm.SelectedCollectionFilter);
+        Assert.False(vm.IsDeleteCollectionDialogOpen);
+    }
+
     private static FontFamilyRecord CreateFont(
         string family,
         FontActivationState state = FontActivationState.Installed,
-        FontSourceKind sourceKind = FontSourceKind.System)
+        FontSourceKind sourceKind = FontSourceKind.System,
+        IReadOnlyList<string>? tags = null,
+        IReadOnlyList<string>? collections = null)
     {
         var file = new FontFileRecord($"C:/Fonts/{family}.ttf", "TTF", null, sourceKind, DateTimeOffset.UtcNow);
         return new FontFamilyRecord(
@@ -163,14 +427,22 @@ public sealed class ShellViewModelTests
             state,
             LicenseStatus.Unknown,
             "未知授权",
-            ["无衬线"],
-            [],
+            tags ?? ["无衬线"],
+            collections ?? [],
             false);
     }
 
+    private static bool RemovesFilterOption(NotifyCollectionChangedEventArgs args, string option) =>
+        args.Action == NotifyCollectionChangedAction.Reset
+        || (args.Action is NotifyCollectionChangedAction.Remove or NotifyCollectionChangedAction.Replace
+            && (args.OldItems?.Cast<string>().Any(item => string.Equals(item, option, StringComparison.CurrentCultureIgnoreCase)) ?? false));
+
     private static LocalFontManagementService CreateLocalService(
         FakePlatformActivation platform,
-        IReadOnlyList<FontCollectionRecord> collections)
+        IReadOnlyList<FontCollectionRecord> collections,
+        FakeMutationStore? mutationStore = null,
+        FakeCollectionStore? collectionStore = null,
+        FakeTagStore? tagStore = null)
     {
         var logStore = new FakeOperationLogStore();
         return new LocalFontManagementService(
@@ -178,8 +450,9 @@ public sealed class ShellViewModelTests
             new FakeManagedFontFileStore(),
             new FakeSettingsStore(),
             new FakeMetadataStore(),
-            new FakeMutationStore(),
-            new FakeCollectionStore(collections),
+            mutationStore ?? new FakeMutationStore(),
+            tagStore ?? new FakeTagStore(),
+            collectionStore ?? new FakeCollectionStore(collections),
             new FakeInstallService(),
             new FontActivationCoordinator(platform, new FakeActivationStore(), logStore),
             logStore);
@@ -286,36 +559,123 @@ public sealed class ShellViewModelTests
 
     private sealed class FakeMutationStore : IFontLibraryMutationStore
     {
+        private readonly FakeTagStore? _tagStore;
+        private readonly FakeCollectionStore? _collectionStore;
+
+        public FakeMutationStore(FakeTagStore? tagStore = null, FakeCollectionStore? collectionStore = null)
+        {
+            _tagStore = tagStore;
+            _collectionStore = collectionStore;
+        }
+
+        public IReadOnlyList<string> Tags { get; private set; } = [];
+
+        public IReadOnlyList<string> Collections { get; private set; } = [];
+
         public Task SetFavoriteAsync(string familyName, bool isFavorite, CancellationToken cancellationToken) => Task.CompletedTask;
 
-        public Task SetTagsAsync(string familyName, IReadOnlyList<string> tags, CancellationToken cancellationToken) => Task.CompletedTask;
+        public Task SetTagsAsync(string familyName, IReadOnlyList<string> tags, CancellationToken cancellationToken)
+        {
+            Tags = tags;
+            _tagStore?.EnsureTags(tags);
+            return Task.CompletedTask;
+        }
 
-        public Task SetCollectionsAsync(string familyName, IReadOnlyList<string> collections, CancellationToken cancellationToken) => Task.CompletedTask;
+        public Task SetCollectionsAsync(string familyName, IReadOnlyList<string> collections, CancellationToken cancellationToken)
+        {
+            Collections = collections;
+            _collectionStore?.EnsureCollections(collections);
+            return Task.CompletedTask;
+        }
 
         public Task UpsertManagedFontAsync(ManagedFontRecord managedFont, FontFamilyRecord family, CancellationToken cancellationToken) => Task.CompletedTask;
     }
 
     private sealed class FakeCollectionStore : ICollectionStore
     {
-        private readonly IReadOnlyList<FontCollectionRecord> _collections;
-
         public FakeCollectionStore(IReadOnlyList<FontCollectionRecord> collections)
         {
-            _collections = collections;
+            Collections = collections.ToList();
+        }
+
+        public List<FontCollectionRecord> Collections { get; }
+
+        public void EnsureCollections(IEnumerable<string> names)
+        {
+            foreach (var name in names)
+            {
+                if (Collections.All(collection => !string.Equals(collection.Name, name, StringComparison.CurrentCultureIgnoreCase)))
+                {
+                    Collections.Add(new FontCollectionRecord(name, []));
+                }
+            }
         }
 
         public Task<IReadOnlyList<FontCollectionRecord>> GetCollectionsAsync(CancellationToken cancellationToken) =>
-            Task.FromResult(_collections);
+            Task.FromResult<IReadOnlyList<FontCollectionRecord>>(Collections);
 
-        public Task CreateCollectionAsync(string name, CancellationToken cancellationToken) => Task.CompletedTask;
+        public Task CreateCollectionAsync(string name, CancellationToken cancellationToken)
+        {
+            if (Collections.All(collection => !string.Equals(collection.Name, name, StringComparison.CurrentCultureIgnoreCase)))
+            {
+                Collections.Add(new FontCollectionRecord(name, []));
+            }
+
+            return Task.CompletedTask;
+        }
 
         public Task RenameCollectionAsync(string oldName, string newName, CancellationToken cancellationToken) => Task.CompletedTask;
 
-        public Task DeleteCollectionAsync(string name, CancellationToken cancellationToken) => Task.CompletedTask;
+        public Task DeleteCollectionAsync(string name, CancellationToken cancellationToken)
+        {
+            Collections.RemoveAll(collection => string.Equals(collection.Name, name, StringComparison.CurrentCultureIgnoreCase));
+            return Task.CompletedTask;
+        }
 
         public Task AddFontToCollectionAsync(string collectionName, string familyName, CancellationToken cancellationToken) => Task.CompletedTask;
 
         public Task RemoveFontFromCollectionAsync(string collectionName, string familyName, CancellationToken cancellationToken) => Task.CompletedTask;
+    }
+
+    private sealed class FakeTagStore : ITagStore
+    {
+        public FakeTagStore(IReadOnlyList<TagRecord>? tags = null)
+        {
+            Tags = tags?.ToList() ?? [new TagRecord("无衬线", 1), new TagRecord("UI", 0)];
+        }
+
+        public List<TagRecord> Tags { get; }
+
+        public List<string> DeletedTags { get; } = [];
+
+        public void EnsureTags(IEnumerable<string> names)
+        {
+            foreach (var name in names)
+            {
+                if (Tags.All(tag => !string.Equals(tag.Name, name, StringComparison.CurrentCultureIgnoreCase)))
+                {
+                    Tags.Add(new TagRecord(name, 0));
+                }
+            }
+        }
+
+        public Task<IReadOnlyList<TagRecord>> GetTagsAsync(CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<TagRecord>>(Tags);
+
+        public Task CreateTagAsync(string name, CancellationToken cancellationToken)
+        {
+            EnsureTags([name]);
+            return Task.CompletedTask;
+        }
+
+        public Task RenameTagAsync(string oldName, string newName, CancellationToken cancellationToken) => Task.CompletedTask;
+
+        public Task DeleteTagAsync(string name, CancellationToken cancellationToken)
+        {
+            DeletedTags.Add(name);
+            Tags.RemoveAll(tag => string.Equals(tag.Name, name, StringComparison.CurrentCultureIgnoreCase));
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class FakeInstallService : IFontInstallService

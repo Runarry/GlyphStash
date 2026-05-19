@@ -37,7 +37,29 @@ public sealed class FontLibraryServiceTests
         Assert.Equal("C:/GlyphStash/fonts/abc123-SourceName.ttf", font.PrimaryFilePath);
         Assert.Equal(FontSourceKind.GlyphStashManaged, font.SourceKind);
         Assert.Equal(FontActivationState.NotEnabled, font.ActivationState);
-        Assert.Same(fonts, store.SavedFonts);
+        Assert.Equal(store.SavedFonts, fonts);
+    }
+
+    [Fact]
+    public async Task RescanAsync_ReturnsPersistedMetadataAfterSavingIndex()
+    {
+        var scanned = CreateInstalledFont("Inter", "C:/Windows/Fonts/Inter.ttf", "hash-inter");
+        var persisted = scanned with
+        {
+            Tags = ["UI"],
+            Collections = ["官网改版"],
+            IsFavorite = true
+        };
+        var store = new FakeMetadataStore { SearchResultOverride = [persisted] };
+        var service = CreateService(installedFonts: [scanned], store: store);
+
+        var fonts = await service.RescanAsync(CancellationToken.None);
+
+        var font = Assert.Single(fonts);
+        Assert.Empty(Assert.Single(store.SavedFonts!).Tags);
+        Assert.Contains("UI", font.Tags);
+        Assert.Contains("官网改版", font.Collections);
+        Assert.True(font.IsFavorite);
     }
 
     [Fact]
@@ -169,6 +191,22 @@ public sealed class FontLibraryServiceTests
     }
 
     [Fact]
+    public async Task RescanAsync_AutomaticallyAddsOnlySafeCjkTag()
+    {
+        var service = CreateService(
+            installedFonts:
+            [
+                CreateInstalledFont("Noto Sans CJK SC", "C:/Windows/Fonts/NotoSansCJKsc.otf", "hash-cjk"),
+                CreateInstalledFont("Commercial Sans", "C:/Windows/Fonts/CommercialSans.otf", "hash-commercial")
+            ]);
+
+        var fonts = await service.RescanAsync(CancellationToken.None);
+
+        Assert.Contains("中文", fonts.Single(font => font.FamilyName == "Noto Sans CJK SC").Tags);
+        Assert.DoesNotContain("可商用", fonts.SelectMany(font => font.Tags));
+    }
+
+    [Fact]
     public async Task RescanAsync_KeepsPhysicalInstalledFontWhenManagedTemporaryFontHasSameFamily()
     {
         var service = CreateService(
@@ -263,6 +301,8 @@ public sealed class FontLibraryServiceTests
     {
         public IReadOnlyList<FontFamilyRecord>? SavedFonts { get; private set; }
 
+        public IReadOnlyList<FontFamilyRecord>? SearchResultOverride { get; init; }
+
         public Task InitializeAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
         public Task SaveFontIndexAsync(IReadOnlyList<FontFamilyRecord> fonts, CancellationToken cancellationToken)
@@ -272,7 +312,7 @@ public sealed class FontLibraryServiceTests
         }
 
         public Task<IReadOnlyList<FontFamilyRecord>> SearchAsync(FontSearchQuery query, CancellationToken cancellationToken) =>
-            Task.FromResult(SavedFonts ?? []);
+            Task.FromResult(SearchResultOverride ?? SavedFonts ?? []);
     }
 
     private sealed class FakeSettingsStore : IAppSettingsStore
