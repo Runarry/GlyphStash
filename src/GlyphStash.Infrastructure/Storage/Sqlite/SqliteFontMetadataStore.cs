@@ -167,17 +167,13 @@ public sealed class SqliteFontMetadataStore :
         await using var transaction = (SqliteTransaction)dbTransaction;
         var tableColumns = await ReadFontIndexColumnsAsync(connection, cancellationToken).ConfigureAwait(false);
         var preservedFamilies = await ReadPreservedFamilyMetadataAsync(connection, tableColumns, cancellationToken, transaction).ConfigureAwait(false);
-        var managedFamilies = await ReadManagedFamilyRecordsAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
-        var scannedFamilyNames = fonts.Select(font => font.FamilyName).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var mergedFonts = fonts
-            .Concat(managedFamilies.Where(font => !scannedFamilyNames.Contains(font.FamilyName)))
-            .ToList();
+        await PruneManagedFontRecordsAsync(connection, transaction, GetCurrentManagedFilePaths(fonts), cancellationToken).ConfigureAwait(false);
 
         await ExecuteAsync(connection, transaction, "DELETE FROM font_faces;", cancellationToken).ConfigureAwait(false);
         await ExecuteAsync(connection, transaction, "DELETE FROM font_families;", cancellationToken).ConfigureAwait(false);
         await ExecuteAsync(connection, transaction, "DELETE FROM font_files;", cancellationToken).ConfigureAwait(false);
 
-        foreach (var family in mergedFonts.OrderBy(font => font.FamilyName, StringComparer.CurrentCultureIgnoreCase))
+        foreach (var family in fonts.OrderBy(font => font.FamilyName, StringComparer.CurrentCultureIgnoreCase))
         {
             foreach (var file in family.Faces.Select(face => face.File).DistinctBy(file => file.Path))
             {
@@ -360,6 +356,53 @@ public sealed class SqliteFontMetadataStore :
 
         await UpsertSettingAsync(connection, "managed_font_directory", settings.ManagedFontDirectory, cancellationToken).ConfigureAwait(false);
         await UpsertSettingAsync(connection, "google_fonts_api_key", settings.GoogleFontsApiKey, cancellationToken).ConfigureAwait(false);
+    }
+
+    private static IReadOnlySet<string> GetCurrentManagedFilePaths(IReadOnlyList<FontFamilyRecord> fonts) =>
+        fonts
+            .SelectMany(font => font.Faces)
+            .Select(face => face.File)
+            .Where(file => file.SourceKind == FontSourceKind.GlyphStashManaged && !string.IsNullOrWhiteSpace(file.Path))
+            .Select(file => file.Path)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+    private static async Task PruneManagedFontRecordsAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        IReadOnlySet<string> currentManagedFilePaths,
+        CancellationToken cancellationToken)
+    {
+        var existsCommand = connection.CreateCommand();
+        existsCommand.Transaction = transaction;
+        existsCommand.CommandText = "SELECT name FROM sqlite_master WHERE type = 'table' AND name = $tableName;";
+        existsCommand.Parameters.AddWithValue("$tableName", ManagedFontsTable);
+        var exists = await existsCommand.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false) as string;
+        if (string.IsNullOrWhiteSpace(exists))
+        {
+            return;
+        }
+
+        var existingPaths = new List<string>();
+        var selectCommand = connection.CreateCommand();
+        selectCommand.Transaction = transaction;
+        selectCommand.CommandText = "SELECT managed_file_path FROM managed_fonts;";
+        await using (var reader = await selectCommand.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false))
+        {
+            while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+            {
+                existingPaths.Add(reader.GetString(0));
+            }
+        }
+
+        foreach (var stalePath in existingPaths.Where(path => !currentManagedFilePaths.Contains(path)))
+        {
+            await ExecuteAsync(
+                connection,
+                transaction,
+                "DELETE FROM managed_fonts WHERE managed_file_path = $path;",
+                [new("$path", stalePath)],
+                cancellationToken).ConfigureAwait(false);
+        }
     }
 
     public async Task SetFavoriteAsync(string familyName, bool isFavorite, CancellationToken cancellationToken)

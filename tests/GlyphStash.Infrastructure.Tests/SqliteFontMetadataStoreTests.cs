@@ -570,7 +570,7 @@ public sealed class SqliteFontMetadataStoreTests
     }
 
     [Fact]
-    public async Task SaveFontIndex_DoesNotRestoreTemporaryStateFromManagedFontRecord()
+    public async Task SaveFontIndex_PrunesManagedFontRecordsMissingFromCurrentScan()
     {
         var dbPath = Path.Combine(Path.GetTempPath(), "GlyphStash.Tests", $"{Guid.NewGuid():N}.db");
         var store = new SqliteFontMetadataStore(dbPath);
@@ -593,6 +593,36 @@ public sealed class SqliteFontMetadataStoreTests
             family,
             CancellationToken.None);
         await store.SaveFontIndexAsync([], CancellationToken.None);
+
+        var result = await store.SearchAsync(new FontSearchQuery(SearchText: "Brand Sans"), CancellationToken.None);
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task SaveFontIndex_DoesNotRestoreTemporaryStateFromCurrentManagedFontRecord()
+    {
+        var dbPath = Path.Combine(Path.GetTempPath(), "GlyphStash.Tests", $"{Guid.NewGuid():N}.db");
+        var store = new SqliteFontMetadataStore(dbPath);
+        var mutationStore = (IFontLibraryMutationStore)store;
+        var managedFile = new FontFileRecord("C:/GlyphStash/fonts/BrandSans.ttf", "TTF", "hash-brand", FontSourceKind.GlyphStashManaged, DateTimeOffset.UtcNow);
+        var family = new FontFamilyRecord(
+            "Brand Sans",
+            [new FontFaceRecord("Brand Sans", "Regular", "Brand Sans Regular", "BrandSans-Regular", 400, "Normal", "Normal", managedFile)],
+            FontSourceKind.GlyphStashManaged,
+            FontActivationState.NotEnabled,
+            LicenseStatus.Unknown,
+            "未知授权",
+            [],
+            [],
+            false);
+
+        await store.InitializeAsync(CancellationToken.None);
+        await mutationStore.UpsertManagedFontAsync(
+            new ManagedFontRecord("Brand Sans", managedFile.Path, managedFile.Format, managedFile.Sha256, null, FontActivationState.TemporarilyEnabled, DateTimeOffset.UtcNow, null),
+            family with { ActivationState = FontActivationState.TemporarilyEnabled },
+            CancellationToken.None);
+        await store.SaveFontIndexAsync([family], CancellationToken.None);
 
         var result = await store.SearchAsync(new FontSearchQuery(SearchText: "Brand Sans"), CancellationToken.None);
 
