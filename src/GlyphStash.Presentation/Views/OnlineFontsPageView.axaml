@@ -102,7 +102,7 @@
                     <DataTemplate>
                       <Grid ColumnDefinitions="Auto,*,1.4*" ColumnSpacing="10" Margin="0,0,0,8">
                         <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}" />
-                        <TextBlock Grid.Column="1" Text="{Binding Variant}" />
+                        <TextBlock Grid.Column="1" Text="{Binding DisplayLabel}" />
                         <TextBlock Grid.Column="2" Text="{Binding FileName}" Classes="muted" TextWrapping="Wrap" />
                       </Grid>
                     </DataTemplate>

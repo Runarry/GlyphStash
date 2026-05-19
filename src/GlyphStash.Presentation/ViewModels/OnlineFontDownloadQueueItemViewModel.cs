@@ -47,7 +47,9 @@ public sealed partial class OnlineFontDownloadQueueItemViewModel : ObservableObj
 
     public string FamilyName => Family.FamilyName;
 
-    public string StylesLabel => Styles.Count == 0 ? "未选择样式" : string.Join(", ", Styles.Select(style => style.Variant));
+    public string StylesLabel => Styles.Count == 0
+        ? "未选择样式"
+        : string.Join(", ", Styles.Select(style => RemoteFontStyleOptionViewModel.FormatVariantLabel(style.Variant)));
 
     public string StatusLabel => Status switch
     {

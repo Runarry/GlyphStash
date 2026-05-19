@@ -125,6 +125,16 @@ public sealed class ShellViewModelTests
     }
 
     [Fact]
+    public void RemoteFontStyleOption_FormatsGoogleFontsVariants()
+    {
+        Assert.Equal("Thin 100", RemoteFontStyleOptionViewModel.FormatVariantLabel("100"));
+        Assert.Equal("Regular 400", RemoteFontStyleOptionViewModel.FormatVariantLabel("regular"));
+        Assert.Equal("Bold 700", RemoteFontStyleOptionViewModel.FormatVariantLabel("700"));
+        Assert.Equal("Bold Italic 700", RemoteFontStyleOptionViewModel.FormatVariantLabel("700italic"));
+        Assert.Equal("Regular Italic 400", RemoteFontStyleOptionViewModel.FormatVariantLabel("italic"));
+    }
+
+    [Fact]
     public async Task ActivateSelectedCollection_SkipsInstalledAndAlreadyEnabledFonts()
     {
         var fonts = new[]
