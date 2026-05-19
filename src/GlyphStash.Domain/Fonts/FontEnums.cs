@@ -21,5 +21,6 @@ public enum LicenseStatus
 {
     Unknown = 0,
     Known = 1,
-    Missing = 2
+    Missing = 2,
+    ExternalLink = 3
 }

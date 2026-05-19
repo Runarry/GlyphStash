@@ -11,7 +11,7 @@
       <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
         <StackPanel>
           <TextBlock Text="设置" Classes="h1" />
-          <TextBlock Text="M2 只开放管理目录、临时字体兼容性矩阵和诊断日志。" Classes="muted" Margin="0,5,0,0" />
+          <TextBlock Text="管理目录、在线字体源、临时字体兼容性矩阵和诊断日志。" Classes="muted" Margin="0,5,0,0" />
         </StackPanel>
         <Button Grid.Column="1" Content="选择管理目录" Classes="primary" Command="{Binding ChooseManagedDirectoryCommand}" />
       </Grid>
@@ -45,6 +45,20 @@
             </StackPanel>
           </Border>
         </Grid>
+
+        <Border Classes="panel" Padding="{StaticResource GlyphPanelPadding}">
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+            <StackPanel Spacing="10">
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Text="在线字体源" Classes="h2" />
+                <Border Grid.Column="1" Classes="badge warn"><TextBlock Text="{Binding GoogleFontsApiKeyStatus}" FontSize="12" /></Border>
+              </Grid>
+              <TextBlock Text="v1 只接入 Google Fonts Developer API；license 以字体来源页面链接为准。" Classes="muted" TextWrapping="Wrap" />
+              <TextBox PasswordChar="*" PlaceholderText="Google Fonts API key" Text="{Binding GoogleFontsApiKeyText, Mode=TwoWay}" />
+            </StackPanel>
+            <Button Grid.Column="1" Content="保存 API key" Classes="primary" Command="{Binding SaveGoogleFontsApiKeyCommand}" VerticalAlignment="Bottom" />
+          </Grid>
+        </Border>
 
         <Border Classes="panel" Padding="{StaticResource GlyphPanelPadding}">
           <StackPanel Spacing="12">

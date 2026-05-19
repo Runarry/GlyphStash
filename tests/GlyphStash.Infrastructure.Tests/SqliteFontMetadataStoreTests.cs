@@ -433,6 +433,38 @@ public sealed class SqliteFontMetadataStoreTests
     }
 
     [Fact]
+    public async Task M3Stores_PersistGoogleFontsApiKeyAndDownloadRecords()
+    {
+        var dbPath = Path.Combine(Path.GetTempPath(), "GlyphStash.Tests", $"{Guid.NewGuid():N}.db");
+        var store = new SqliteFontMetadataStore(dbPath);
+        var settingsStore = (IAppSettingsStore)store;
+        var downloadStore = (IDownloadRecordStore)store;
+
+        await store.InitializeAsync(CancellationToken.None);
+        await settingsStore.SaveSettingsAsync(new UserFontSettings("C:/GlyphStash/fonts", "fixture-key"), CancellationToken.None);
+        await downloadStore.AddDownloadRecordAsync(
+            new DownloadRecord(
+                "google-fonts",
+                "Noto Sans",
+                "Noto Sans",
+                "regular",
+                "https://example.test/noto.ttf",
+                "https://fonts.google.com/specimen/Noto+Sans",
+                "请查看来源页面：https://fonts.google.com/specimen/Noto+Sans",
+                "C:/GlyphStash/fonts/NotoSans-Regular.ttf",
+                DateTimeOffset.UtcNow),
+            CancellationToken.None);
+
+        var settings = await settingsStore.GetSettingsAsync(CancellationToken.None);
+        var downloads = await downloadStore.GetRecentDownloadRecordsAsync(5, CancellationToken.None);
+
+        Assert.Equal("fixture-key", settings?.GoogleFontsApiKey);
+        Assert.Single(downloads);
+        Assert.Equal("Noto Sans", downloads[0].FamilyName);
+        Assert.Contains("fonts.google.com", downloads[0].LicenseText, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task TagStore_SeedsDefaultsAndCountsAssignedTags()
     {
         var dbPath = Path.Combine(Path.GetTempPath(), "GlyphStash.Tests", $"{Guid.NewGuid():N}.db");

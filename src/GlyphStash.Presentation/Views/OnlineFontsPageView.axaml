@@ -1,0 +1,118 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="GlyphStash.Presentation.Views.OnlineFontsPageView"
+             x:CompileBindings="False">
+  <Grid RowDefinitions="76,*,Auto">
+    <Border Grid.Row="0" Background="{DynamicResource GlyphSurfaceBrush}" BorderBrush="{DynamicResource GlyphBorderBrush}" BorderThickness="0,0,0,1" Padding="24,0">
+      <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+        <StackPanel>
+          <TextBlock Text="在线字体" Classes="h1" />
+          <TextBlock Text="官方字体源：Google Fonts Developer API。" Classes="muted" Margin="0,5,0,0" />
+        </StackPanel>
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
+          <Button Content="保存 API key" Command="{Binding SaveGoogleFontsApiKeyCommand}" />
+          <Button Content="搜索" Classes="primary" Command="{Binding SearchOnlineFontsCommand}" />
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <Grid Grid.Row="1" ColumnDefinitions="320,*,360" ColumnSpacing="16" Margin="{StaticResource GlyphPagePadding}">
+      <Border Grid.Column="0" Classes="panel" Padding="{StaticResource GlyphPanelPadding}">
+        <StackPanel Spacing="14">
+          <StackPanel Spacing="7">
+            <TextBlock Text="搜索 family 名称" Classes="caption" FontWeight="Bold" />
+            <TextBox Text="{Binding OnlineSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+          </StackPanel>
+          <Border Classes="card">
+            <StackPanel Spacing="8">
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Text="API key 状态" FontWeight="SemiBold" />
+                <Border Grid.Column="1" Classes="badge warn"><TextBlock Text="{Binding GoogleFontsApiKeyStatus}" FontSize="12" /></Border>
+              </Grid>
+              <TextBlock Text="未配置时不能实时搜索；请在设置页保存 Google Fonts API key。" Classes="muted" TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+          <TextBlock Text="{Binding OnlineStatus}" Classes="muted" TextWrapping="Wrap" />
+          <TextBlock Text="正在搜索..." Classes="muted" IsVisible="{Binding IsOnlineSearchBusy}" />
+          <ListBox Classes="font-list" ItemsSource="{Binding RemoteFonts}" SelectedItem="{Binding SelectedRemoteFont, Mode=TwoWay}" IsVisible="{Binding HasRemoteFonts}">
+            <ListBox.ItemTemplate>
+              <DataTemplate>
+                <Border Classes="card" Margin="0,0,0,10">
+                  <StackPanel Spacing="7">
+                    <TextBlock Text="{Binding FamilyName}" Classes="h2" />
+                    <TextBlock Text="{Binding CategoryLabel}" Classes="muted" />
+                    <WrapPanel>
+                      <Border Classes="badge ok" Margin="0,0,7,7"><TextBlock Text="Google Fonts" FontSize="12" /></Border>
+                      <Border Classes="badge" Margin="0,0,7,7"><TextBlock Text="{Binding LastModifiedLabel}" FontSize="12" /></Border>
+                    </WrapPanel>
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </StackPanel>
+      </Border>
+
+      <Border Grid.Column="1" Classes="panel" Padding="{StaticResource GlyphPanelPadding}">
+        <Grid>
+          <TextBlock Text="请选择一个在线字体结果。" Classes="muted" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding !HasSelectedRemoteFont}" />
+          <ScrollViewer IsVisible="{Binding HasSelectedRemoteFont}">
+            <StackPanel Spacing="14">
+              <StackPanel>
+                <TextBlock Text="{Binding SelectedRemoteFont.FamilyName}" Classes="h1" />
+                <TextBlock Text="{Binding SelectedRemoteFont.CategoryLabel}" Classes="muted" Margin="0,5,0,0" />
+              </StackPanel>
+              <TextBlock Text="{Binding SelectedRemoteFont.PreviewText}" FontSize="34" TextWrapping="Wrap" />
+              <TextBlock Text="下载不代表可商用，license 信息以来源页面为准，并会随下载记录保存。" Classes="muted" TextWrapping="Wrap" />
+              <Border Classes="card">
+                <ItemsControl ItemsSource="{Binding SelectedRemoteFont.Styles}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Grid ColumnDefinitions="Auto,*,1.4*" ColumnSpacing="10" Margin="0,0,0,8">
+                        <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}" />
+                        <TextBlock Grid.Column="1" Text="{Binding Variant}" />
+                        <TextBlock Grid.Column="2" Text="{Binding FileName}" Classes="muted" TextWrapping="Wrap" />
+                      </Grid>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </Border>
+              <TextBlock Text="下载后操作" Classes="h2" />
+              <UniformGrid Columns="2">
+                <CheckBox Content="收藏" IsChecked="{Binding DownloadFavorite, Mode=TwoWay}" />
+                <CheckBox Content="用户级安装" IsChecked="{Binding DownloadInstallForCurrentUser, Mode=TwoWay}" />
+                <CheckBox Content="当前会话临时启用" IsChecked="{Binding DownloadTemporarilyActivate, Mode=TwoWay}" />
+                <TextBox PlaceholderText="标签：开源, UI" Text="{Binding DownloadTagsText, Mode=TwoWay}" />
+                <TextBox PlaceholderText="集合：官网改版" Text="{Binding DownloadCollectionsText, Mode=TwoWay}" />
+              </UniformGrid>
+              <Button Content="下载所选样式" Classes="primary" HorizontalAlignment="Left" Command="{Binding DownloadSelectedOnlineFontCommand}" />
+            </StackPanel>
+          </ScrollViewer>
+        </Grid>
+      </Border>
+
+      <Border Grid.Column="2" Background="{DynamicResource GlyphSurfaceBrush}" BorderBrush="{DynamicResource GlyphBorderBrush}" BorderThickness="1" CornerRadius="{StaticResource GlyphRadiusLg}" Padding="18">
+        <StackPanel Spacing="14">
+          <TextBlock Text="远程字体详情" Classes="h1" />
+          <TextBlock Text="{Binding SelectedRemoteFont.FamilyName}" Classes="h2" />
+          <UniformGrid Columns="2">
+            <Border Classes="card" Margin="0,0,8,8"><StackPanel><TextBlock Text="Provider" Classes="caption" /><TextBlock Text="Google Fonts" /></StackPanel></Border>
+            <Border Classes="card" Margin="0,0,0,8"><StackPanel><TextBlock Text="支持子集" Classes="caption" /><TextBlock Text="{Binding SelectedRemoteFont.SubsetsLabel}" TextWrapping="Wrap" /></StackPanel></Border>
+            <Border Classes="card" Margin="0,0,8,8"><StackPanel><TextBlock Text="更新日期" Classes="caption" /><TextBlock Text="{Binding SelectedRemoteFont.LastModifiedLabel}" /></StackPanel></Border>
+            <Border Classes="card" Margin="0,0,0,8"><StackPanel><TextBlock Text="本地状态" Classes="caption" /><TextBlock Text="未下载" /></StackPanel></Border>
+          </UniformGrid>
+          <Border Classes="card">
+            <StackPanel>
+              <TextBlock Text="License 来源" Classes="caption" />
+              <TextBlock Text="{Binding SelectedRemoteFont.LicenseLabel}" TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+        </StackPanel>
+      </Border>
+    </Grid>
+
+    <Border Grid.Row="2" Background="{DynamicResource GlyphSurfaceBrush}" BorderBrush="{DynamicResource GlyphBorderBrush}" BorderThickness="0,1,0,0" Padding="24,9">
+      <TextBlock Text="只显示 v1 已接入的官方 API 来源；网络失败、限流和权限错误会保留诊断入口。" Classes="muted" />
+    </Border>
+  </Grid>
+</UserControl>

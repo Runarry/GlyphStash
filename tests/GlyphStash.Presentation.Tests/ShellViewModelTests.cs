@@ -73,9 +73,9 @@ public sealed class ShellViewModelTests
         }
 
         vm.SelectedNavigationItem = vm.NavigationItems.Single(item => item.Key == "online-fonts");
-        if (!vm.IsPlaceholderPage || vm.CurrentPageMilestone != "M3")
+        if (!vm.IsOnlineFontsPage || vm.CurrentPageMilestone != "M3")
         {
-            throw new InvalidOperationException("Expected post-M2 pages to use the milestone placeholder page.");
+            throw new InvalidOperationException("Expected online fonts page to be implemented in M3.");
         }
     }
 
@@ -412,6 +412,30 @@ public sealed class ShellViewModelTests
         Assert.False(vm.IsDeleteCollectionDialogOpen);
     }
 
+    [Fact]
+    public async Task SearchOnlineFonts_ShowsReadableProviderError()
+    {
+        var logStore = new FakeOperationLogStore();
+        var onlineService = new OnlineFontService(
+            new ThrowingFontSourceProvider("Google Fonts 请求无效：Invalid family query"),
+            new FakeSettingsStore("api-key"),
+            new FakeMutationStore(),
+            new FakeInstallService(),
+            new FontActivationCoordinator(new FakePlatformActivation(), new FakeActivationStore(), logStore),
+            logStore,
+            new FakeDownloadRecordStore());
+        var vm = new ShellViewModel(
+            new FontLibraryService(new FakeInventory([]), new FakeStore([])),
+            null,
+            NullUserFileDialogService.Instance,
+            onlineService);
+
+        await vm.SearchOnlineFontsCommand.ExecuteAsync(null);
+
+        Assert.Contains("请求无效", vm.OnlineStatus, StringComparison.Ordinal);
+        Assert.DoesNotContain("Response status code does not indicate success", vm.OnlineStatus, StringComparison.Ordinal);
+    }
+
     private static FontFamilyRecord CreateFont(
         string family,
         FontActivationState state = FontActivationState.Installed,
@@ -541,10 +565,43 @@ public sealed class ShellViewModelTests
 
     private sealed class FakeSettingsStore : IAppSettingsStore
     {
+        private readonly string _apiKey;
+
+        public FakeSettingsStore(string apiKey = "")
+        {
+            _apiKey = apiKey;
+        }
+
         public Task<UserFontSettings?> GetSettingsAsync(CancellationToken cancellationToken) =>
-            Task.FromResult<UserFontSettings?>(new UserFontSettings("C:/GlyphStash"));
+            Task.FromResult<UserFontSettings?>(new UserFontSettings("C:/GlyphStash", _apiKey));
 
         public Task SaveSettingsAsync(UserFontSettings settings, CancellationToken cancellationToken) => Task.CompletedTask;
+    }
+
+    private sealed class ThrowingFontSourceProvider : IFontSourceProvider
+    {
+        private readonly string _message;
+
+        public ThrowingFontSourceProvider(string message)
+        {
+            _message = message;
+        }
+
+        public string ProviderId => "google-fonts";
+
+        public Task<IReadOnlyList<RemoteFontFamily>> SearchAsync(RemoteFontSearchQuery query, CancellationToken cancellationToken) =>
+            throw new InvalidOperationException(_message);
+
+        public Task<RemoteFontDownloadResult> DownloadAsync(RemoteFontDownloadRequest request, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+    }
+
+    private sealed class FakeDownloadRecordStore : IDownloadRecordStore
+    {
+        public Task AddDownloadRecordAsync(DownloadRecord record, CancellationToken cancellationToken) => Task.CompletedTask;
+
+        public Task<IReadOnlyList<DownloadRecord>> GetRecentDownloadRecordsAsync(int limit, CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<DownloadRecord>>([]);
     }
 
     private sealed class FakeMetadataStore : IFontMetadataStore

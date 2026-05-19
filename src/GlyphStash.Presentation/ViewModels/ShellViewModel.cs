@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using GlyphStash.Application.Abstractions.Fonts;
 using GlyphStash.Application.Fonts;
 using GlyphStash.Domain.Fonts;
 using GlyphStash.Presentation.Services;
@@ -12,6 +13,9 @@ public sealed partial class ShellViewModel : ObservableObject
     private readonly FontLibraryService _fontLibraryService;
     private readonly LocalFontManagementService? _localManagementService;
     private readonly IUserFileDialogService _fileDialogService;
+    private readonly IUserClipboardService _clipboardService;
+    private readonly OnlineFontService? _onlineFontService;
+    private readonly IGlyphCatalogService? _glyphCatalogService;
     private readonly List<FontFamilyItemViewModel> _allFonts = [];
     private FontImportPreview? _currentImportPreview;
 
@@ -82,6 +86,9 @@ public sealed partial class ShellViewModel : ObservableObject
     private string _managedFontDirectory = "";
 
     [ObservableProperty]
+    private string _googleFontsApiKeyText = "";
+
+    [ObservableProperty]
     private string _importStatus = "请选择字体文件并选择 GlyphStash 管理目录。";
 
     [ObservableProperty]
@@ -111,6 +118,54 @@ public sealed partial class ShellViewModel : ObservableObject
     [ObservableProperty]
     private string _newCollectionName = "";
 
+    [ObservableProperty]
+    private string _onlineSearchText = "Noto Sans";
+
+    [ObservableProperty]
+    private RemoteFontFamilyItemViewModel? _selectedRemoteFont;
+
+    [ObservableProperty]
+    private string _onlineStatus = "请在设置页配置 Google Fonts API key 后搜索在线字体。";
+
+    [ObservableProperty]
+    private bool _isOnlineSearchBusy;
+
+    [ObservableProperty]
+    private bool _downloadInstallForCurrentUser;
+
+    [ObservableProperty]
+    private bool _downloadTemporarilyActivate;
+
+    [ObservableProperty]
+    private bool _downloadFavorite;
+
+    [ObservableProperty]
+    private string _downloadTagsText = "";
+
+    [ObservableProperty]
+    private string _downloadCollectionsText = "";
+
+    [ObservableProperty]
+    private bool _isGlyphBrowserOpen;
+
+    [ObservableProperty]
+    private string _glyphSearchText = "";
+
+    [ObservableProperty]
+    private string _selectedUnicodeBlock = "全部区块";
+
+    [ObservableProperty]
+    private GlyphItemViewModel? _selectedGlyph;
+
+    [ObservableProperty]
+    private string _glyphStatus = "请从字体详情进入字形浏览。";
+
+    [ObservableProperty]
+    private int _glyphPageNumber = 1;
+
+    [ObservableProperty]
+    private int _glyphTotalPages = 1;
+
     public ShellViewModel(FontLibraryService fontLibraryService)
         : this(fontLibraryService, null, NullUserFileDialogService.Instance)
     {
@@ -119,11 +174,17 @@ public sealed partial class ShellViewModel : ObservableObject
     public ShellViewModel(
         FontLibraryService fontLibraryService,
         LocalFontManagementService? localManagementService,
-        IUserFileDialogService fileDialogService)
+        IUserFileDialogService fileDialogService,
+        OnlineFontService? onlineFontService = null,
+        IGlyphCatalogService? glyphCatalogService = null,
+        IUserClipboardService? clipboardService = null)
     {
         _fontLibraryService = fontLibraryService;
         _localManagementService = localManagementService;
         _fileDialogService = fileDialogService;
+        _onlineFontService = onlineFontService;
+        _glyphCatalogService = glyphCatalogService;
+        _clipboardService = clipboardService ?? NullUserFileDialogService.Instance;
     }
 
     public ObservableCollection<FontFamilyItemViewModel> Fonts { get; } = [];
@@ -148,11 +209,17 @@ public sealed partial class ShellViewModel : ObservableObject
 
     public ObservableCollection<OperationLogItemViewModel> OperationLogs { get; } = [];
 
+    public ObservableCollection<RemoteFontFamilyItemViewModel> RemoteFonts { get; } = [];
+
+    public ObservableCollection<GlyphItemViewModel> Glyphs { get; } = [];
+
+    public ObservableCollection<string> UnicodeBlocks { get; } = ["全部区块"];
+
     public ObservableCollection<NavigationItemViewModel> NavigationItems { get; } =
     [
         new("font-library", "字体库", "字体库", "查看、搜索和预览本地字体。", "M2", true),
         new("collections", "集合", "集合", "项目字体包、批量临时启用、关闭与导出清单。", "M2", true),
-        new("online-fonts", "在线字体", "在线字体", "Google Fonts 搜索、授权信息与下载流程。", "M3", false),
+        new("online-fonts", "在线字体", "在线字体", "Google Fonts 搜索、授权信息与下载流程。", "M3", true),
         new("merge-tool", "合并工具", "合并工具", "指定 Unicode 范围合并字形并导出报告。", "M4", false),
         new("settings", "设置", "设置", "管理目录、临时字体兼容性矩阵和诊断日志。", "M2", true),
         new("component-demo", "组件演示", "组件演示", "检查通用组件、状态和主题资源。", "M1", true)
@@ -196,15 +263,19 @@ public sealed partial class ShellViewModel : ObservableObject
 
     public string FontCountLabel => _allFonts.Count == 0 ? "字体索引为空" : $"索引就绪：{_allFonts.Count:N0} 个字体族";
 
-    public bool IsFontLibraryPage => SelectedNavigationItem?.IsFontLibrary == true;
+    public bool IsFontLibraryPage => !IsGlyphBrowserOpen && SelectedNavigationItem?.IsFontLibrary == true;
 
-    public bool IsCollectionsPage => SelectedNavigationItem?.IsCollections == true;
+    public bool IsCollectionsPage => !IsGlyphBrowserOpen && SelectedNavigationItem?.IsCollections == true;
 
-    public bool IsSettingsPage => SelectedNavigationItem?.IsSettings == true;
+    public bool IsOnlineFontsPage => !IsGlyphBrowserOpen && SelectedNavigationItem?.Key == "online-fonts";
 
-    public bool IsComponentDemoPage => SelectedNavigationItem?.IsComponentDemo == true;
+    public bool IsSettingsPage => !IsGlyphBrowserOpen && SelectedNavigationItem?.IsSettings == true;
 
-    public bool IsPlaceholderPage => SelectedNavigationItem is { IsImplemented: false };
+    public bool IsComponentDemoPage => !IsGlyphBrowserOpen && SelectedNavigationItem?.IsComponentDemo == true;
+
+    public bool IsPlaceholderPage => !IsGlyphBrowserOpen && SelectedNavigationItem is { IsImplemented: false };
+
+    public bool IsGlyphBrowserPage => IsGlyphBrowserOpen;
 
     public string CurrentPageTitle => SelectedNavigationItem?.Title ?? "字体库";
 
@@ -219,6 +290,18 @@ public sealed partial class ShellViewModel : ObservableObject
     public bool HasManagedFontDirectory => !string.IsNullOrWhiteSpace(ManagedFontDirectory);
 
     public string ManagedDirectoryStatus => HasManagedFontDirectory ? "已选择，可写性将在导入时验证" : "导入前必须选择";
+
+    public string GoogleFontsApiKeyStatus => string.IsNullOrWhiteSpace(GoogleFontsApiKeyText) ? "未配置" : "已配置";
+
+    public bool HasRemoteFonts => RemoteFonts.Count > 0;
+
+    public bool HasSelectedRemoteFont => SelectedRemoteFont is not null;
+
+    public bool HasGlyphs => Glyphs.Count > 0;
+
+    public bool HasSelectedGlyph => SelectedGlyph is not null;
+
+    public string GlyphPageLabel => $"{GlyphPageNumber:N0} / {GlyphTotalPages:N0}";
 
     public bool HasImportPreview => ImportPreviewItems.Count > 0;
 
@@ -244,6 +327,7 @@ public sealed partial class ShellViewModel : ObservableObject
             {
                 var settings = await _localManagementService.GetSettingsAsync(CancellationToken.None);
                 ManagedFontDirectory = settings?.ManagedFontDirectory ?? "";
+                GoogleFontsApiKeyText = settings?.GoogleFontsApiKey ?? "";
             }
 
             var cached = await _fontLibraryService.LoadCachedFontsAsync(new FontSearchQuery(), CancellationToken.None);
@@ -314,6 +398,7 @@ public sealed partial class ShellViewModel : ObservableObject
         }
 
         SelectedNavigationItem = item;
+        IsGlyphBrowserOpen = false;
         StatusMessage = item.IsImplemented
             ? $"当前页面：{item.Title}"
             : $"{item.Title} 属于 {item.Milestone}，当前仅显示占位页";
@@ -396,6 +481,177 @@ public sealed partial class ShellViewModel : ObservableObject
         ImportStatus = "管理目录已选择，可以开始导入。";
         await ReloadOperationLogsAsync();
         ShowToast("管理目录已更新");
+    }
+
+    [RelayCommand]
+    private async Task SaveGoogleFontsApiKeyAsync()
+    {
+        if (_localManagementService is null)
+        {
+            return;
+        }
+
+        await _localManagementService.SaveGoogleFontsApiKeyAsync(GoogleFontsApiKeyText, CancellationToken.None);
+        OnlineStatus = string.IsNullOrWhiteSpace(GoogleFontsApiKeyText)
+            ? "Google Fonts API key 已清空。"
+            : "Google Fonts API key 已保存，可以搜索在线字体。";
+        await ReloadOperationLogsAsync();
+        ShowToast("Google Fonts API key 已保存");
+    }
+
+    [RelayCommand]
+    private async Task SearchOnlineFontsAsync()
+    {
+        if (_onlineFontService is null)
+        {
+            OnlineStatus = "在线字体服务未装配。";
+            return;
+        }
+
+        RemoteFonts.Clear();
+        SelectedRemoteFont = null;
+        IsOnlineSearchBusy = true;
+        OnlineStatus = "正在搜索 Google Fonts...";
+        try
+        {
+            var results = await _onlineFontService.SearchAsync(OnlineSearchText, CancellationToken.None);
+            foreach (var result in results)
+            {
+                RemoteFonts.Add(new RemoteFontFamilyItemViewModel(result));
+            }
+
+            SelectedRemoteFont = RemoteFonts.FirstOrDefault();
+            OnlineStatus = RemoteFonts.Count == 0 ? "没有找到匹配的在线字体。" : $"搜索完成：{RemoteFonts.Count:N0} 个字体族。";
+        }
+        catch (Exception ex)
+        {
+            OnlineStatus = BuildErrorMessage(ex);
+        }
+        finally
+        {
+            IsOnlineSearchBusy = false;
+            OnPropertyChanged(nameof(HasRemoteFonts));
+        }
+    }
+
+    [RelayCommand]
+    private async Task DownloadSelectedOnlineFontAsync()
+    {
+        if (_onlineFontService is null || SelectedRemoteFont is null)
+        {
+            OnlineStatus = "请先选择一个在线字体。";
+            return;
+        }
+
+        try
+        {
+            IsBusy = true;
+            OnlineStatus = $"正在下载 {SelectedRemoteFont.FamilyName}...";
+            var result = await _onlineFontService.DownloadAsync(
+                SelectedRemoteFont.ToRecord(),
+                SelectedRemoteFont.SelectedStyles,
+                new OnlineFontImportOptions(ParseNames(DownloadTagsText), ParseNames(DownloadCollectionsText), DownloadFavorite, DownloadInstallForCurrentUser, DownloadTemporarilyActivate),
+                CancellationToken.None);
+            var cached = await _fontLibraryService.LoadCachedFontsAsync(new FontSearchQuery(), CancellationToken.None);
+            ReplaceFonts(cached);
+            await ReloadM2StateAsync();
+            OnlineStatus = result.Message;
+            ShowToast($"已下载 {SelectedRemoteFont.FamilyName}");
+        }
+        catch (Exception ex)
+        {
+            OnlineStatus = BuildErrorMessage(ex);
+            ShowToast("下载失败，可重试");
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task OpenGlyphBrowserAsync()
+    {
+        if (SelectedFont is null)
+        {
+            ShowToast("请先选择一个字体");
+            return;
+        }
+
+        if (_glyphCatalogService is null)
+        {
+            GlyphStatus = "字形浏览服务未装配。";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(SelectedFont.FilePath) || !File.Exists(SelectedFont.FilePath))
+        {
+            GlyphStatus = "当前字体没有可读取的本地文件路径。";
+            ShowToast(GlyphStatus);
+            return;
+        }
+
+        IsGlyphBrowserOpen = true;
+        GlyphSearchText = "";
+        SelectedUnicodeBlock = "全部区块";
+        GlyphPageNumber = 1;
+        NotifyNavigationState();
+        await LoadGlyphsAsync();
+    }
+
+    [RelayCommand]
+    private void BackFromGlyphBrowser()
+    {
+        IsGlyphBrowserOpen = false;
+        NotifyNavigationState();
+    }
+
+    [RelayCommand]
+    private async Task NextGlyphPageAsync()
+    {
+        if (GlyphPageNumber >= GlyphTotalPages)
+        {
+            return;
+        }
+
+        GlyphPageNumber++;
+        await LoadGlyphsAsync();
+    }
+
+    [RelayCommand]
+    private async Task PreviousGlyphPageAsync()
+    {
+        if (GlyphPageNumber <= 1)
+        {
+            return;
+        }
+
+        GlyphPageNumber--;
+        await LoadGlyphsAsync();
+    }
+
+    [RelayCommand]
+    private async Task CopySelectedGlyphCharacterAsync()
+    {
+        if (SelectedGlyph is null)
+        {
+            return;
+        }
+
+        await _clipboardService.SetTextAsync(SelectedGlyph.Character, CancellationToken.None);
+        ShowToast($"已复制字符：{SelectedGlyph.Character}");
+    }
+
+    [RelayCommand]
+    private async Task CopySelectedGlyphUnicodeAsync()
+    {
+        if (SelectedGlyph is null)
+        {
+            return;
+        }
+
+        await _clipboardService.SetTextAsync(SelectedGlyph.UnicodeLabel, CancellationToken.None);
+        ShowToast($"已复制 Unicode：{SelectedGlyph.UnicodeLabel}");
     }
 
     [RelayCommand]
@@ -794,6 +1050,8 @@ public sealed partial class ShellViewModel : ObservableObject
         OnPropertyChanged(nameof(ManagedDirectoryStatus));
     }
 
+    partial void OnGoogleFontsApiKeyTextChanged(string value) => OnPropertyChanged(nameof(GoogleFontsApiKeyStatus));
+
     partial void OnSelectedFontChanged(FontFamilyItemViewModel? value)
     {
         OnPropertyChanged(nameof(HasSelectedFont));
@@ -828,15 +1086,45 @@ public sealed partial class ShellViewModel : ObservableObject
                 : $"{value.Title} 属于 {value.Milestone}，当前仅显示占位页";
         }
 
-        OnPropertyChanged(nameof(IsFontLibraryPage));
-        OnPropertyChanged(nameof(IsCollectionsPage));
-        OnPropertyChanged(nameof(IsSettingsPage));
-        OnPropertyChanged(nameof(IsComponentDemoPage));
-        OnPropertyChanged(nameof(IsPlaceholderPage));
+        NotifyNavigationState();
         OnPropertyChanged(nameof(CurrentPageTitle));
         OnPropertyChanged(nameof(CurrentPageDescription));
         OnPropertyChanged(nameof(CurrentPageMilestone));
     }
+
+    partial void OnIsGlyphBrowserOpenChanged(bool value) => NotifyNavigationState();
+
+    partial void OnSelectedRemoteFontChanged(RemoteFontFamilyItemViewModel? value)
+    {
+        OnPropertyChanged(nameof(HasSelectedRemoteFont));
+    }
+
+    partial void OnSelectedGlyphChanged(GlyphItemViewModel? value)
+    {
+        OnPropertyChanged(nameof(HasSelectedGlyph));
+    }
+
+    partial void OnGlyphSearchTextChanged(string value)
+    {
+        if (IsGlyphBrowserOpen)
+        {
+            GlyphPageNumber = 1;
+            _ = LoadGlyphsAsync();
+        }
+    }
+
+    partial void OnSelectedUnicodeBlockChanged(string value)
+    {
+        if (IsGlyphBrowserOpen)
+        {
+            GlyphPageNumber = 1;
+            _ = LoadGlyphsAsync();
+        }
+    }
+
+    partial void OnGlyphPageNumberChanged(int value) => OnPropertyChanged(nameof(GlyphPageLabel));
+
+    partial void OnGlyphTotalPagesChanged(int value) => OnPropertyChanged(nameof(GlyphPageLabel));
 
     partial void OnPreviewFontSizeChanged(double value)
     {
@@ -869,6 +1157,52 @@ public sealed partial class ShellViewModel : ObservableObject
         SelectedFont ??= Fonts.FirstOrDefault();
         RefreshCollectionFonts();
         OnPropertyChanged(nameof(FontCountLabel));
+    }
+
+    private async Task LoadGlyphsAsync()
+    {
+        if (_glyphCatalogService is null || SelectedFont is null || !IsGlyphBrowserOpen)
+        {
+            return;
+        }
+
+        try
+        {
+            GlyphStatus = "正在读取字体字形...";
+            var page = await _glyphCatalogService.GetGlyphsAsync(
+                new GlyphQuery(
+                    SelectedFont.FilePath,
+                    SelectedFont.Faces.FirstOrDefault()?.SubfamilyName ?? "Regular",
+                    GlyphSearchText,
+                    SelectedUnicodeBlock,
+                    false,
+                    GlyphPageNumber,
+                    120),
+                CancellationToken.None);
+
+            Glyphs.Clear();
+            foreach (var glyph in page.Glyphs)
+            {
+                Glyphs.Add(new GlyphItemViewModel(glyph));
+            }
+
+            ReplaceFilterOptions(UnicodeBlocks, page.Blocks.Select(block => block.Name).ToList());
+            if (!UnicodeBlocks.Contains(SelectedUnicodeBlock))
+            {
+                SelectedUnicodeBlock = "全部区块";
+            }
+
+            GlyphTotalPages = page.TotalPages;
+            SelectedGlyph = Glyphs.FirstOrDefault();
+            GlyphStatus = string.IsNullOrWhiteSpace(page.EmptyMessage)
+                ? $"当前显示 {Glyphs.Count:N0} / {page.TotalCount:N0} 个 Unicode 映射字形。"
+                : page.EmptyMessage;
+            OnPropertyChanged(nameof(HasGlyphs));
+        }
+        catch (Exception ex)
+        {
+            GlyphStatus = BuildErrorMessage(ex);
+        }
     }
 
     private void ApplyFilters()
@@ -1029,6 +1363,17 @@ public sealed partial class ShellViewModel : ObservableObject
         OnPropertyChanged(nameof(HasSelectedCollection));
         OnPropertyChanged(nameof(FontCountLabel));
         OnPropertyChanged(nameof(EmptyStateMessage));
+    }
+
+    private void NotifyNavigationState()
+    {
+        OnPropertyChanged(nameof(IsFontLibraryPage));
+        OnPropertyChanged(nameof(IsCollectionsPage));
+        OnPropertyChanged(nameof(IsOnlineFontsPage));
+        OnPropertyChanged(nameof(IsSettingsPage));
+        OnPropertyChanged(nameof(IsComponentDemoPage));
+        OnPropertyChanged(nameof(IsPlaceholderPage));
+        OnPropertyChanged(nameof(IsGlyphBrowserPage));
     }
 
     private static IReadOnlyList<string> ParseNames(string text) =>

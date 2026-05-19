@@ -55,4 +55,5 @@ public sealed record OperationLogEntry(
     bool Succeeded = true);
 
 public sealed record UserFontSettings(
-    string ManagedFontDirectory);
+    string ManagedFontDirectory,
+    string GoogleFontsApiKey = "");

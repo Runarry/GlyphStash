@@ -7,7 +7,12 @@ public interface IUserFileDialogService
     Task<string?> PickManagedDirectoryAsync(CancellationToken cancellationToken);
 }
 
-public sealed class NullUserFileDialogService : IUserFileDialogService
+public interface IUserClipboardService
+{
+    Task SetTextAsync(string text, CancellationToken cancellationToken);
+}
+
+public sealed class NullUserFileDialogService : IUserFileDialogService, IUserClipboardService
 {
     public static NullUserFileDialogService Instance { get; } = new();
 
@@ -20,4 +25,6 @@ public sealed class NullUserFileDialogService : IUserFileDialogService
 
     public Task<string?> PickManagedDirectoryAsync(CancellationToken cancellationToken) =>
         Task.FromResult<string?>(null);
+
+    public Task SetTextAsync(string text, CancellationToken cancellationToken) => Task.CompletedTask;
 }

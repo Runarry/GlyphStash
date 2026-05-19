@@ -11,7 +11,8 @@ public sealed class SqliteFontMetadataStore :
     ITagStore,
     ICollectionStore,
     IActivationStore,
-    IOperationLogStore
+    IOperationLogStore,
+    IDownloadRecordStore
 {
     private static readonly string[] DefaultTags = ["中文", "英文", "衬线", "无衬线", "等宽", "可商用", "开源", "品牌项目"];
 
@@ -28,6 +29,7 @@ public sealed class SqliteFontMetadataStore :
     private const string LegacyFontCollectionItemsTable = "font_collection_items";
     private const string ActivationRecordsTable = "activation_records";
     private const string OperationLogsTable = "operation_logs";
+    private const string DownloadRecordsTable = "download_records";
 
     private static readonly CanonicalTableSchema SchemaVersionSchema = new(
         SchemaVersionTable,
@@ -335,9 +337,19 @@ public sealed class SqliteFontMetadataStore :
         await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
 
         var command = connection.CreateCommand();
-        command.CommandText = "SELECT value FROM app_settings WHERE key = 'managed_font_directory';";
-        var value = await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false) as string;
-        return string.IsNullOrWhiteSpace(value) ? null : new UserFontSettings(value);
+        command.CommandText = "SELECT key, value FROM app_settings WHERE key IN ('managed_font_directory', 'google_fonts_api_key');";
+        var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+        while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+        {
+            values[reader.GetString(0)] = reader.GetString(1);
+        }
+
+        values.TryGetValue("managed_font_directory", out var directory);
+        values.TryGetValue("google_fonts_api_key", out var apiKey);
+        return string.IsNullOrWhiteSpace(directory) && string.IsNullOrWhiteSpace(apiKey)
+            ? null
+            : new UserFontSettings(directory ?? "", apiKey ?? "");
     }
 
     public async Task SaveSettingsAsync(UserFontSettings settings, CancellationToken cancellationToken)
@@ -346,14 +358,8 @@ public sealed class SqliteFontMetadataStore :
         await using var connection = CreateConnection();
         await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
 
-        var command = connection.CreateCommand();
-        command.CommandText = """
-            INSERT INTO app_settings(key, value, updated_at)
-            VALUES('managed_font_directory', $value, datetime('now'))
-            ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at;
-            """;
-        command.Parameters.AddWithValue("$value", settings.ManagedFontDirectory);
-        await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        await UpsertSettingAsync(connection, "managed_font_directory", settings.ManagedFontDirectory, cancellationToken).ConfigureAwait(false);
+        await UpsertSettingAsync(connection, "google_fonts_api_key", settings.GoogleFontsApiKey, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task SetFavoriteAsync(string familyName, bool isFavorite, CancellationToken cancellationToken)
@@ -835,6 +841,78 @@ public sealed class SqliteFontMetadataStore :
         return result;
     }
 
+    public async Task AddDownloadRecordAsync(DownloadRecord record, CancellationToken cancellationToken)
+    {
+        await InitializeAsync(cancellationToken).ConfigureAwait(false);
+        await using var connection = CreateConnection();
+        await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+        await ExecuteAsync(
+            connection,
+            null,
+            """
+            INSERT INTO download_records(provider_id, remote_id, family_name, variant, download_url, source_url, license_text, local_file_path, downloaded_at)
+            VALUES($providerId, $remoteId, $familyName, $variant, $downloadUrl, $sourceUrl, $licenseText, $localFilePath, $downloadedAt);
+            """,
+            [
+                new("$providerId", record.ProviderId),
+                new("$remoteId", record.RemoteId),
+                new("$familyName", record.FamilyName),
+                new("$variant", record.Variant),
+                new("$downloadUrl", record.DownloadUrl),
+                new("$sourceUrl", record.SourceUrl),
+                new("$licenseText", record.LicenseText),
+                new("$localFilePath", record.LocalFilePath),
+                new("$downloadedAt", record.DownloadedAt.ToString("O"))
+            ],
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<IReadOnlyList<DownloadRecord>> GetRecentDownloadRecordsAsync(int limit, CancellationToken cancellationToken)
+    {
+        await InitializeAsync(cancellationToken).ConfigureAwait(false);
+        await using var connection = CreateConnection();
+        await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+
+        var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT provider_id, remote_id, family_name, variant, download_url, source_url, license_text, local_file_path, downloaded_at
+            FROM download_records
+            ORDER BY id DESC
+            LIMIT $limit;
+            """;
+        command.Parameters.AddWithValue("$limit", Math.Max(1, limit));
+        var result = new List<DownloadRecord>();
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+        while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+        {
+            result.Add(new DownloadRecord(
+                reader.GetString(0),
+                reader.GetString(1),
+                reader.GetString(2),
+                reader.GetString(3),
+                reader.GetString(4),
+                reader.GetString(5),
+                reader.GetString(6),
+                reader.GetString(7),
+                DateTimeOffset.TryParse(reader.GetString(8), out var downloadedAt) ? downloadedAt : DateTimeOffset.UnixEpoch));
+        }
+
+        return result;
+    }
+
+    private static async Task UpsertSettingAsync(SqliteConnection connection, string key, string value, CancellationToken cancellationToken)
+    {
+        var command = connection.CreateCommand();
+        command.CommandText = """
+            INSERT INTO app_settings(key, value, updated_at)
+            VALUES($key, $value, datetime('now'))
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at;
+            """;
+        command.Parameters.AddWithValue("$key", key);
+        command.Parameters.AddWithValue("$value", value);
+        await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+    }
+
     private SqliteConnection CreateConnection() => new($"Data Source={_databasePath}");
 
     private static async Task EnsureSchemaVersionAsync(SqliteConnection connection, CancellationToken cancellationToken)
@@ -954,7 +1032,22 @@ public sealed class SqliteFontMetadataStore :
                 succeeded INTEGER NOT NULL
             );
             """,
-            "CREATE INDEX IF NOT EXISTS ix_operation_logs_timestamp ON operation_logs(timestamp DESC);"
+            """
+            CREATE TABLE IF NOT EXISTS download_records (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                provider_id TEXT NOT NULL,
+                remote_id TEXT NOT NULL,
+                family_name TEXT NOT NULL,
+                variant TEXT NOT NULL,
+                download_url TEXT NOT NULL,
+                source_url TEXT NOT NULL,
+                license_text TEXT NOT NULL,
+                local_file_path TEXT NOT NULL,
+                downloaded_at TEXT NOT NULL
+            );
+            """,
+            "CREATE INDEX IF NOT EXISTS ix_operation_logs_timestamp ON operation_logs(timestamp DESC);",
+            "CREATE INDEX IF NOT EXISTS ix_download_records_downloaded_at ON download_records(downloaded_at DESC);"
         };
 
         foreach (var statement in statements)
@@ -965,7 +1058,7 @@ public sealed class SqliteFontMetadataStore :
         await MigrateFamilyMetadataToM2TablesAsync(connection, cancellationToken).ConfigureAwait(false);
         await RemoveLegacyCollectionRelationshipTablesAsync(connection, cancellationToken).ConfigureAwait(false);
         await EnsureDefaultTagsAsync(connection, cancellationToken).ConfigureAwait(false);
-        await ExecuteAsync(connection, "INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES(2, datetime('now'));", cancellationToken).ConfigureAwait(false);
+        await ExecuteAsync(connection, "INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES(3, datetime('now'));", cancellationToken).ConfigureAwait(false);
     }
 
     private static async Task RebuildIncompatibleM2TablesAsync(SqliteConnection connection, CancellationToken cancellationToken)
@@ -979,7 +1072,8 @@ public sealed class SqliteFontMetadataStore :
             new CanonicalTableSchema(CollectionsTable, [new("name", "TEXT", true, 1), new("created_at", "TEXT", true, 0), new("updated_at", "TEXT", true, 0), new("last_exported_at", "TEXT", false, 0)], ""),
             new CanonicalTableSchema(CollectionFontsTable, [new("collection_name", "TEXT", true, 1), new("family_name", "TEXT", true, 2)], ""),
             new CanonicalTableSchema(ActivationRecordsTable, [new("font_path", "TEXT", true, 1), new("owner_key", "TEXT", true, 2), new("reference_count", "INTEGER", true, 0), new("platform_flags", "INTEGER", true, 0), new("activated_at", "TEXT", true, 0), new("last_known_state", "TEXT", true, 0), new("cleanup_status", "TEXT", true, 0), new("sha256", "TEXT", false, 0), new("scope", "TEXT", true, 0)], ""),
-            new CanonicalTableSchema(OperationLogsTable, [new("id", "INTEGER", false, 1), new("timestamp", "TEXT", true, 0), new("category", "TEXT", true, 0), new("action", "TEXT", true, 0), new("message", "TEXT", true, 0), new("target", "TEXT", false, 0), new("succeeded", "INTEGER", true, 0)], "")
+            new CanonicalTableSchema(OperationLogsTable, [new("id", "INTEGER", false, 1), new("timestamp", "TEXT", true, 0), new("category", "TEXT", true, 0), new("action", "TEXT", true, 0), new("message", "TEXT", true, 0), new("target", "TEXT", false, 0), new("succeeded", "INTEGER", true, 0)], ""),
+            new CanonicalTableSchema(DownloadRecordsTable, [new("id", "INTEGER", false, 1), new("provider_id", "TEXT", true, 0), new("remote_id", "TEXT", true, 0), new("family_name", "TEXT", true, 0), new("variant", "TEXT", true, 0), new("download_url", "TEXT", true, 0), new("source_url", "TEXT", true, 0), new("license_text", "TEXT", true, 0), new("local_file_path", "TEXT", true, 0), new("downloaded_at", "TEXT", true, 0)], "")
         };
 
         var dropNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -1018,6 +1112,7 @@ public sealed class SqliteFontMetadataStore :
                 CollectionFontsTable,
                 ActivationRecordsTable,
                 OperationLogsTable,
+                DownloadRecordsTable,
                 ManagedFontsTable,
                 TagsTable,
                 CollectionsTable,

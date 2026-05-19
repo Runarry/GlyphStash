@@ -63,3 +63,10 @@ public interface IOperationLogStore
 
     Task<IReadOnlyList<OperationLogEntry>> GetRecentOperationsAsync(int limit, CancellationToken cancellationToken);
 }
+
+public interface IDownloadRecordStore
+{
+    Task AddDownloadRecordAsync(DownloadRecord record, CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<DownloadRecord>> GetRecentDownloadRecordsAsync(int limit, CancellationToken cancellationToken);
+}

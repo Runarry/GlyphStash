@@ -54,8 +54,16 @@ public sealed class LocalFontManagementService
             throw new InvalidOperationException("需要先选择 GlyphStash 管理目录。");
         }
 
-        await _settingsStore.SaveSettingsAsync(new UserFontSettings(directory), cancellationToken).ConfigureAwait(false);
+        var existing = await _settingsStore.GetSettingsAsync(cancellationToken).ConfigureAwait(false);
+        await _settingsStore.SaveSettingsAsync(new UserFontSettings(directory, existing?.GoogleFontsApiKey ?? ""), cancellationToken).ConfigureAwait(false);
         await LogAsync("settings", "managed-directory", $"管理目录已更新：{directory}", directory, true, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task SaveGoogleFontsApiKeyAsync(string apiKey, CancellationToken cancellationToken)
+    {
+        var existing = await _settingsStore.GetSettingsAsync(cancellationToken).ConfigureAwait(false);
+        await _settingsStore.SaveSettingsAsync(new UserFontSettings(existing?.ManagedFontDirectory ?? "", apiKey.Trim()), cancellationToken).ConfigureAwait(false);
+        await LogAsync("settings", "google-fonts-api-key", "Google Fonts API key 已更新。", "google-fonts", true, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<FontImportPreview> PreviewImportAsync(IReadOnlyList<string> sourcePaths, CancellationToken cancellationToken)

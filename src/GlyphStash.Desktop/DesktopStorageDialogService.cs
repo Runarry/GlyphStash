@@ -1,10 +1,11 @@
 using Avalonia.Controls;
+using Avalonia.Input.Platform;
 using Avalonia.Platform.Storage;
 using GlyphStash.Presentation.Services;
 
 namespace GlyphStash.Desktop;
 
-public sealed class DesktopStorageDialogService : IUserFileDialogService
+public sealed class DesktopStorageDialogService : IUserFileDialogService, IUserClipboardService
 {
     public TopLevel? TopLevel { get; set; }
 
@@ -49,5 +50,15 @@ public sealed class DesktopStorageDialogService : IUserFileDialogService
         });
 
         return folders.FirstOrDefault()?.TryGetLocalPath();
+    }
+
+    public async Task SetTextAsync(string text, CancellationToken cancellationToken)
+    {
+        if (TopLevel?.Clipboard is null)
+        {
+            return;
+        }
+
+        await TopLevel.Clipboard.SetTextAsync(text);
     }
 }

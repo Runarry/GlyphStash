@@ -32,7 +32,7 @@
             <Button Content="{Binding SelectedFont.TemporaryActivationLabel}" Classes="primary sm" Command="{Binding ToggleTemporaryActivationCommand}" CommandParameter="{Binding SelectedFont}" IsEnabled="{Binding SelectedFont.CanTemporarilyActivate}" ToolTip.Tip="{Binding SelectedFont.TemporaryActivationDisabledReason}" Margin="0,0,8,8" />
             <Button Content="{Binding SelectedFont.InstallLabel}" Classes="sm" Command="{Binding InstallSelectedFontCommand}" Margin="0,0,8,8" />
             <Button Content="卸载管理字体" Classes="danger sm" Command="{Binding OpenUninstallDialogCommand}" Margin="0,0,8,8" />
-            <Button Content="查看字形" Classes="sm" IsEnabled="False" Margin="0,0,8,8" />
+            <Button Content="查看字形" Classes="sm" Command="{Binding OpenGlyphBrowserCommand}" Margin="0,0,8,8" />
           </WrapPanel>
           <TextBlock Text="临时启用属于当前用户会话，退出应用后会释放；外部应用可见性取决于 Windows 和目标应用刷新行为。" Classes="muted" TextWrapping="Wrap" />
         </StackPanel>

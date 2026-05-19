@@ -1,0 +1,98 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="GlyphStash.Presentation.Views.GlyphBrowserPageView"
+             x:CompileBindings="False">
+  <Grid RowDefinitions="76,*,Auto">
+    <Border Grid.Row="0" Background="{DynamicResource GlyphSurfaceBrush}" BorderBrush="{DynamicResource GlyphBorderBrush}" BorderThickness="0,0,0,1" Padding="24,0">
+      <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+        <StackPanel>
+          <TextBlock Text="{Binding SelectedFont.FamilyName, StringFormat='字形浏览：{0}'}" Classes="h1" />
+          <TextBlock Text="查看 Unicode 映射字符，搜索字符或码位，并复制字形信息。" Classes="muted" Margin="0,5,0,0" />
+        </StackPanel>
+        <Button Grid.Column="1" Content="返回字体详情" Command="{Binding BackFromGlyphBrowserCommand}" />
+      </Grid>
+    </Border>
+
+    <Grid Grid.Row="1" ColumnDefinitions="260,*,340" ColumnSpacing="16" Margin="{StaticResource GlyphPagePadding}">
+      <Border Grid.Column="0" Classes="panel" Padding="{StaticResource GlyphPanelPadding}">
+        <StackPanel Spacing="14">
+          <StackPanel Spacing="7">
+            <TextBlock Text="搜索字符 / Unicode / 输入文本" Classes="caption" FontWeight="Bold" />
+            <TextBox Text="{Binding GlyphSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="你、U+4F60" />
+          </StackPanel>
+          <StackPanel Spacing="7">
+            <TextBlock Text="Unicode 区块" Classes="caption" FontWeight="Bold" />
+            <ComboBox ItemsSource="{Binding UnicodeBlocks}" SelectedItem="{Binding SelectedUnicodeBlock}" HorizontalAlignment="Stretch" />
+          </StackPanel>
+          <StackPanel Spacing="7">
+            <TextBlock Text="映射状态" Classes="caption" FontWeight="Bold" />
+            <ComboBox SelectedIndex="0" HorizontalAlignment="Stretch">
+              <ComboBoxItem>Unicode 映射字形</ComboBoxItem>
+              <ComboBoxItem IsEnabled="False">未映射字形（后续）</ComboBoxItem>
+            </ComboBox>
+          </StackPanel>
+          <Border Classes="card">
+            <StackPanel Spacing="8">
+              <TextBlock Text="分页" Classes="h2" />
+              <TextBlock Text="{Binding GlyphPageLabel}" FontWeight="SemiBold" />
+              <TextBlock Text="大型 CJK 字体按页渲染，避免一次性绘制全部字形。" Classes="muted" TextWrapping="Wrap" />
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Content="上一页" Classes="sm" Command="{Binding PreviousGlyphPageCommand}" />
+                <Button Content="下一页" Classes="sm" Command="{Binding NextGlyphPageCommand}" />
+              </StackPanel>
+            </StackPanel>
+          </Border>
+          <TextBlock Text="{Binding GlyphStatus}" Classes="muted" TextWrapping="Wrap" />
+        </StackPanel>
+      </Border>
+
+      <Border Grid.Column="1" Classes="panel" Padding="{StaticResource GlyphPanelPadding}">
+        <Grid RowDefinitions="Auto,*">
+          <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,12">
+            <TextBlock Text="字形网格" Classes="h2" />
+            <Border Grid.Column="1" Classes="badge"><TextBlock Text="固定单元 78px" FontSize="12" /></Border>
+          </Grid>
+          <TextBlock Grid.Row="1" Text="{Binding GlyphStatus}" Classes="muted" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding !HasGlyphs}" />
+          <ListBox Grid.Row="1" Classes="font-list" ItemsSource="{Binding Glyphs}" SelectedItem="{Binding SelectedGlyph, Mode=TwoWay}" IsVisible="{Binding HasGlyphs}">
+            <ListBox.ItemsPanel>
+              <ItemsPanelTemplate>
+                <WrapPanel />
+              </ItemsPanelTemplate>
+            </ListBox.ItemsPanel>
+            <ListBox.ItemTemplate>
+              <DataTemplate>
+                <Border Width="78" Height="82" Classes="card" Margin="0,0,8,8" Padding="5">
+                  <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
+                    <TextBlock Text="{Binding Character}" FontSize="28" HorizontalAlignment="Center" />
+                    <TextBlock Text="{Binding UnicodeLabel}" Classes="caption" HorizontalAlignment="Center" />
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </Grid>
+      </Border>
+
+      <Border Grid.Column="2" Classes="panel" Padding="18">
+        <StackPanel Spacing="14">
+          <TextBlock Text="选中字形" Classes="h1" />
+          <TextBlock Text="{Binding SelectedGlyph.Character}" FontSize="76" HorizontalAlignment="Center" />
+          <UniformGrid Columns="2">
+            <Border Classes="card" Margin="0,0,8,8"><StackPanel><TextBlock Text="Unicode" Classes="caption" /><TextBlock Text="{Binding SelectedGlyph.UnicodeLabel}" /></StackPanel></Border>
+            <Border Classes="card" Margin="0,0,0,8"><StackPanel><TextBlock Text="Glyph name" Classes="caption" /><TextBlock Text="{Binding SelectedGlyph.GlyphName}" TextWrapping="Wrap" /></StackPanel></Border>
+            <Border Classes="card" Margin="0,0,8,0"><StackPanel><TextBlock Text="Glyph ID" Classes="caption" /><TextBlock Text="{Binding SelectedGlyph.GlyphIdLabel}" /></StackPanel></Border>
+            <Border Classes="card"><StackPanel><TextBlock Text="所属样式" Classes="caption" /><TextBlock Text="{Binding SelectedGlyph.FaceName}" /></StackPanel></Border>
+          </UniformGrid>
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <Button Content="复制字符" Classes="primary" Command="{Binding CopySelectedGlyphCharacterCommand}" />
+            <Button Content="复制 Unicode" Command="{Binding CopySelectedGlyphUnicodeCommand}" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+    </Grid>
+
+    <Border Grid.Row="2" Background="{DynamicResource GlyphSurfaceBrush}" BorderBrush="{DynamicResource GlyphBorderBrush}" BorderThickness="0,1,0,0" Padding="24,9">
+      <TextBlock Text="缺字搜索会显示当前字体不包含该字符/码位；未映射 glyph 入口已预留。" Classes="muted" />
+    </Border>
+  </Grid>
+</UserControl>

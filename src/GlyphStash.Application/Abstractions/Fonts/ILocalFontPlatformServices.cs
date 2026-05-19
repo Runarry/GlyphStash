@@ -30,3 +30,17 @@ public interface IManagedFontFileStore
 
     Task<IReadOnlyList<string>> EnumerateManagedFontFilesAsync(UserFontSettings settings, CancellationToken cancellationToken);
 }
+
+public interface IGlyphCatalogService
+{
+    Task<GlyphPage> GetGlyphsAsync(GlyphQuery query, CancellationToken cancellationToken);
+}
+
+public interface IFontSourceProvider
+{
+    string ProviderId { get; }
+
+    Task<IReadOnlyList<RemoteFontFamily>> SearchAsync(RemoteFontSearchQuery query, CancellationToken cancellationToken);
+
+    Task<RemoteFontDownloadResult> DownloadAsync(RemoteFontDownloadRequest request, CancellationToken cancellationToken);
+}
