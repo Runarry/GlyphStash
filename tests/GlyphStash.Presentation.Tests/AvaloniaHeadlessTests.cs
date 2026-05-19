@@ -39,6 +39,27 @@ public sealed class AvaloniaHeadlessTests
         }
     }
 
+    [Fact]
+    public void ShellView_LoadsOnlineFontsPage()
+    {
+        EnsureAvalonia();
+        var vm = new ShellViewModel(new FontLibraryService(new FakeInventory(), new FakeStore()));
+        vm.SelectedNavigationItem = vm.NavigationItems.Single(item => item.Key == "online-fonts");
+        var window = new Window
+        {
+            Width = 1360,
+            Height = 860,
+            Content = new ShellView { DataContext = vm }
+        };
+
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+        AvaloniaHeadlessPlatform.ForceRenderTimerTick(3);
+
+        Assert.True(vm.IsOnlineFontsPage);
+        Assert.IsType<ShellView>(window.Content);
+    }
+
     private static void EnsureAvalonia()
     {
         if (s_initialized)

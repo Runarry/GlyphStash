@@ -32,7 +32,13 @@ public sealed class OnlineFontService
         _downloadRecordStore = downloadRecordStore;
     }
 
-    public async Task<IReadOnlyList<RemoteFontFamily>> SearchAsync(string searchText, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<RemoteFontFamily>> SearchAsync(
+        string searchText,
+        string subset,
+        string category,
+        IReadOnlyList<string> capabilities,
+        string sort,
+        CancellationToken cancellationToken)
     {
         var settings = await RequireSettingsAsync(cancellationToken).ConfigureAwait(false);
         if (string.IsNullOrWhiteSpace(settings.GoogleFontsApiKey))
@@ -40,8 +46,11 @@ public sealed class OnlineFontService
             throw new InvalidOperationException("需要先在设置页配置 Google Fonts API key。");
         }
 
-        return await _provider.SearchAsync(new RemoteFontSearchQuery(searchText, settings.GoogleFontsApiKey), cancellationToken).ConfigureAwait(false);
+        return await _provider.SearchAsync(new RemoteFontSearchQuery(searchText, settings.GoogleFontsApiKey, subset, category, capabilities, sort), cancellationToken).ConfigureAwait(false);
     }
+
+    public Task<IReadOnlyList<RemoteFontFamily>> SearchAsync(string searchText, CancellationToken cancellationToken) =>
+        SearchAsync(searchText, "", "", [], "alpha", cancellationToken);
 
     public async Task<RemoteFontDownloadResult> DownloadAsync(
         RemoteFontFamily family,

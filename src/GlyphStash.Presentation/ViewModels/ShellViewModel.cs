@@ -122,6 +122,21 @@ public sealed partial class ShellViewModel : ObservableObject
     private string _onlineSearchText = "Noto Sans";
 
     [ObservableProperty]
+    private string _selectedOnlineSubset = "全部子集";
+
+    [ObservableProperty]
+    private string _selectedOnlineCategory = "全部分类";
+
+    [ObservableProperty]
+    private string _selectedOnlineSort = "alpha";
+
+    [ObservableProperty]
+    private bool _onlineCapabilityVf;
+
+    [ObservableProperty]
+    private bool _onlineCapabilityWoff2;
+
+    [ObservableProperty]
     private RemoteFontFamilyItemViewModel? _selectedRemoteFont;
 
     [ObservableProperty]
@@ -243,6 +258,45 @@ public sealed partial class ShellViewModel : ObservableObject
     ];
 
     public IReadOnlyList<string> PreviewModes { get; } = ["单行", "段落", "字符集"];
+
+    public IReadOnlyList<string> OnlineSubsetOptions { get; } =
+    [
+        "全部子集",
+        "latin",
+        "latin-ext",
+        "cyrillic",
+        "cyrillic-ext",
+        "greek",
+        "greek-ext",
+        "vietnamese",
+        "arabic",
+        "hebrew",
+        "devanagari",
+        "thai",
+        "korean",
+        "japanese",
+        "chinese-simplified",
+        "chinese-traditional"
+    ];
+
+    public IReadOnlyList<string> OnlineCategoryOptions { get; } =
+    [
+        "全部分类",
+        "serif",
+        "sans-serif",
+        "monospace",
+        "display",
+        "handwriting"
+    ];
+
+    public IReadOnlyList<string> OnlineSortOptions { get; } =
+    [
+        "alpha",
+        "date",
+        "popularity",
+        "style",
+        "trending"
+    ];
 
     public IReadOnlyList<string> CompatibilityMatrix { get; } =
     [
@@ -514,7 +568,13 @@ public sealed partial class ShellViewModel : ObservableObject
         OnlineStatus = "正在搜索 Google Fonts...";
         try
         {
-            var results = await _onlineFontService.SearchAsync(OnlineSearchText, CancellationToken.None);
+            var results = await _onlineFontService.SearchAsync(
+                OnlineSearchText,
+                NormalizeOnlineFilter(SelectedOnlineSubset, "全部子集"),
+                NormalizeOnlineFilter(SelectedOnlineCategory, "全部分类"),
+                BuildOnlineCapabilities(),
+                SelectedOnlineSort,
+                CancellationToken.None);
             foreach (var result in results)
             {
                 RemoteFonts.Add(new RemoteFontFamilyItemViewModel(result));
@@ -1390,6 +1450,25 @@ public sealed partial class ShellViewModel : ObservableObject
 
     private static string NormalizeFilter(string? value, string fallback) =>
         string.IsNullOrWhiteSpace(value) ? fallback : value;
+
+    private static string NormalizeOnlineFilter(string value, string allValue) =>
+        string.Equals(value, allValue, StringComparison.CurrentCultureIgnoreCase) ? "" : value;
+
+    private IReadOnlyList<string> BuildOnlineCapabilities()
+    {
+        var capabilities = new List<string>();
+        if (OnlineCapabilityVf)
+        {
+            capabilities.Add("VF");
+        }
+
+        if (OnlineCapabilityWoff2)
+        {
+            capabilities.Add("WOFF2");
+        }
+
+        return capabilities;
+    }
 
     private static void ReplaceFilterOptions(ObservableCollection<string> target, IReadOnlyList<string> values)
     {

@@ -91,6 +91,32 @@ public sealed class GoogleFontsProviderTests
     }
 
     [Fact]
+    public async Task SearchAsync_IncludesSelectedGoogleFontsQueryOptions()
+    {
+        Uri? requestUri = null;
+        var provider = new GoogleFontsProvider(new HttpClient(new StubHttpMessageHandler(request =>
+        {
+            requestUri = request.RequestUri;
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("""{ "items": [] }""")
+            };
+        })));
+
+        await provider.SearchAsync(
+            new RemoteFontSearchQuery("Noto", "key", "latin-ext", "sans-serif", ["VF", "WOFF2"], "popularity"),
+            CancellationToken.None);
+
+        Assert.NotNull(requestUri);
+        Assert.Contains("sort=popularity", requestUri!.Query, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("subset=latin-ext", requestUri.Query, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("category=sans-serif", requestUri.Query, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("capability=VF", requestUri.Query, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("capability=WOFF2", requestUri.Query, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("family=", requestUri.Query, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task SearchAsync_EmptySearchReturnsFirstFiftyFamilies()
     {
         var items = string.Join(

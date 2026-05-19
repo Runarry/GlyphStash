@@ -436,6 +436,43 @@ public sealed class ShellViewModelTests
         Assert.DoesNotContain("Response status code does not indicate success", vm.OnlineStatus, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task SearchOnlineFonts_ForwardsSelectedFiltersToProvider()
+    {
+        var logStore = new FakeOperationLogStore();
+        var provider = new CapturingFontSourceProvider();
+        var onlineService = new OnlineFontService(
+            provider,
+            new FakeSettingsStore("api-key"),
+            new FakeMutationStore(),
+            new FakeInstallService(),
+            new FontActivationCoordinator(new FakePlatformActivation(), new FakeActivationStore(), logStore),
+            logStore,
+            new FakeDownloadRecordStore());
+        var vm = new ShellViewModel(
+            new FontLibraryService(new FakeInventory([]), new FakeStore([])),
+            null,
+            NullUserFileDialogService.Instance,
+            onlineService)
+        {
+            OnlineSearchText = "Noto",
+            SelectedOnlineSubset = "latin-ext",
+            SelectedOnlineCategory = "sans-serif",
+            SelectedOnlineSort = "popularity",
+            OnlineCapabilityVf = true,
+            OnlineCapabilityWoff2 = true
+        };
+
+        await vm.SearchOnlineFontsCommand.ExecuteAsync(null);
+
+        Assert.NotNull(provider.LastQuery);
+        Assert.Equal("Noto", provider.LastQuery!.SearchText);
+        Assert.Equal("latin-ext", provider.LastQuery.Subset);
+        Assert.Equal("sans-serif", provider.LastQuery.Category);
+        Assert.Equal("popularity", provider.LastQuery.Sort);
+        Assert.Equal(["VF", "WOFF2"], provider.LastQuery.Capabilities);
+    }
+
     private static FontFamilyRecord CreateFont(
         string family,
         FontActivationState state = FontActivationState.Installed,
@@ -591,6 +628,22 @@ public sealed class ShellViewModelTests
 
         public Task<IReadOnlyList<RemoteFontFamily>> SearchAsync(RemoteFontSearchQuery query, CancellationToken cancellationToken) =>
             throw new InvalidOperationException(_message);
+
+        public Task<RemoteFontDownloadResult> DownloadAsync(RemoteFontDownloadRequest request, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+    }
+
+    private sealed class CapturingFontSourceProvider : IFontSourceProvider
+    {
+        public RemoteFontSearchQuery? LastQuery { get; private set; }
+
+        public string ProviderId => "google-fonts";
+
+        public Task<IReadOnlyList<RemoteFontFamily>> SearchAsync(RemoteFontSearchQuery query, CancellationToken cancellationToken)
+        {
+            LastQuery = query;
+            return Task.FromResult<IReadOnlyList<RemoteFontFamily>>([]);
+        }
 
         public Task<RemoteFontDownloadResult> DownloadAsync(RemoteFontDownloadRequest request, CancellationToken cancellationToken) =>
             throw new NotSupportedException();

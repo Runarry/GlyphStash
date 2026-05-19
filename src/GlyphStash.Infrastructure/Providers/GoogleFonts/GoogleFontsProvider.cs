@@ -25,7 +25,7 @@ public sealed class GoogleFontsProvider : IFontSourceProvider
             throw new InvalidOperationException("需要先在设置页配置 Google Fonts API key。");
         }
 
-        var url = BuildListUrl(query.ApiKey);
+        var url = BuildListUrl(query);
 
         using var response = await _httpClient.GetAsync(url, cancellationToken).ConfigureAwait(false);
         await EnsureGoogleFontsSuccessAsync(response, "Google Fonts 请求", cancellationToken).ConfigureAwait(false);
@@ -128,8 +128,34 @@ public sealed class GoogleFontsProvider : IFontSourceProvider
     private static string BuildSourceUrl(string family) =>
         $"https://fonts.google.com/specimen/{Uri.EscapeDataString(family).Replace("%20", "+", StringComparison.Ordinal)}";
 
-    private static string BuildListUrl(string apiKey) =>
-        $"{Endpoint}?key={Uri.EscapeDataString(apiKey)}&sort=alpha";
+    private static string BuildListUrl(RemoteFontSearchQuery query)
+    {
+        var parameters = new List<string>
+        {
+            $"key={Uri.EscapeDataString(query.ApiKey)}",
+            $"sort={Uri.EscapeDataString(NormalizeSort(query.Sort))}"
+        };
+
+        if (!string.IsNullOrWhiteSpace(query.Subset))
+        {
+            parameters.Add($"subset={Uri.EscapeDataString(query.Subset.Trim())}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.Category))
+        {
+            parameters.Add($"category={Uri.EscapeDataString(query.Category.Trim())}");
+        }
+
+        foreach (var capability in query.Capabilities?.Where(value => !string.IsNullOrWhiteSpace(value)).Distinct(StringComparer.OrdinalIgnoreCase) ?? [])
+        {
+            parameters.Add($"capability={Uri.EscapeDataString(capability.Trim())}");
+        }
+
+        return $"{Endpoint}?{string.Join('&', parameters)}";
+    }
+
+    private static string NormalizeSort(string sort) =>
+        string.IsNullOrWhiteSpace(sort) ? "alpha" : sort.Trim();
 
     private static string BuildExactFamilyUrl(string apiKey, string family) =>
         $"{Endpoint}?key={Uri.EscapeDataString(apiKey)}&family={Uri.EscapeDataString(family)}";

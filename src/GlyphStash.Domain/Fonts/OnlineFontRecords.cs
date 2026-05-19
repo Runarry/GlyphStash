@@ -2,7 +2,11 @@ namespace GlyphStash.Domain.Fonts;
 
 public sealed record RemoteFontSearchQuery(
     string SearchText,
-    string ApiKey);
+    string ApiKey,
+    string Subset = "",
+    string Category = "",
+    IReadOnlyList<string>? Capabilities = null,
+    string Sort = "alpha");
 
 public sealed record RemoteFontFamily(
     string ProviderId,
