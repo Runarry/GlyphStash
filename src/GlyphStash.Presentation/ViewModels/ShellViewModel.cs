@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using GlyphStash.Application.Abstractions.Fonts;
@@ -14,11 +15,13 @@ public sealed partial class ShellViewModel : ObservableObject
     private readonly LocalFontManagementService? _localManagementService;
     private readonly IUserFileDialogService _fileDialogService;
     private readonly IUserClipboardService _clipboardService;
+    private readonly IFontPreviewRegistry _fontPreviewRegistry;
     private readonly OnlineFontService? _onlineFontService;
     private readonly IGlyphCatalogService? _glyphCatalogService;
     private readonly List<FontFamilyItemViewModel> _allFonts = [];
     private FontImportPreview? _currentImportPreview;
     private bool _isProcessingOnlineDownloadQueue;
+    private FontFaceItemViewModel? _currentGlyphFace;
 
     [ObservableProperty]
     private NavigationItemViewModel? _selectedNavigationItem;
@@ -196,7 +199,8 @@ public sealed partial class ShellViewModel : ObservableObject
         IUserFileDialogService fileDialogService,
         OnlineFontService? onlineFontService = null,
         IGlyphCatalogService? glyphCatalogService = null,
-        IUserClipboardService? clipboardService = null)
+        IUserClipboardService? clipboardService = null,
+        IFontPreviewRegistry? fontPreviewRegistry = null)
     {
         _fontLibraryService = fontLibraryService;
         _localManagementService = localManagementService;
@@ -204,6 +208,7 @@ public sealed partial class ShellViewModel : ObservableObject
         _onlineFontService = onlineFontService;
         _glyphCatalogService = glyphCatalogService;
         _clipboardService = clipboardService ?? NullUserFileDialogService.Instance;
+        _fontPreviewRegistry = fontPreviewRegistry ?? NullFontPreviewRegistry.Instance;
     }
 
     public ObservableCollection<FontFamilyItemViewModel> Fonts { get; } = [];
@@ -323,6 +328,16 @@ public sealed partial class ShellViewModel : ObservableObject
 
     public bool HasSelectedPreviewFace => SelectedPreviewFace is not null;
 
+    public FontFamily SelectedPreviewFontFamily =>
+        _fontPreviewRegistry.Resolve(SelectedPreviewFace, SelectedFont?.FamilyName ?? "");
+
+    public FontWeight SelectedPreviewFontWeight => ToFontWeight(SelectedPreviewFace?.Weight ?? 400);
+
+    public FontStyle SelectedPreviewFontStyle =>
+        string.Equals(SelectedPreviewFace?.Slant, "Italic", StringComparison.OrdinalIgnoreCase)
+            ? FontStyle.Italic
+            : FontStyle.Normal;
+
     public string FontCountLabel => _allFonts.Count == 0 ? "字体索引为空" : $"索引就绪：{_allFonts.Count:N0} 个字体族";
 
     public bool IsFontLibraryPage => !IsGlyphBrowserOpen && SelectedNavigationItem?.IsFontLibrary == true;
@@ -366,6 +381,16 @@ public sealed partial class ShellViewModel : ObservableObject
     public bool HasSelectedGlyph => SelectedGlyph is not null;
 
     public string GlyphPageLabel => $"{GlyphPageNumber:N0} / {GlyphTotalPages:N0}";
+
+    public string GlyphBrowserTitle =>
+        _currentGlyphFace is null
+            ? "字形浏览"
+            : $"字形浏览：{_currentGlyphFace.FamilyName}";
+
+    public string GlyphBrowserDescription =>
+        _currentGlyphFace is null
+            ? "查看 Unicode 映射字符，搜索字符或码位，并复制字形信息。"
+            : $"当前样式：{_currentGlyphFace.StyleLabel}。查看 Unicode 映射字符，搜索字符或码位，并复制字形信息。";
 
     public bool HasImportPreview => ImportPreviewItems.Count > 0;
 
@@ -727,10 +752,13 @@ public sealed partial class ShellViewModel : ObservableObject
             return;
         }
 
-        IsGlyphBrowserOpen = true;
+        _currentGlyphFace = SelectedPreviewFace;
+        OnPropertyChanged(nameof(GlyphBrowserTitle));
+        OnPropertyChanged(nameof(GlyphBrowserDescription));
         GlyphSearchText = "";
         SelectedUnicodeBlock = "全部区块";
         GlyphPageNumber = 1;
+        IsGlyphBrowserOpen = true;
         NotifyNavigationState();
         await LoadGlyphsAsync();
     }
@@ -739,6 +767,9 @@ public sealed partial class ShellViewModel : ObservableObject
     private void BackFromGlyphBrowser()
     {
         IsGlyphBrowserOpen = false;
+        _currentGlyphFace = null;
+        OnPropertyChanged(nameof(GlyphBrowserTitle));
+        OnPropertyChanged(nameof(GlyphBrowserDescription));
         NotifyNavigationState();
     }
 
@@ -1195,7 +1226,14 @@ public sealed partial class ShellViewModel : ObservableObject
         OnPropertyChanged(nameof(HasNoSelectedFont));
     }
 
-    partial void OnSelectedPreviewFaceChanged(FontFaceItemViewModel? value) => OnPropertyChanged(nameof(HasSelectedPreviewFace));
+    partial void OnSelectedPreviewFaceChanged(FontFaceItemViewModel? value)
+    {
+        UpdateSelectedFaceFlags(value);
+        OnPropertyChanged(nameof(HasSelectedPreviewFace));
+        OnPropertyChanged(nameof(SelectedPreviewFontFamily));
+        OnPropertyChanged(nameof(SelectedPreviewFontWeight));
+        OnPropertyChanged(nameof(SelectedPreviewFontStyle));
+    }
 
     partial void OnImportInstallForCurrentUserChanged(bool value)
     {
@@ -1300,12 +1338,12 @@ public sealed partial class ShellViewModel : ObservableObject
 
     private async Task LoadGlyphsAsync()
     {
-        if (_glyphCatalogService is null || SelectedFont is null || !IsGlyphBrowserOpen)
+        if (_glyphCatalogService is null || !IsGlyphBrowserOpen)
         {
             return;
         }
 
-        if (SelectedPreviewFace is null)
+        if (_currentGlyphFace is null)
         {
             GlyphStatus = "当前字体没有可读取的样式。";
             return;
@@ -1316,8 +1354,8 @@ public sealed partial class ShellViewModel : ObservableObject
             GlyphStatus = "正在读取字体字形...";
             var page = await _glyphCatalogService.GetGlyphsAsync(
                 new GlyphQuery(
-                    SelectedPreviewFace?.FilePath ?? SelectedFont.FilePath,
-                    SelectedPreviewFace?.StyleLabel ?? "Regular 400",
+                    _currentGlyphFace.FilePath,
+                    _currentGlyphFace.StyleLabel,
                     GlyphSearchText,
                     SelectedUnicodeBlock,
                     false,
@@ -1535,6 +1573,28 @@ public sealed partial class ShellViewModel : ObservableObject
 
     private static string NormalizeFilter(string? value, string fallback) =>
         string.IsNullOrWhiteSpace(value) ? fallback : value;
+
+    private void UpdateSelectedFaceFlags(FontFaceItemViewModel? selectedFace)
+    {
+        foreach (var face in _allFonts.SelectMany(font => font.Faces).Concat(SelectedFont?.Faces ?? []))
+        {
+            face.IsSelected = ReferenceEquals(face, selectedFace);
+        }
+    }
+
+    private static FontWeight ToFontWeight(int weight) => weight switch
+    {
+        <= 100 => FontWeight.Thin,
+        200 => FontWeight.ExtraLight,
+        300 => FontWeight.Light,
+        400 => FontWeight.Normal,
+        500 => FontWeight.Medium,
+        600 => FontWeight.SemiBold,
+        700 => FontWeight.Bold,
+        800 => FontWeight.ExtraBold,
+        >= 900 => FontWeight.Black,
+        _ => (FontWeight)weight
+    };
 
     private static FontFaceItemViewModel? SelectDefaultPreviewFace(FontFamilyItemViewModel? font)
     {

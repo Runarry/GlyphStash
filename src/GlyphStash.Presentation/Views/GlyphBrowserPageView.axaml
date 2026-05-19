@@ -6,8 +6,8 @@
     <Border Grid.Row="0" Background="{DynamicResource GlyphSurfaceBrush}" BorderBrush="{DynamicResource GlyphBorderBrush}" BorderThickness="0,0,0,1" Padding="24,0">
       <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
         <StackPanel>
-          <TextBlock Text="{Binding SelectedFont.FamilyName, StringFormat='字形浏览：{0}'}" Classes="h1" />
-          <TextBlock Text="查看 Unicode 映射字符，搜索字符或码位，并复制字形信息。" Classes="muted" Margin="0,5,0,0" />
+          <TextBlock Text="{Binding GlyphBrowserTitle}" Classes="h1" />
+          <TextBlock Text="{Binding GlyphBrowserDescription}" Classes="muted" Margin="0,5,0,0" />
         </StackPanel>
         <Button Grid.Column="1" Content="返回字体详情" Command="{Binding BackFromGlyphBrowserCommand}" />
       </Grid>

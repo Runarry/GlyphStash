@@ -1,4 +1,5 @@
 using System.Collections.Specialized;
+using Avalonia.Media;
 using GlyphStash.Application.Abstractions.Fonts;
 using GlyphStash.Application.Abstractions.Storage;
 using GlyphStash.Application.Fonts;
@@ -159,6 +160,31 @@ public sealed class ShellViewModelTests
     }
 
     [Fact]
+    public void SelectedPreviewFace_UpdatesPreviewPropertiesAndSelectedBadge()
+    {
+        var font = new FontFamilyItemViewModel(CreateFontWithFaces("Noto Sans", ("Regular 400", 400, "Normal", "C:/Fonts/NotoSans-Regular.ttf"), ("Bold Italic 700", 700, "Italic", "C:/Fonts/NotoSans-BoldItalic.ttf")));
+        var registry = new CapturingFontPreviewRegistry();
+        var vm = new ShellViewModel(
+            new FontLibraryService(new FakeInventory([]), new FakeStore([])),
+            null,
+            NullUserFileDialogService.Instance,
+            fontPreviewRegistry: registry)
+        {
+            SelectedFont = font
+        };
+
+        var boldItalic = font.Faces.Single(face => face.StyleLabel == "Bold Italic 700");
+        vm.SelectedPreviewFace = boldItalic;
+        _ = vm.SelectedPreviewFontFamily;
+
+        Assert.Same(boldItalic, registry.LastFace);
+        Assert.Equal(FontWeight.Bold, vm.SelectedPreviewFontWeight);
+        Assert.Equal(FontStyle.Italic, vm.SelectedPreviewFontStyle);
+        Assert.True(boldItalic.IsSelected);
+        Assert.False(font.Faces.Single(face => face.StyleLabel == "Regular 400").IsSelected);
+    }
+
+    [Fact]
     public async Task OpenGlyphBrowser_UsesSelectedPreviewFace()
     {
         var regularPath = Path.Combine(Path.GetTempPath(), "GlyphStash.Tests", $"{Guid.NewGuid():N}-regular.ttf");
@@ -181,6 +207,12 @@ public sealed class ShellViewModelTests
         await vm.OpenGlyphBrowserCommand.ExecuteAsync(null);
 
         Assert.NotNull(glyphService.LastQuery);
+        Assert.Equal(boldPath, glyphService.LastQuery!.FontFilePath);
+        Assert.Equal("Bold 700", glyphService.LastQuery.FaceName);
+
+        vm.SelectedPreviewFace = font.Faces.Single(face => face.StyleLabel == "Regular 400");
+        await vm.NextGlyphPageCommand.ExecuteAsync(null);
+
         Assert.Equal(boldPath, glyphService.LastQuery!.FontFilePath);
         Assert.Equal("Bold 700", glyphService.LastQuery.FaceName);
     }
@@ -501,6 +533,7 @@ public sealed class ShellViewModelTests
         var onlineService = new OnlineFontService(
             new ThrowingFontSourceProvider("Google Fonts 请求无效：Invalid family query"),
             new FakeSettingsStore("api-key"),
+            new FakeManagedFontFileStore(),
             new FakeMutationStore(),
             new FakeInstallService(),
             new FontActivationCoordinator(new FakePlatformActivation(), new FakeActivationStore(), logStore),
@@ -526,6 +559,7 @@ public sealed class ShellViewModelTests
         var onlineService = new OnlineFontService(
             provider,
             new FakeSettingsStore("api-key"),
+            new FakeManagedFontFileStore(),
             new FakeMutationStore(),
             new FakeInstallService(),
             new FontActivationCoordinator(new FakePlatformActivation(), new FakeActivationStore(), logStore),
@@ -563,6 +597,7 @@ public sealed class ShellViewModelTests
         var onlineService = new OnlineFontService(
             provider,
             new FakeSettingsStore("api-key"),
+            new FakeManagedFontFileStore(),
             new FakeMutationStore(),
             new FakeInstallService(),
             new FontActivationCoordinator(new FakePlatformActivation(), new FakeActivationStore(), logStore),
@@ -594,6 +629,7 @@ public sealed class ShellViewModelTests
         var onlineService = new OnlineFontService(
             provider,
             new FakeSettingsStore("api-key"),
+            new FakeManagedFontFileStore(),
             new FakeMutationStore(),
             new FakeInstallService(),
             new FontActivationCoordinator(new FakePlatformActivation(), new FakeActivationStore(), logStore),
@@ -776,6 +812,17 @@ public sealed class ShellViewModelTests
             Task.FromResult<IReadOnlyList<string>>([]);
     }
 
+    private sealed class CapturingFontPreviewRegistry : IFontPreviewRegistry
+    {
+        public FontFaceItemViewModel? LastFace { get; private set; }
+
+        public FontFamily Resolve(FontFaceItemViewModel? face, string fallbackFamilyName)
+        {
+            LastFace = face;
+            return string.IsNullOrWhiteSpace(fallbackFamilyName) ? FontFamily.Default : new FontFamily(fallbackFamilyName);
+        }
+    }
+
     private sealed class FakeSettingsStore : IAppSettingsStore
     {
         private readonly string _apiKey;
@@ -832,7 +879,7 @@ public sealed class ShellViewModelTests
         public Task<GlyphPage> GetGlyphsAsync(GlyphQuery query, CancellationToken cancellationToken)
         {
             LastQuery = query;
-            return Task.FromResult(new GlyphPage([], [new UnicodeBlockOption("全部区块", 0, 0)], 1, 120, 0, "empty"));
+            return Task.FromResult(new GlyphPage([], [new UnicodeBlockOption("全部区块", 0, 0)], query.PageNumber, 120, 240, "empty"));
         }
     }
 

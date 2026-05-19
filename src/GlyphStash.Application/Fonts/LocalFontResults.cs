@@ -24,7 +24,10 @@ public sealed record FontImportPreviewItem(
     bool CanInstall,
     bool CanTemporarilyActivate,
     string Status,
-    string? ErrorMessage = null);
+    string? ErrorMessage = null,
+    int Weight = 400,
+    string Width = "Normal",
+    string Slant = "Normal");
 
 public sealed record FontImportOptions(
     bool InstallForCurrentUser,
@@ -83,4 +86,7 @@ public sealed record FontMetadata(
     string? Version,
     string? Manufacturer,
     string? LicenseText,
-    string Sha256);
+    string Sha256,
+    int Weight = 400,
+    string Width = "Normal",
+    string Slant = "Normal");

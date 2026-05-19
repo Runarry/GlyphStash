@@ -8,6 +8,7 @@ public sealed class OnlineFontService
 {
     private readonly IFontSourceProvider _provider;
     private readonly IAppSettingsStore _settingsStore;
+    private readonly IManagedFontFileStore _managedFontFileStore;
     private readonly IFontLibraryMutationStore _mutationStore;
     private readonly IFontInstallService _installService;
     private readonly FontActivationCoordinator _activationCoordinator;
@@ -17,6 +18,7 @@ public sealed class OnlineFontService
     public OnlineFontService(
         IFontSourceProvider provider,
         IAppSettingsStore settingsStore,
+        IManagedFontFileStore managedFontFileStore,
         IFontLibraryMutationStore mutationStore,
         IFontInstallService installService,
         FontActivationCoordinator activationCoordinator,
@@ -25,6 +27,7 @@ public sealed class OnlineFontService
     {
         _provider = provider;
         _settingsStore = settingsStore;
+        _managedFontFileStore = managedFontFileStore;
         _mutationStore = mutationStore;
         _installService = installService;
         _activationCoordinator = activationCoordinator;
@@ -79,9 +82,14 @@ public sealed class OnlineFontService
             new RemoteFontDownloadRequest(family, selectedStyles, settings.ManagedFontDirectory, settings.GoogleFontsApiKey),
             cancellationToken).ConfigureAwait(false);
 
+        var finalFiles = new List<RemoteFontDownloadedFile>();
         foreach (var file in result.Files)
         {
-            var fontFile = new FontFileRecord(file.LocalPath, file.Format, file.Sha256, FontSourceKind.GlyphStashManaged, DateTimeOffset.UtcNow);
+            var copy = await _managedFontFileStore.CopyToManagedDirectoryAsync(file.LocalPath, settings, cancellationToken).ConfigureAwait(false);
+            var finalFile = file with { LocalPath = copy.ManagedPath, Sha256 = copy.Sha256 };
+            finalFiles.Add(finalFile);
+
+            var fontFile = new FontFileRecord(finalFile.LocalPath, finalFile.Format, finalFile.Sha256, FontSourceKind.GlyphStashManaged, DateTimeOffset.UtcNow);
             var styleLabel = FontStyleVariantFormatter.FormatGoogleFontsVariant(file.Style.Variant);
             var weight = FontStyleVariantFormatter.WeightFromGoogleFontsVariant(file.Style.Variant);
             var slant = FontStyleVariantFormatter.SlantFromGoogleFontsVariant(file.Style.Variant);
@@ -95,16 +103,16 @@ public sealed class OnlineFontService
                 slant,
                 fontFile);
             var installResult = options.InstallForCurrentUser
-                ? await _installService.InstallForCurrentUserAsync(new FontFileRef(file.LocalPath, file.Format, file.Sha256), cancellationToken).ConfigureAwait(false)
-                : new FontInstallResult(true, file.LocalPath, null, "未选择用户级安装。");
+                ? await _installService.InstallForCurrentUserAsync(new FontFileRef(finalFile.LocalPath, finalFile.Format, finalFile.Sha256), cancellationToken).ConfigureAwait(false)
+                : new FontInstallResult(true, finalFile.LocalPath, null, "未选择用户级安装。");
             var shouldActivate = !options.InstallForCurrentUser && options.TemporarilyActivate;
             if (shouldActivate)
             {
-                await _activationCoordinator.ActivateAsync($"font:{family.FamilyName}", [new FontFileRef(file.LocalPath, file.Format, file.Sha256)], cancellationToken)
+                await _activationCoordinator.ActivateAsync($"font:{family.FamilyName}", [new FontFileRef(finalFile.LocalPath, finalFile.Format, finalFile.Sha256)], cancellationToken)
                     .ConfigureAwait(false);
             }
 
-            var visiblePath = installResult.InstalledPath ?? file.LocalPath;
+            var visiblePath = installResult.InstalledPath ?? finalFile.LocalPath;
             var visibleFile = fontFile with
             {
                 Path = visiblePath,
@@ -128,9 +136,9 @@ public sealed class OnlineFontService
             await _mutationStore.UpsertManagedFontAsync(
                 new ManagedFontRecord(
                     family.FamilyName,
-                    file.LocalPath,
-                    file.Format,
-                    file.Sha256,
+                    finalFile.LocalPath,
+                    finalFile.Format,
+                    finalFile.Sha256,
                     installResult.InstalledPath,
                     state,
                     DateTimeOffset.UtcNow,
@@ -147,14 +155,14 @@ public sealed class OnlineFontService
                     file.Style.DownloadUrl,
                     family.SourceUrl,
                     family.LicenseText,
-                    file.LocalPath,
+                    finalFile.LocalPath,
                     DateTimeOffset.UtcNow),
                 cancellationToken).ConfigureAwait(false);
         }
 
-        await LogAsync("online-fonts", "download", $"已下载在线字体：{family.FamilyName} ({result.Files.Count} 个样式)", family.FamilyName, true, cancellationToken)
+        await LogAsync("online-fonts", "download", $"已下载在线字体：{family.FamilyName} ({finalFiles.Count} 个样式)", family.FamilyName, true, cancellationToken)
             .ConfigureAwait(false);
-        return result;
+        return result with { Files = finalFiles, Message = $"已下载 {finalFiles.Count} 个样式。" };
     }
 
     private async Task<UserFontSettings> RequireSettingsAsync(CancellationToken cancellationToken) =>

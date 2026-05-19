@@ -196,7 +196,7 @@ public sealed class GoogleFontsProviderTests
     }
 
     [Fact]
-    public async Task DownloadAsync_WritesSelectedStylesToManagedStagingDirectory()
+    public async Task DownloadAsync_WritesSelectedStylesToTemporaryStagingDirectory()
     {
         var directory = Path.Combine(Path.GetTempPath(), "GlyphStash.Tests", Guid.NewGuid().ToString("N"));
         var provider = new GoogleFontsProvider(new HttpClient(new StubHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
@@ -219,6 +219,7 @@ public sealed class GoogleFontsProviderTests
         Assert.True(result.Succeeded);
         Assert.True(File.Exists(result.Files[0].LocalPath));
         Assert.Equal("TTF", result.Files[0].Format);
+        Assert.False(result.Files[0].LocalPath.StartsWith(directory, StringComparison.OrdinalIgnoreCase));
     }
 
     private sealed class StubHttpMessageHandler : HttpMessageHandler

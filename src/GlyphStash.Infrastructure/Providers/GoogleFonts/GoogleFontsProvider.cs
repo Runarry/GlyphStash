@@ -68,7 +68,7 @@ public sealed class GoogleFontsProvider : IFontSourceProvider
 
     public async Task<RemoteFontDownloadResult> DownloadAsync(RemoteFontDownloadRequest request, CancellationToken cancellationToken)
     {
-        var stagingDirectory = Path.Combine(request.ManagedFontDirectory, ".downloads", ProviderId, SanitizeFileName(request.Family.FamilyName));
+        var stagingDirectory = Path.Combine(Path.GetTempPath(), "GlyphStash", "downloads", ProviderId, Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(stagingDirectory);
         var files = new List<RemoteFontDownloadedFile>();
         foreach (var style in request.Styles)

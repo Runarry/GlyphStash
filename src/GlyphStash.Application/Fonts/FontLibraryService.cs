@@ -87,9 +87,9 @@ public sealed class FontLibraryService
                     string.IsNullOrWhiteSpace(metadata.SubfamilyName) ? "Regular" : metadata.SubfamilyName,
                     string.IsNullOrWhiteSpace(metadata.FullName) ? metadata.FamilyName : metadata.FullName,
                     string.IsNullOrWhiteSpace(metadata.PostScriptName) ? metadata.FamilyName.Replace(' ', '-') : metadata.PostScriptName,
-                    400,
-                    "Normal",
-                    metadata.SubfamilyName.Contains("Italic", StringComparison.OrdinalIgnoreCase) ? "Italic" : "Normal",
+                    metadata.Weight,
+                    metadata.Width,
+                    metadata.Slant,
                     file));
             }
             catch (Exception) when (!cancellationToken.IsCancellationRequested)

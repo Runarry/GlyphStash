@@ -96,6 +96,7 @@ public partial class App : Avalonia.Application
         services.AddSingleton<DesktopStorageDialogService>();
         services.AddSingleton<IUserFileDialogService>(provider => provider.GetRequiredService<DesktopStorageDialogService>());
         services.AddSingleton<IUserClipboardService>(provider => provider.GetRequiredService<DesktopStorageDialogService>());
+        services.AddSingleton<IFontPreviewRegistry, AvaloniaFontPreviewRegistry>();
         services.AddSingleton<ShellViewModel>();
 
         return services.BuildServiceProvider();

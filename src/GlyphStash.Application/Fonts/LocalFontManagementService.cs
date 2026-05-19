@@ -120,7 +120,10 @@ public sealed class LocalFontManagementService
                     true,
                     true,
                     true,
-                    duplicate ? "重复字体，可导入但会复用相同文件 hash" : "可导入"));
+                    duplicate ? "重复字体，可导入但会复用相同文件 hash" : "可导入",
+                    Weight: metadata.Weight,
+                    Width: metadata.Width,
+                    Slant: metadata.Slant));
             }
             catch (Exception ex)
             {
@@ -153,9 +156,9 @@ public sealed class LocalFontManagementService
                     string.IsNullOrWhiteSpace(item.SubfamilyName) ? "Regular" : item.SubfamilyName,
                     string.IsNullOrWhiteSpace(item.FullName) ? item.FamilyName : item.FullName,
                     string.IsNullOrWhiteSpace(item.PostScriptName) ? item.FamilyName.Replace(' ', '-') : item.PostScriptName,
-                    400,
-                    "Normal",
-                    item.SubfamilyName.Contains("Italic", StringComparison.OrdinalIgnoreCase) ? "Italic" : "Normal",
+                    item.Weight,
+                    item.Width,
+                    item.Slant,
                     file);
                 var shouldTemporarilyActivate = !options.InstallForCurrentUser && options.TemporarilyActivate;
                 if (shouldTemporarilyActivate)

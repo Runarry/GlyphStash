@@ -1,10 +1,14 @@
+using CommunityToolkit.Mvvm.ComponentModel;
 using GlyphStash.Domain.Fonts;
 
 namespace GlyphStash.Presentation.ViewModels;
 
-public sealed class FontFaceItemViewModel
+public sealed partial class FontFaceItemViewModel : ObservableObject
 {
     private readonly FontFaceRecord _record;
+
+    [ObservableProperty]
+    private bool _isSelected;
 
     public FontFaceItemViewModel(FontFaceRecord record)
     {

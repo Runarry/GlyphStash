@@ -21,6 +21,11 @@ public sealed class ManagedFontFileStore : IManagedFontFileStore
             throw new FileNotFoundException("字体文件不存在。", sourcePath);
         }
 
+        if (!IsSupportedFontPath(sourcePath))
+        {
+            throw new InvalidOperationException("当前字体库不支持该格式导入，仅支持 TTF、OTF、TTC、OTC。");
+        }
+
         Directory.CreateDirectory(settings.ManagedFontDirectory);
         var sha256 = await ComputeSha256Async(sourcePath, cancellationToken).ConfigureAwait(false);
         var fileName = $"{sha256[..12]}-{SanitizeFileName(Path.GetFileName(sourcePath))}";
@@ -36,11 +41,11 @@ public sealed class ManagedFontFileStore : IManagedFontFileStore
         return new ManagedFontCopyResult(destination, sha256, alreadyExists);
     }
 
-    public Task<IReadOnlyList<string>> EnumerateManagedFontFilesAsync(UserFontSettings settings, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<string>> EnumerateManagedFontFilesAsync(UserFontSettings settings, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(settings.ManagedFontDirectory) || !Directory.Exists(settings.ManagedFontDirectory))
         {
-            return Task.FromResult<IReadOnlyList<string>>([]);
+            return [];
         }
 
         var files = new List<string>();
@@ -49,11 +54,13 @@ public sealed class ManagedFontFileStore : IManagedFontFileStore
             foreach (var path in Directory.EnumerateFiles(settings.ManagedFontDirectory, "*.*", SearchOption.TopDirectoryOnly))
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (SupportedExtensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase))
+                if (IsSupportedFontPath(path))
                 {
                     files.Add(path);
                 }
             }
+
+            await RecoverLegacyDownloadedFontsAsync(settings.ManagedFontDirectory, files, cancellationToken).ConfigureAwait(false);
         }
         catch (IOException)
         {
@@ -62,7 +69,45 @@ public sealed class ManagedFontFileStore : IManagedFontFileStore
         {
         }
 
-        return Task.FromResult<IReadOnlyList<string>>(files);
+        return files
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static async Task RecoverLegacyDownloadedFontsAsync(string managedDirectory, List<string> files, CancellationToken cancellationToken)
+    {
+        var legacyDirectory = Path.Combine(managedDirectory, ".downloads");
+        if (!Directory.Exists(legacyDirectory))
+        {
+            return;
+        }
+
+        foreach (var legacyPath in Directory.EnumerateFiles(legacyDirectory, "*.*", SearchOption.AllDirectories))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!IsSupportedFontPath(legacyPath))
+            {
+                continue;
+            }
+
+            try
+            {
+                var sha256 = await ComputeSha256Async(legacyPath, cancellationToken).ConfigureAwait(false);
+                var destination = Path.Combine(managedDirectory, $"{sha256[..12]}-{SanitizeFileName(Path.GetFileName(legacyPath))}");
+                if (!File.Exists(destination))
+                {
+                    File.Copy(legacyPath, destination);
+                }
+
+                files.Add(destination);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
     }
 
     private static async Task<string> ComputeSha256Async(string path, CancellationToken cancellationToken)
@@ -71,6 +116,9 @@ public sealed class ManagedFontFileStore : IManagedFontFileStore
         var hash = await SHA256.HashDataAsync(stream, cancellationToken).ConfigureAwait(false);
         return Convert.ToHexString(hash).ToLowerInvariant();
     }
+
+    private static bool IsSupportedFontPath(string path) =>
+        SupportedExtensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase);
 
     private static string SanitizeFileName(string fileName)
     {

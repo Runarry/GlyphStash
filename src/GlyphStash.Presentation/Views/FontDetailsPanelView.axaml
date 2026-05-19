@@ -24,9 +24,9 @@
             <Button Grid.Column="1" Classes="sm" Content="{Binding SelectedFont.FavoriteLabel}" Command="{Binding ToggleFavoriteCommand}" CommandParameter="{Binding SelectedFont}" />
           </Grid>
           <TextBlock Text="{Binding PreviewText}"
-                     FontFamily="{Binding SelectedPreviewFace.PreviewFontFamily}"
-                     FontWeight="{Binding SelectedPreviewFace.FontWeightName}"
-                     FontStyle="{Binding SelectedPreviewFace.FontStyleName}"
+                     FontFamily="{Binding SelectedPreviewFontFamily}"
+                     FontWeight="{Binding SelectedPreviewFontWeight}"
+                     FontStyle="{Binding SelectedPreviewFontStyle}"
                      FontSize="{Binding PreviewFontSize}"
                      TextWrapping="Wrap" />
         </StackPanel>
@@ -80,8 +80,8 @@
                       <TextBlock Text="{Binding PostScriptName}" Classes="muted" />
                       <TextBlock Text="{Binding FilePath}" Classes="muted" TextWrapping="Wrap" />
                     </StackPanel>
-                    <Border Grid.Column="1" Classes="badge ok" VerticalAlignment="Center">
-                      <TextBlock Text="当前预览可选" FontSize="12" />
+                    <Border Grid.Column="1" Classes="badge ok" VerticalAlignment="Center" IsVisible="{Binding IsSelected}">
+                      <TextBlock Text="当前预览/字形样式" FontSize="12" />
                     </Border>
                   </Grid>
                 </Border>

@@ -25,6 +25,7 @@ public sealed class OnlineFontServiceTests
         var service = new OnlineFontService(
             new StubFontSourceProvider(),
             new StubSettingsStore(),
+            new StubManagedFontFileStore(),
             mutationStore,
             new NoopInstallService(),
             new FontActivationCoordinator(new NoopTemporaryActivationService(), new NoopActivationStore(), logStore),
@@ -39,6 +40,8 @@ public sealed class OnlineFontServiceTests
         Assert.Equal("Noto Sans Bold Italic 700", face.FullName);
         Assert.Equal(700, face.Weight);
         Assert.Equal("Italic", face.Slant);
+        Assert.Equal("C:/GlyphStash/NotoSans-700italic.ttf", face.File.Path.Replace('\\', '/'));
+        Assert.Equal("managed-hash", face.File.Sha256);
     }
 
     private sealed class StubFontSourceProvider : IFontSourceProvider
@@ -64,6 +67,15 @@ public sealed class OnlineFontServiceTests
             Task.FromResult<UserFontSettings?>(new UserFontSettings("C:/GlyphStash", "api-key"));
 
         public Task SaveSettingsAsync(UserFontSettings settings, CancellationToken cancellationToken) => Task.CompletedTask;
+    }
+
+    private sealed class StubManagedFontFileStore : IManagedFontFileStore
+    {
+        public Task<ManagedFontCopyResult> CopyToManagedDirectoryAsync(string sourcePath, UserFontSettings settings, CancellationToken cancellationToken) =>
+            Task.FromResult(new ManagedFontCopyResult(Path.Combine(settings.ManagedFontDirectory, Path.GetFileName(sourcePath)), "managed-hash", false));
+
+        public Task<IReadOnlyList<string>> EnumerateManagedFontFilesAsync(UserFontSettings settings, CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<string>>([]);
     }
 
     private sealed class CapturingMutationStore : IFontLibraryMutationStore

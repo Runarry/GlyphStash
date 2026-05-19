@@ -37,6 +37,7 @@ public sealed class OpenTypeFontMetadataReader : IFontMetadataReader
         var subfamily = ValueOrFallback(names, 2, GuessSubfamilyName(fontFilePath));
         var fullName = ValueOrFallback(names, 4, $"{family} {subfamily}".Trim());
         var postScript = ValueOrFallback(names, 6, $"{family.Replace(' ', '-')}-{subfamily.Replace(' ', '-')}");
+        var style = ReadStyleMetrics(bytes, fontOffset, subfamily);
         var sha256 = Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
 
         return new FontMetadata(
@@ -49,7 +50,10 @@ public sealed class OpenTypeFontMetadataReader : IFontMetadataReader
             names.TryGetValue(5, out var version) ? version : null,
             names.TryGetValue(8, out var manufacturer) ? manufacturer : null,
             names.TryGetValue(13, out var license) ? license : null,
-            sha256);
+            sha256,
+            style.Weight,
+            style.Width,
+            style.Slant);
     }
 
     private static int GetFirstFontOffset(ReadOnlySpan<byte> bytes)
@@ -87,29 +91,7 @@ public sealed class OpenTypeFontMetadataReader : IFontMetadataReader
             throw new InvalidOperationException("OpenType 字体表头不完整。");
         }
 
-        var tableCount = ReadUInt16(bytes, fontOffset + 4);
-        var tableRecordsOffset = fontOffset + 12;
-        var nameOffset = -1;
-        var nameLength = 0;
-        for (var i = 0; i < tableCount; i++)
-        {
-            var recordOffset = tableRecordsOffset + i * 16;
-            if (recordOffset + 16 > bytes.Length)
-            {
-                throw new InvalidOperationException("OpenType 表目录不完整。");
-            }
-
-            if (ReadUInt32(bytes, recordOffset) != Tag("name"))
-            {
-                continue;
-            }
-
-            nameOffset = checked((int)ReadUInt32(bytes, recordOffset + 8));
-            nameLength = checked((int)ReadUInt32(bytes, recordOffset + 12));
-            break;
-        }
-
-        if (nameOffset < 0 || nameOffset + nameLength > bytes.Length)
+        if (!TryReadTable(bytes, fontOffset, "name", out var nameOffset, out var nameLength))
         {
             throw new InvalidOperationException("字体缺少有效 name 表。");
         }
@@ -151,6 +133,62 @@ public sealed class OpenTypeFontMetadataReader : IFontMetadataReader
         }
 
         return best.ToDictionary(pair => pair.Key, pair => pair.Value.Value);
+    }
+
+    private static (int Weight, string Width, string Slant) ReadStyleMetrics(ReadOnlySpan<byte> bytes, int fontOffset, string subfamily)
+    {
+        var weight = GuessWeight(subfamily);
+        var width = "Normal";
+        var slant = subfamily.Contains("Italic", StringComparison.OrdinalIgnoreCase)
+            ? "Italic"
+            : "Normal";
+
+        if (!TryReadTable(bytes, fontOffset, "OS/2", out var os2Offset, out var os2Length) || os2Length < 64)
+        {
+            return (weight, width, slant);
+        }
+
+        weight = ReadUInt16(bytes, os2Offset + 4);
+        width = WidthName(ReadUInt16(bytes, os2Offset + 6));
+        var fsSelection = ReadUInt16(bytes, os2Offset + 62);
+        if ((fsSelection & 0x0001) != 0)
+        {
+            slant = "Italic";
+        }
+
+        return (weight, width, slant);
+    }
+
+    private static bool TryReadTable(ReadOnlySpan<byte> bytes, int fontOffset, string tag, out int offset, out int length)
+    {
+        offset = -1;
+        length = 0;
+        if (fontOffset + 12 > bytes.Length)
+        {
+            return false;
+        }
+
+        var tableCount = ReadUInt16(bytes, fontOffset + 4);
+        var tableRecordsOffset = fontOffset + 12;
+        for (var i = 0; i < tableCount; i++)
+        {
+            var recordOffset = tableRecordsOffset + i * 16;
+            if (recordOffset + 16 > bytes.Length)
+            {
+                throw new InvalidOperationException("OpenType 表目录不完整。");
+            }
+
+            if (ReadUInt32(bytes, recordOffset) != Tag(tag))
+            {
+                continue;
+            }
+
+            offset = checked((int)ReadUInt32(bytes, recordOffset + 8));
+            length = checked((int)ReadUInt32(bytes, recordOffset + 12));
+            return offset >= 0 && offset + length <= bytes.Length;
+        }
+
+        return false;
     }
 
     private static string DecodeName(ReadOnlySpan<byte> bytes, ushort platformId, ushort encodingId)
@@ -198,6 +236,38 @@ public sealed class OpenTypeFontMetadataReader : IFontMetadataReader
         var parts = name.Split(['-', '_'], 2, StringSplitOptions.TrimEntries);
         return parts.Length > 1 ? parts[1].Replace('_', ' ') : "Regular";
     }
+
+    private static int GuessWeight(string subfamily)
+    {
+        var normalized = subfamily
+            .Replace(" ", "", StringComparison.Ordinal)
+            .Replace("-", "", StringComparison.Ordinal)
+            .Replace("_", "", StringComparison.Ordinal);
+        if (normalized.Contains("ExtraBlack", StringComparison.OrdinalIgnoreCase) || normalized.Contains("UltraBlack", StringComparison.OrdinalIgnoreCase)) return 950;
+        if (normalized.Contains("Black", StringComparison.OrdinalIgnoreCase) || normalized.Contains("Heavy", StringComparison.OrdinalIgnoreCase)) return 900;
+        if (normalized.Contains("ExtraBold", StringComparison.OrdinalIgnoreCase) || normalized.Contains("UltraBold", StringComparison.OrdinalIgnoreCase)) return 800;
+        if (normalized.Contains("Bold", StringComparison.OrdinalIgnoreCase)) return 700;
+        if (normalized.Contains("SemiBold", StringComparison.OrdinalIgnoreCase) || normalized.Contains("DemiBold", StringComparison.OrdinalIgnoreCase)) return 600;
+        if (normalized.Contains("Medium", StringComparison.OrdinalIgnoreCase)) return 500;
+        if (normalized.Contains("ExtraLight", StringComparison.OrdinalIgnoreCase) || normalized.Contains("UltraLight", StringComparison.OrdinalIgnoreCase)) return 200;
+        if (normalized.Contains("Light", StringComparison.OrdinalIgnoreCase)) return 300;
+        if (normalized.Contains("Thin", StringComparison.OrdinalIgnoreCase)) return 100;
+        return 400;
+    }
+
+    private static string WidthName(int widthClass) => widthClass switch
+    {
+        1 => "UltraCondensed",
+        2 => "ExtraCondensed",
+        3 => "Condensed",
+        4 => "SemiCondensed",
+        5 => "Normal",
+        6 => "SemiExpanded",
+        7 => "Expanded",
+        8 => "ExtraExpanded",
+        9 => "UltraExpanded",
+        _ => "Normal"
+    };
 
     private static ushort ReadUInt16(ReadOnlySpan<byte> bytes, int offset) => BinaryPrimitives.ReadUInt16BigEndian(bytes.Slice(offset, 2));
 

@@ -41,6 +41,36 @@ public sealed class FontLibraryServiceTests
     }
 
     [Fact]
+    public async Task RescanAsync_UsesManagedFontMetadataStyleMetrics()
+    {
+        var service = CreateService(
+            managedPaths: ["C:/GlyphStash/fonts/NotoSans-BoldItalic.ttf"],
+            metadata:
+            [
+                new FontMetadata(
+                    "C:/GlyphStash/fonts/NotoSans-BoldItalic.ttf",
+                    "TTF",
+                    "Noto Sans",
+                    "Bold Italic",
+                    "Noto Sans Bold Italic",
+                    "NotoSans-BoldItalic",
+                    null,
+                    null,
+                    null,
+                    "hash-bold",
+                    700,
+                    "Normal",
+                    "Italic")
+            ]);
+
+        var fonts = await service.RescanAsync(CancellationToken.None);
+
+        var face = Assert.Single(Assert.Single(fonts).Faces);
+        Assert.Equal(700, face.Weight);
+        Assert.Equal("Italic", face.Slant);
+    }
+
+    [Fact]
     public async Task RescanAsync_ReturnsPersistedMetadataAfterSavingIndex()
     {
         var scanned = CreateInstalledFont("Inter", "C:/Windows/Fonts/Inter.ttf", "hash-inter");
