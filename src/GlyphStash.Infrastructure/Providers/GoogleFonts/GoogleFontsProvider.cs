@@ -27,7 +27,7 @@ public sealed class GoogleFontsProvider : IFontSourceProvider
 
         var url = BuildListUrl(query);
 
-        using var response = await _httpClient.GetAsync(url, cancellationToken).ConfigureAwait(false);
+        using var response = await SendGoogleFontsRequestAsync(url, "Google Fonts 请求", cancellationToken).ConfigureAwait(false);
         await EnsureGoogleFontsSuccessAsync(response, "Google Fonts 请求", cancellationToken).ConfigureAwait(false);
         await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
         using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -81,7 +81,7 @@ public sealed class GoogleFontsProvider : IFontSourceProvider
             }
 
             var localPath = Path.Combine(stagingDirectory, $"{SanitizeFileName(request.Family.FamilyName)}-{SanitizeFileName(style.Variant)}{extension}");
-            using var response = await _httpClient.GetAsync(style.DownloadUrl, cancellationToken).ConfigureAwait(false);
+            using var response = await SendGoogleFontsRequestAsync(style.DownloadUrl, "Google Fonts 下载", cancellationToken).ConfigureAwait(false);
             await EnsureGoogleFontsSuccessAsync(response, "Google Fonts 下载", cancellationToken).ConfigureAwait(false);
             await using (var input = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false))
             await using (var output = File.Create(localPath))
@@ -159,6 +159,22 @@ public sealed class GoogleFontsProvider : IFontSourceProvider
 
     private static string BuildExactFamilyUrl(string apiKey, string family) =>
         $"{Endpoint}?key={Uri.EscapeDataString(apiKey)}&family={Uri.EscapeDataString(family)}";
+
+    private async Task<HttpResponseMessage> SendGoogleFontsRequestAsync(string url, string operation, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await _httpClient.GetAsync(url, cancellationToken).ConfigureAwait(false);
+        }
+        catch (HttpRequestException ex)
+        {
+            throw new InvalidOperationException($"{operation}网络不可用，请检查网络连接后重试。", ex);
+        }
+        catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            throw new InvalidOperationException($"{operation}请求超时，请稍后重试。", ex);
+        }
+    }
 
     private static async Task EnsureGoogleFontsSuccessAsync(HttpResponseMessage response, string operation, CancellationToken cancellationToken)
     {

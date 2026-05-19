@@ -473,6 +473,72 @@ public sealed class ShellViewModelTests
         Assert.Equal(["VF", "WOFF2"], provider.LastQuery.Capabilities);
     }
 
+    [Fact]
+    public async Task DownloadSelectedOnlineFont_EnqueuesAndCompletesQueueItem()
+    {
+        var logStore = new FakeOperationLogStore();
+        var provider = new QueueingFontSourceProvider();
+        var onlineService = new OnlineFontService(
+            provider,
+            new FakeSettingsStore("api-key"),
+            new FakeMutationStore(),
+            new FakeInstallService(),
+            new FontActivationCoordinator(new FakePlatformActivation(), new FakeActivationStore(), logStore),
+            logStore,
+            new FakeDownloadRecordStore());
+        var vm = new ShellViewModel(
+            new FontLibraryService(new FakeInventory([]), new FakeStore([])),
+            null,
+            NullUserFileDialogService.Instance,
+            onlineService)
+        {
+            SelectedRemoteFont = new RemoteFontFamilyItemViewModel(CreateRemoteFont("Noto Sans"))
+        };
+
+        await vm.DownloadSelectedOnlineFontCommand.ExecuteAsync(null);
+
+        Assert.Single(vm.OnlineDownloadQueue);
+        Assert.True(vm.HasOnlineDownloadQueue);
+        Assert.Equal(OnlineFontDownloadStatus.Succeeded, vm.OnlineDownloadQueue[0].Status);
+        Assert.Equal(1, provider.DownloadCalls);
+        Assert.Contains("成功", vm.OnlineStatus, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RetryOnlineDownload_RerunsFailedQueueItem()
+    {
+        var logStore = new FakeOperationLogStore();
+        var provider = new QueueingFontSourceProvider { FailDownloadCount = 1 };
+        var onlineService = new OnlineFontService(
+            provider,
+            new FakeSettingsStore("api-key"),
+            new FakeMutationStore(),
+            new FakeInstallService(),
+            new FontActivationCoordinator(new FakePlatformActivation(), new FakeActivationStore(), logStore),
+            logStore,
+            new FakeDownloadRecordStore());
+        var vm = new ShellViewModel(
+            new FontLibraryService(new FakeInventory([]), new FakeStore([])),
+            null,
+            NullUserFileDialogService.Instance,
+            onlineService)
+        {
+            SelectedRemoteFont = new RemoteFontFamilyItemViewModel(CreateRemoteFont("Noto Sans"))
+        };
+
+        await vm.DownloadSelectedOnlineFontCommand.ExecuteAsync(null);
+
+        var item = Assert.Single(vm.OnlineDownloadQueue);
+        Assert.Equal(OnlineFontDownloadStatus.Failed, item.Status);
+        Assert.True(item.CanRetry);
+        Assert.Contains("fixture download failed", item.ErrorMessage, StringComparison.Ordinal);
+
+        await vm.RetryOnlineDownloadCommand.ExecuteAsync(item);
+
+        Assert.Equal(OnlineFontDownloadStatus.Succeeded, item.Status);
+        Assert.Equal(2, provider.DownloadCalls);
+    }
+
     private static FontFamilyRecord CreateFont(
         string family,
         FontActivationState state = FontActivationState.Installed,
@@ -492,6 +558,18 @@ public sealed class ShellViewModelTests
             collections ?? [],
             false);
     }
+
+    private static RemoteFontFamily CreateRemoteFont(string family) =>
+        new(
+            "google-fonts",
+            family,
+            "sans-serif",
+            ["latin"],
+            "v1",
+            null,
+            $"https://fonts.google.com/specimen/{family.Replace(' ', '+')}",
+            $"请查看来源页面：https://fonts.google.com/specimen/{family.Replace(' ', '+')}",
+            [new RemoteFontStyle("regular", "regular.ttf", $"https://fonts.gstatic.com/s/{family.Replace(" ", "", StringComparison.Ordinal).ToLowerInvariant()}/regular.ttf")]);
 
     private static bool RemovesFilterOption(NotifyCollectionChangedEventArgs args, string option) =>
         args.Action == NotifyCollectionChangedAction.Reset
@@ -647,6 +725,34 @@ public sealed class ShellViewModelTests
 
         public Task<RemoteFontDownloadResult> DownloadAsync(RemoteFontDownloadRequest request, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
+    }
+
+    private sealed class QueueingFontSourceProvider : IFontSourceProvider
+    {
+        public int DownloadCalls { get; private set; }
+
+        public int FailDownloadCount { get; init; }
+
+        public string ProviderId => "google-fonts";
+
+        public Task<IReadOnlyList<RemoteFontFamily>> SearchAsync(RemoteFontSearchQuery query, CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<RemoteFontFamily>>([CreateRemoteFont("Noto Sans")]);
+
+        public Task<RemoteFontDownloadResult> DownloadAsync(RemoteFontDownloadRequest request, CancellationToken cancellationToken)
+        {
+            DownloadCalls++;
+            if (DownloadCalls <= FailDownloadCount)
+            {
+                throw new InvalidOperationException("fixture download failed");
+            }
+
+            var style = request.Styles[0];
+            var path = $"C:/GlyphStash/{request.Family.FamilyName}-{style.Variant}.ttf";
+            return Task.FromResult(new RemoteFontDownloadResult(
+                request.Family,
+                [new RemoteFontDownloadedFile(style, path, "hash", "TTF")],
+                "已下载 1 个样式。"));
+        }
     }
 
     private sealed class FakeDownloadRecordStore : IDownloadRecordStore

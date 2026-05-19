@@ -4,6 +4,7 @@ using Avalonia.Headless;
 using Avalonia.Markup.Xaml.Styling;
 using Avalonia.Themes.Fluent;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using GlyphStash.Application.Abstractions.Fonts;
 using GlyphStash.Application.Abstractions.Storage;
 using GlyphStash.Application.Fonts;
@@ -45,6 +46,21 @@ public sealed class AvaloniaHeadlessTests
         EnsureAvalonia();
         var vm = new ShellViewModel(new FontLibraryService(new FakeInventory(), new FakeStore()));
         vm.SelectedNavigationItem = vm.NavigationItems.Single(item => item.Key == "online-fonts");
+        var remoteFont = new RemoteFontFamily(
+            "google-fonts",
+            "Noto Sans",
+            "sans-serif",
+            ["latin"],
+            "v1",
+            null,
+            "https://fonts.google.com/specimen/Noto+Sans",
+            "请查看来源页面：https://fonts.google.com/specimen/Noto+Sans",
+            [new RemoteFontStyle("regular", "regular.ttf", "https://fonts.gstatic.com/s/notosans/regular.ttf")]);
+        vm.SelectedRemoteFont = new RemoteFontFamilyItemViewModel(remoteFont);
+        vm.OnlineDownloadQueue.Add(new OnlineFontDownloadQueueItemViewModel(
+            remoteFont,
+            [new RemoteFontStyle("regular", "regular.ttf", "https://fonts.gstatic.com/s/notosans/regular.ttf")],
+            new OnlineFontImportOptions([], [], false, false, false)));
         var window = new Window
         {
             Width = 1360,
@@ -58,6 +74,7 @@ public sealed class AvaloniaHeadlessTests
 
         Assert.True(vm.IsOnlineFontsPage);
         Assert.IsType<ShellView>(window.Content);
+        Assert.Contains(window.GetVisualDescendants().OfType<Control>(), control => control.Name == "OnlineDownloadQueueSection");
     }
 
     private static void EnsureAvalonia()

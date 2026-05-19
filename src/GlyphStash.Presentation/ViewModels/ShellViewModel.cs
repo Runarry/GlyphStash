@@ -18,6 +18,7 @@ public sealed partial class ShellViewModel : ObservableObject
     private readonly IGlyphCatalogService? _glyphCatalogService;
     private readonly List<FontFamilyItemViewModel> _allFonts = [];
     private FontImportPreview? _currentImportPreview;
+    private bool _isProcessingOnlineDownloadQueue;
 
     [ObservableProperty]
     private NavigationItemViewModel? _selectedNavigationItem;
@@ -226,6 +227,8 @@ public sealed partial class ShellViewModel : ObservableObject
 
     public ObservableCollection<RemoteFontFamilyItemViewModel> RemoteFonts { get; } = [];
 
+    public ObservableCollection<OnlineFontDownloadQueueItemViewModel> OnlineDownloadQueue { get; } = [];
+
     public ObservableCollection<GlyphItemViewModel> Glyphs { get; } = [];
 
     public ObservableCollection<string> UnicodeBlocks { get; } = ["全部区块"];
@@ -350,6 +353,8 @@ public sealed partial class ShellViewModel : ObservableObject
     public bool HasRemoteFonts => RemoteFonts.Count > 0;
 
     public bool HasSelectedRemoteFont => SelectedRemoteFont is not null;
+
+    public bool HasOnlineDownloadQueue => OnlineDownloadQueue.Count > 0;
 
     public bool HasGlyphs => Glyphs.Count > 0;
 
@@ -603,30 +608,88 @@ public sealed partial class ShellViewModel : ObservableObject
             return;
         }
 
+        var selectedStyles = SelectedRemoteFont.SelectedStyles;
+        if (selectedStyles.Count == 0)
+        {
+            OnlineStatus = "请选择至少一个可下载样式。";
+            return;
+        }
+
+        var item = new OnlineFontDownloadQueueItemViewModel(
+            SelectedRemoteFont.ToRecord(),
+            selectedStyles,
+            new OnlineFontImportOptions(ParseNames(DownloadTagsText), ParseNames(DownloadCollectionsText), DownloadFavorite, DownloadInstallForCurrentUser, DownloadTemporarilyActivate));
+        OnlineDownloadQueue.Add(item);
+        OnPropertyChanged(nameof(HasOnlineDownloadQueue));
+        OnlineStatus = $"已加入下载队列：{item.FamilyName}";
+        await ProcessOnlineDownloadQueueAsync();
+    }
+
+    [RelayCommand]
+    private async Task RetryOnlineDownloadAsync(OnlineFontDownloadQueueItemViewModel? item)
+    {
+        if (item is null || !item.CanRetry)
+        {
+            return;
+        }
+
+        item.ResetForRetry();
+        OnlineStatus = $"已重新加入下载队列：{item.FamilyName}";
+        await ProcessOnlineDownloadQueueAsync();
+    }
+
+    private async Task ProcessOnlineDownloadQueueAsync()
+    {
+        if (_onlineFontService is null || _isProcessingOnlineDownloadQueue)
+        {
+            return;
+        }
+
+        _isProcessingOnlineDownloadQueue = true;
         try
         {
-            IsBusy = true;
-            OnlineStatus = $"正在下载 {SelectedRemoteFont.FamilyName}...";
-            var result = await _onlineFontService.DownloadAsync(
-                SelectedRemoteFont.ToRecord(),
-                SelectedRemoteFont.SelectedStyles,
-                new OnlineFontImportOptions(ParseNames(DownloadTagsText), ParseNames(DownloadCollectionsText), DownloadFavorite, DownloadInstallForCurrentUser, DownloadTemporarilyActivate),
-                CancellationToken.None);
-            var cached = await _fontLibraryService.LoadCachedFontsAsync(new FontSearchQuery(), CancellationToken.None);
-            ReplaceFonts(cached);
-            await ReloadM2StateAsync();
-            OnlineStatus = result.Message;
-            ShowToast($"已下载 {SelectedRemoteFont.FamilyName}");
-        }
-        catch (Exception ex)
-        {
-            OnlineStatus = BuildErrorMessage(ex);
-            ShowToast("下载失败，可重试");
+            while (OnlineDownloadQueue.FirstOrDefault(item => item.Status == OnlineFontDownloadStatus.Queued) is { } item)
+            {
+                item.MarkDownloading();
+                OnlineStatus = $"队列中 {OnlineDownloadQueue.Count:N0} 项，正在下载 {item.FamilyName}...";
+                try
+                {
+                    var result = await _onlineFontService.DownloadAsync(item.Family, item.Styles, item.Options, CancellationToken.None);
+                    item.MarkSucceeded(result.Message);
+                    var cached = await _fontLibraryService.LoadCachedFontsAsync(new FontSearchQuery(), CancellationToken.None);
+                    ReplaceFonts(cached);
+                    await ReloadM2StateAsync();
+                    OnlineStatus = $"下载完成：{item.FamilyName}";
+                    ShowToast($"已下载 {item.FamilyName}");
+                }
+                catch (Exception ex)
+                {
+                    var message = BuildErrorMessage(ex);
+                    item.MarkFailed(message);
+                    OnlineStatus = $"下载失败：{item.FamilyName}。{message}";
+                    ShowToast("下载失败，可重试");
+                }
+            }
         }
         finally
         {
-            IsBusy = false;
+            _isProcessingOnlineDownloadQueue = false;
+            UpdateOnlineQueueStatusIfIdle();
         }
+    }
+
+    private void UpdateOnlineQueueStatusIfIdle()
+    {
+        if (_isProcessingOnlineDownloadQueue || OnlineDownloadQueue.Count == 0)
+        {
+            return;
+        }
+
+        var failed = OnlineDownloadQueue.Count(item => item.Status == OnlineFontDownloadStatus.Failed);
+        var succeeded = OnlineDownloadQueue.Count(item => item.Status == OnlineFontDownloadStatus.Succeeded);
+        OnlineStatus = failed > 0
+            ? $"下载队列完成：{succeeded:N0} 项成功，{failed:N0} 项失败，可重试失败项。"
+            : $"下载队列完成：{succeeded:N0} 项成功。";
     }
 
     [RelayCommand]
@@ -1538,6 +1601,14 @@ public sealed partial class ShellViewModel : ObservableObject
 
     private static string BuildErrorMessage(Exception exception)
     {
+        for (var candidate = exception; candidate is not null; candidate = candidate.InnerException)
+        {
+            if (candidate is InvalidOperationException && !string.IsNullOrWhiteSpace(candidate.Message))
+            {
+                return candidate.Message;
+            }
+        }
+
         var current = exception;
         while (current.InnerException is not null)
         {

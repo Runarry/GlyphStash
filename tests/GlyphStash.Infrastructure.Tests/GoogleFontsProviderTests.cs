@@ -172,6 +172,30 @@ public sealed class GoogleFontsProviderTests
     }
 
     [Fact]
+    public async Task SearchAsync_ReportsNetworkFailureClearly()
+    {
+        var provider = new GoogleFontsProvider(new HttpClient(new StubHttpMessageHandler(_ => throw new HttpRequestException("fixture offline"))));
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            provider.SearchAsync(new RemoteFontSearchQuery("Noto Sans", "key"), CancellationToken.None));
+
+        Assert.Contains("网络不可用", ex.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("fixture offline", ex.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task SearchAsync_ReportsTimeoutClearly()
+    {
+        var provider = new GoogleFontsProvider(new HttpClient(new StubHttpMessageHandler(_ => throw new TaskCanceledException("fixture timeout"))));
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            provider.SearchAsync(new RemoteFontSearchQuery("Noto Sans", "key"), CancellationToken.None));
+
+        Assert.Contains("请求超时", ex.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("fixture timeout", ex.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task DownloadAsync_WritesSelectedStylesToManagedStagingDirectory()
     {
         var directory = Path.Combine(Path.GetTempPath(), "GlyphStash.Tests", Guid.NewGuid().ToString("N"));
