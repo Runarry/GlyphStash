@@ -1,0 +1,94 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="using:System">
+  <ResourceDictionary.ThemeDictionaries>
+    <ResourceDictionary x:Key="Light">
+      <Color x:Key="GlyphColorBackground">#F7F9FA</Color>
+      <Color x:Key="GlyphColorSurface">#FFFFFF</Color>
+      <Color x:Key="GlyphColorSurfaceMuted">#EEF4F2</Color>
+      <Color x:Key="GlyphColorText">#273133</Color>
+      <Color x:Key="GlyphColorTextMuted">#747E82</Color>
+      <Color x:Key="GlyphColorBorder">#E4E9E8</Color>
+      <Color x:Key="GlyphColorAccent">#118169</Color>
+      <Color x:Key="GlyphColorAccentSoft">#E4F4EF</Color>
+      <Color x:Key="GlyphColorBlue">#3B7DD8</Color>
+      <Color x:Key="GlyphColorBlueSoft">#EDF5FF</Color>
+      <Color x:Key="GlyphColorWarn">#A56B05</Color>
+      <Color x:Key="GlyphColorWarnSoft">#FFF5D8</Color>
+      <Color x:Key="GlyphColorDanger">#C74338</Color>
+      <Color x:Key="GlyphColorDangerSoft">#FCECE9</Color>
+
+      <SolidColorBrush x:Key="GlyphBackgroundBrush" Color="{StaticResource GlyphColorBackground}" />
+      <SolidColorBrush x:Key="GlyphSurfaceBrush" Color="{StaticResource GlyphColorSurface}" />
+      <SolidColorBrush x:Key="GlyphSurfaceMutedBrush" Color="{StaticResource GlyphColorSurfaceMuted}" />
+      <SolidColorBrush x:Key="GlyphTextBrush" Color="{StaticResource GlyphColorText}" />
+      <SolidColorBrush x:Key="GlyphTextMutedBrush" Color="{StaticResource GlyphColorTextMuted}" />
+      <SolidColorBrush x:Key="GlyphBorderBrush" Color="{StaticResource GlyphColorBorder}" />
+      <SolidColorBrush x:Key="GlyphAccentBrush" Color="{StaticResource GlyphColorAccent}" />
+      <SolidColorBrush x:Key="GlyphAccentSoftBrush" Color="{StaticResource GlyphColorAccentSoft}" />
+      <SolidColorBrush x:Key="GlyphBlueBrush" Color="{StaticResource GlyphColorBlue}" />
+      <SolidColorBrush x:Key="GlyphBlueSoftBrush" Color="{StaticResource GlyphColorBlueSoft}" />
+      <SolidColorBrush x:Key="GlyphWarnBrush" Color="{StaticResource GlyphColorWarn}" />
+      <SolidColorBrush x:Key="GlyphWarnSoftBrush" Color="{StaticResource GlyphColorWarnSoft}" />
+      <SolidColorBrush x:Key="GlyphDangerBrush" Color="{StaticResource GlyphColorDanger}" />
+      <SolidColorBrush x:Key="GlyphDangerSoftBrush" Color="{StaticResource GlyphColorDangerSoft}" />
+    </ResourceDictionary>
+
+    <ResourceDictionary x:Key="Dark">
+      <Color x:Key="GlyphColorBackground">#111819</Color>
+      <Color x:Key="GlyphColorSurface">#182122</Color>
+      <Color x:Key="GlyphColorSurfaceMuted">#202B2D</Color>
+      <Color x:Key="GlyphColorText">#EDF3F2</Color>
+      <Color x:Key="GlyphColorTextMuted">#9DADAA</Color>
+      <Color x:Key="GlyphColorBorder">#2C3A3B</Color>
+      <Color x:Key="GlyphColorAccent">#46C2A0</Color>
+      <Color x:Key="GlyphColorAccentSoft">#153B34</Color>
+      <Color x:Key="GlyphColorBlue">#7CAAF2</Color>
+      <Color x:Key="GlyphColorBlueSoft">#182B47</Color>
+      <Color x:Key="GlyphColorWarn">#E4B64F</Color>
+      <Color x:Key="GlyphColorWarnSoft">#3F3113</Color>
+      <Color x:Key="GlyphColorDanger">#F08A80</Color>
+      <Color x:Key="GlyphColorDangerSoft">#41201D</Color>
+
+      <SolidColorBrush x:Key="GlyphBackgroundBrush" Color="{StaticResource GlyphColorBackground}" />
+      <SolidColorBrush x:Key="GlyphSurfaceBrush" Color="{StaticResource GlyphColorSurface}" />
+      <SolidColorBrush x:Key="GlyphSurfaceMutedBrush" Color="{StaticResource GlyphColorSurfaceMuted}" />
+      <SolidColorBrush x:Key="GlyphTextBrush" Color="{StaticResource GlyphColorText}" />
+      <SolidColorBrush x:Key="GlyphTextMutedBrush" Color="{StaticResource GlyphColorTextMuted}" />
+      <SolidColorBrush x:Key="GlyphBorderBrush" Color="{StaticResource GlyphColorBorder}" />
+      <SolidColorBrush x:Key="GlyphAccentBrush" Color="{StaticResource GlyphColorAccent}" />
+      <SolidColorBrush x:Key="GlyphAccentSoftBrush" Color="{StaticResource GlyphColorAccentSoft}" />
+      <SolidColorBrush x:Key="GlyphBlueBrush" Color="{StaticResource GlyphColorBlue}" />
+      <SolidColorBrush x:Key="GlyphBlueSoftBrush" Color="{StaticResource GlyphColorBlueSoft}" />
+      <SolidColorBrush x:Key="GlyphWarnBrush" Color="{StaticResource GlyphColorWarn}" />
+      <SolidColorBrush x:Key="GlyphWarnSoftBrush" Color="{StaticResource GlyphColorWarnSoft}" />
+      <SolidColorBrush x:Key="GlyphDangerBrush" Color="{StaticResource GlyphColorDanger}" />
+      <SolidColorBrush x:Key="GlyphDangerSoftBrush" Color="{StaticResource GlyphColorDangerSoft}" />
+    </ResourceDictionary>
+  </ResourceDictionary.ThemeDictionaries>
+
+  <FontFamily x:Key="GlyphFontSans">Segoe UI, Microsoft YaHei UI, system-ui, sans-serif</FontFamily>
+  <FontFamily x:Key="GlyphFontDisplay">Segoe UI Semibold, Microsoft YaHei UI, system-ui, sans-serif</FontFamily>
+  <FontFamily x:Key="GlyphFontMono">Cascadia Mono, Consolas, monospace</FontFamily>
+
+  <sys:Double x:Key="GlyphFontSizeXs">12</sys:Double>
+  <sys:Double x:Key="GlyphFontSizeSm">13</sys:Double>
+  <sys:Double x:Key="GlyphFontSizeBase">14</sys:Double>
+  <sys:Double x:Key="GlyphFontSizeMd">16</sys:Double>
+  <sys:Double x:Key="GlyphFontSizeLg">18</sys:Double>
+  <sys:Double x:Key="GlyphFontSizeXl">24</sys:Double>
+
+  <sys:Double x:Key="GlyphSpace1">4</sys:Double>
+  <sys:Double x:Key="GlyphSpace2">8</sys:Double>
+  <sys:Double x:Key="GlyphSpace3">12</sys:Double>
+  <sys:Double x:Key="GlyphSpace4">16</sys:Double>
+  <sys:Double x:Key="GlyphSpace5">20</sys:Double>
+  <sys:Double x:Key="GlyphSpace6">24</sys:Double>
+
+  <CornerRadius x:Key="GlyphRadiusSm">8</CornerRadius>
+  <CornerRadius x:Key="GlyphRadiusMd">12</CornerRadius>
+  <CornerRadius x:Key="GlyphRadiusLg">16</CornerRadius>
+  <CornerRadius x:Key="GlyphRadiusFull">999</CornerRadius>
+  <Thickness x:Key="GlyphPagePadding">24,18,24,22</Thickness>
+  <Thickness x:Key="GlyphPanelPadding">16</Thickness>
+</ResourceDictionary>

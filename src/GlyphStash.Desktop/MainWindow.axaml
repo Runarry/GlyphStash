@@ -1,0 +1,13 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:views="using:GlyphStash.Presentation.Views"
+        x:Class="GlyphStash.Desktop.MainWindow"
+        x:CompileBindings="False"
+        Title="GlyphStash"
+        Width="1360"
+        Height="860"
+        MinWidth="980"
+        MinHeight="640"
+        Background="{DynamicResource GlyphBackgroundBrush}">
+  <views:ShellView />
+</Window>

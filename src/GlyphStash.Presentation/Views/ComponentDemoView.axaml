@@ -1,0 +1,30 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="GlyphStash.Presentation.Views.ComponentDemoView"
+             x:CompileBindings="False">
+  <ScrollViewer Background="{DynamicResource GlyphBackgroundBrush}">
+    <StackPanel Margin="{StaticResource GlyphPagePadding}" Spacing="16">
+      <TextBlock Text="组件演示" Classes="h1" />
+      <Border Classes="panel" Padding="{StaticResource GlyphPanelPadding}">
+        <StackPanel Spacing="12">
+          <TextBlock Text="Buttons / Badges / States" Classes="h2" />
+          <WrapPanel>
+            <Button Content="普通按钮" Margin="0,0,8,8" />
+            <Button Content="主操作" Classes="primary" Margin="0,0,8,8" />
+            <Button Content="危险操作" Classes="danger" Margin="0,0,8,8" />
+            <Border Classes="badge ok" Margin="0,0,8,8"><TextBlock Text="已安装" /></Border>
+            <Border Classes="badge blue" Margin="0,0,8,8"><TextBlock Text="系统字体" /></Border>
+            <Border Classes="badge warn" Margin="0,0,8,8"><TextBlock Text="未知授权" /></Border>
+            <Border Classes="badge danger" Margin="0,0,8,8"><TextBlock Text="阻止操作" /></Border>
+          </WrapPanel>
+        </StackPanel>
+      </Border>
+      <Border Classes="panel" Padding="{StaticResource GlyphPanelPadding}">
+        <StackPanel Spacing="12">
+          <TextBlock Text="Empty / Error / Permission" Classes="h2" />
+          <TextBlock Text="当前筛选没有匹配字体。扫描失败、下载失败、权限不足和授权风险都复用页面内状态区或确认对话框。" Classes="muted" TextWrapping="Wrap" />
+        </StackPanel>
+      </Border>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

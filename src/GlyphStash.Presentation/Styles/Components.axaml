@@ -1,0 +1,156 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Style Selector="TextBlock">
+    <Setter Property="FontFamily" Value="{StaticResource GlyphFontSans}" />
+    <Setter Property="FontSize" Value="{StaticResource GlyphFontSizeBase}" />
+    <Setter Property="Foreground" Value="{DynamicResource GlyphTextBrush}" />
+  </Style>
+
+  <Style Selector="TextBlock.muted">
+    <Setter Property="Foreground" Value="{DynamicResource GlyphTextMutedBrush}" />
+  </Style>
+
+  <Style Selector="TextBlock.caption">
+    <Setter Property="Foreground" Value="{DynamicResource GlyphTextMutedBrush}" />
+    <Setter Property="FontSize" Value="{StaticResource GlyphFontSizeXs}" />
+  </Style>
+
+  <Style Selector="TextBlock.h1">
+    <Setter Property="FontFamily" Value="{StaticResource GlyphFontDisplay}" />
+    <Setter Property="FontSize" Value="{StaticResource GlyphFontSizeXl}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+
+  <Style Selector="TextBlock.h2">
+    <Setter Property="FontFamily" Value="{StaticResource GlyphFontDisplay}" />
+    <Setter Property="FontSize" Value="{StaticResource GlyphFontSizeMd}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+
+  <Style Selector="Border.panel">
+    <Setter Property="Background" Value="{DynamicResource GlyphSurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource GlyphBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{StaticResource GlyphRadiusLg}" />
+  </Style>
+
+  <Style Selector="Border.card">
+    <Setter Property="Background" Value="{DynamicResource GlyphSurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource GlyphBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{StaticResource GlyphRadiusMd}" />
+    <Setter Property="Padding" Value="13" />
+  </Style>
+
+  <Style Selector="Border.card:pointerover">
+    <Setter Property="BorderBrush" Value="{DynamicResource GlyphAccentBrush}" />
+  </Style>
+
+  <Style Selector="Button">
+    <Setter Property="MinHeight" Value="36" />
+    <Setter Property="Padding" Value="13,0" />
+    <Setter Property="CornerRadius" Value="{StaticResource GlyphRadiusMd}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Background" Value="{DynamicResource GlyphSurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource GlyphBorderBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource GlyphTextBrush}" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+
+  <Style Selector="Button:pointerover">
+    <Setter Property="BorderBrush" Value="{DynamicResource GlyphAccentBrush}" />
+  </Style>
+
+  <Style Selector="Button.primary">
+    <Setter Property="Background" Value="{DynamicResource GlyphAccentBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource GlyphAccentBrush}" />
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+
+  <Style Selector="Button.ghost">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+
+  <Style Selector="Button.danger">
+    <Setter Property="Background" Value="{DynamicResource GlyphDangerSoftBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource GlyphDangerBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource GlyphDangerBrush}" />
+  </Style>
+
+  <Style Selector="Button.sm">
+    <Setter Property="MinHeight" Value="30" />
+    <Setter Property="Padding" Value="10,0" />
+    <Setter Property="FontSize" Value="{StaticResource GlyphFontSizeSm}" />
+  </Style>
+
+  <Style Selector="TextBox, ComboBox">
+    <Setter Property="MinHeight" Value="36" />
+    <Setter Property="CornerRadius" Value="{StaticResource GlyphRadiusMd}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource GlyphBorderBrush}" />
+    <Setter Property="Background" Value="{DynamicResource GlyphSurfaceBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource GlyphTextBrush}" />
+  </Style>
+
+  <Style Selector="Border.badge">
+    <Setter Property="CornerRadius" Value="{StaticResource GlyphRadiusFull}" />
+    <Setter Property="MinHeight" Value="26" />
+    <Setter Property="Padding" Value="8,0" />
+    <Setter Property="Background" Value="{DynamicResource GlyphSurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource GlyphBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+
+  <Style Selector="Border.badge > TextBlock">
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="LineHeight" Value="16" />
+  </Style>
+
+  <Style Selector="Border.badge.ok">
+    <Setter Property="Background" Value="{DynamicResource GlyphAccentSoftBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource GlyphAccentBrush}" />
+  </Style>
+
+  <Style Selector="Border.badge.blue">
+    <Setter Property="Background" Value="{DynamicResource GlyphBlueSoftBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource GlyphBlueBrush}" />
+  </Style>
+
+  <Style Selector="Border.badge.warn">
+    <Setter Property="Background" Value="{DynamicResource GlyphWarnSoftBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource GlyphWarnBrush}" />
+  </Style>
+
+  <Style Selector="Border.badge.danger">
+    <Setter Property="Background" Value="{DynamicResource GlyphDangerSoftBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource GlyphDangerBrush}" />
+  </Style>
+
+  <Style Selector="ListBox.font-list">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+  </Style>
+
+  <Style Selector="ListBox.nav-list">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+  </Style>
+
+  <Style Selector="ListBox.nav-list ListBoxItem">
+    <Setter Property="MinHeight" Value="38" />
+    <Setter Property="Padding" Value="12,9" />
+    <Setter Property="CornerRadius" Value="{StaticResource GlyphRadiusMd}" />
+    <Setter Property="Margin" Value="0,0,0,5" />
+  </Style>
+
+  <Style Selector="ListBox.nav-list ListBoxItem:selected">
+    <Setter Property="Background" Value="{DynamicResource GlyphSurfaceBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource GlyphAccentBrush}" />
+  </Style>
+
+  <Style Selector="ListBox.nav-list ListBoxItem:pointerover">
+    <Setter Property="Background" Value="{DynamicResource GlyphSurfaceBrush}" />
+  </Style>
+</Styles>

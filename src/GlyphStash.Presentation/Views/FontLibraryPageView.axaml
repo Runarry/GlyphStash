@@ -1,0 +1,198 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="GlyphStash.Presentation.Views.FontLibraryPageView"
+             x:CompileBindings="False">
+  <Grid RowDefinitions="76,*,Auto">
+    <Border Grid.Row="0"
+            Background="{DynamicResource GlyphSurfaceBrush}"
+            BorderBrush="{DynamicResource GlyphBorderBrush}"
+            BorderThickness="0,0,0,1"
+            Padding="24,0">
+      <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+        <StackPanel>
+          <TextBlock Text="字体库" Classes="h1" />
+          <TextBlock Text="{Binding ScanStatus}" Classes="muted" Margin="0,5,0,0" />
+        </StackPanel>
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
+          <Button Content="重新扫描" Command="{Binding RescanCommand}" />
+          <Button Content="导入字体" Classes="primary" Command="{Binding OpenImportDialogCommand}" />
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <Grid Grid.Row="1" ColumnDefinitions="250,*" ColumnSpacing="16" Margin="{StaticResource GlyphPagePadding}">
+      <Border Grid.Column="0" Classes="panel" Padding="{StaticResource GlyphPanelPadding}">
+        <ScrollViewer>
+          <StackPanel Spacing="14">
+            <StackPanel Spacing="7">
+              <TextBlock Text="搜索字体或标签" Classes="caption" FontWeight="Bold" />
+              <TextBox Text="{Binding SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="Inter、中文、等宽" />
+            </StackPanel>
+            <StackPanel Spacing="7">
+              <TextBlock Text="来源" Classes="caption" FontWeight="Bold" />
+              <ComboBox ItemsSource="{Binding SourceFilters}" SelectedItem="{Binding SelectedSourceFilter}" HorizontalAlignment="Stretch" />
+            </StackPanel>
+            <StackPanel Spacing="7">
+              <TextBlock Text="激活状态" Classes="caption" FontWeight="Bold" />
+              <ComboBox ItemsSource="{Binding StateFilters}" SelectedItem="{Binding SelectedStateFilter}" HorizontalAlignment="Stretch" />
+            </StackPanel>
+            <StackPanel Spacing="7">
+              <TextBlock Text="标签" Classes="caption" FontWeight="Bold" />
+              <WrapPanel>
+                <Border Classes="badge ok" Margin="0,0,7,7"><TextBlock Text="无衬线" FontSize="12" /></Border>
+                <Border Classes="badge" Margin="0,0,7,7"><TextBlock Text="中文" FontSize="12" /></Border>
+                <Border Classes="badge" Margin="0,0,7,7"><TextBlock Text="等宽" FontSize="12" /></Border>
+                <Border Classes="badge" Margin="0,0,7,7"><TextBlock Text="可商用" FontSize="12" /></Border>
+              </WrapPanel>
+            </StackPanel>
+            <StackPanel Spacing="7">
+              <TextBlock Text="集合" Classes="caption" FontWeight="Bold" />
+              <WrapPanel>
+                <Border Classes="badge" Margin="0,0,7,7"><TextBlock Text="官网改版" FontSize="12" /></Border>
+                <Border Classes="badge" Margin="0,0,7,7"><TextBlock Text="游戏 UI" FontSize="12" /></Border>
+                <Border Classes="badge" Margin="0,0,7,7"><TextBlock Text="开发文档" FontSize="12" /></Border>
+              </WrapPanel>
+            </StackPanel>
+            <Button Content="管理标签" Command="{Binding OpenTagsDialogCommand}" />
+          </StackPanel>
+        </ScrollViewer>
+      </Border>
+
+      <Border Grid.Column="1" Classes="panel" Padding="{StaticResource GlyphPanelPadding}">
+        <Grid RowDefinitions="Auto,*">
+          <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,12">
+            <StackPanel>
+              <TextBlock Text="本地字体" Classes="h2" />
+              <TextBlock Text="列表区分系统字体、用户级安装、GlyphStash 管理和临时字体。" Classes="muted" Margin="0,5,0,0" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
+              <Button Content="单行" Classes="sm" Command="{Binding SetPreviewModeCommand}" CommandParameter="单行" />
+              <Button Content="段落" Classes="sm" Command="{Binding SetPreviewModeCommand}" CommandParameter="段落" />
+              <Button Content="字符集" Classes="sm" Command="{Binding SetPreviewModeCommand}" CommandParameter="字符集" />
+            </StackPanel>
+          </Grid>
+
+          <Grid Grid.Row="1">
+            <TextBlock Text="正在加载字体索引..." Classes="muted" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding IsBusy}" />
+
+            <Border BorderBrush="{DynamicResource GlyphBorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="{StaticResource GlyphRadiusLg}"
+                    Padding="22"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Center"
+                    IsVisible="{Binding IsEmpty}">
+              <StackPanel HorizontalAlignment="Center" Spacing="12">
+                <TextBlock Text="{Binding EmptyStateMessage}" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                <Button Content="重新扫描字体" Command="{Binding RescanCommand}" HorizontalAlignment="Center" />
+              </StackPanel>
+            </Border>
+
+            <ListBox Classes="font-list"
+                     ItemsSource="{Binding Fonts}"
+                     SelectedItem="{Binding SelectedFont, Mode=TwoWay}"
+                     IsVisible="{Binding HasFonts}">
+              <ListBox.ItemTemplate>
+                <DataTemplate>
+                  <Border Classes="card" Margin="0,0,0,10">
+                    <StackPanel Spacing="9">
+                      <Grid ColumnDefinitions="*,Auto">
+                        <StackPanel>
+                          <TextBlock Text="{Binding FamilyName}" Classes="h2" />
+                          <WrapPanel Margin="0,7,0,0">
+                            <Border Classes="badge" Classes.ok="{Binding IsOkState}" Classes.warn="{Binding IsWarningState}" Margin="0,0,7,0">
+                              <TextBlock Text="{Binding StateLabel}" FontSize="12" />
+                            </Border>
+                            <Border Classes="badge" Classes.blue="{Binding IsSystemSource}" Margin="0,0,7,0">
+                              <TextBlock Text="{Binding SourceLabel}" FontSize="12" />
+                            </Border>
+                            <Border Classes="badge" Margin="0,0,7,0">
+                              <TextBlock Text="{Binding StyleCountLabel}" FontSize="12" />
+                            </Border>
+                          </WrapPanel>
+                        </StackPanel>
+                        <Button Grid.Column="1"
+                                Classes="ghost sm"
+                                Content="{Binding FavoriteLabel}"
+                                Command="{Binding $parent[UserControl].DataContext.ToggleFavoriteCommand}"
+                                CommandParameter="{Binding .}" />
+                      </Grid>
+                      <TextBlock Text="{Binding PreviewText}"
+                                 FontFamily="{Binding FamilyName}"
+                                 FontSize="{Binding PreviewFontSize}"
+                                 TextWrapping="Wrap" />
+                      <TextBlock Text="{Binding TagsLabel}" Classes="muted" />
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </Grid>
+        </Grid>
+      </Border>
+    </Grid>
+
+    <Border Grid.Row="2"
+            Background="{DynamicResource GlyphSurfaceBrush}"
+            BorderBrush="{DynamicResource GlyphBorderBrush}"
+            BorderThickness="0,1,0,0"
+            Padding="24,9">
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <TextBlock Text="预览文本" VerticalAlignment="Center" Classes="muted" />
+          <TextBox Width="320" MinHeight="30" Text="{Binding PreviewText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+        </StackPanel>
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+          <TextBlock Text="字号" VerticalAlignment="Center" Classes="muted" />
+          <Slider Width="140" Minimum="18" Maximum="48" Value="{Binding PreviewFontSize, Mode=TwoWay}" />
+          <TextBlock Text="{Binding PreviewFontSizeLabel}" FontWeight="SemiBold" VerticalAlignment="Center" />
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <Grid Grid.RowSpan="3" Background="#99000000" IsVisible="{Binding IsImportDialogOpen}">
+      <Border Width="720" MaxHeight="620" Classes="panel" Padding="18" HorizontalAlignment="Center" VerticalAlignment="Center">
+        <StackPanel Spacing="14">
+          <TextBlock Text="导入字体" Classes="h1" />
+          <TextBlock Text="解析结果会先展示重复、损坏文件和授权状态。M1 不执行真实安装或临时启用。" Classes="muted" TextWrapping="Wrap" />
+          <Border Classes="card">
+            <StackPanel Spacing="8">
+              <TextBlock Text="BrandSans-Regular.otf · OTF · 可导入 · 未知授权" />
+              <TextBlock Text="BrandSans-Bold.otf · OTF · 同名不同版本 · OFL" />
+              <TextBlock Text="broken-font.ttf · TTF · 文件损坏 · 无法读取" Foreground="{DynamicResource GlyphDangerBrush}" />
+            </StackPanel>
+          </Border>
+          <UniformGrid Columns="2">
+            <CheckBox Content="加入 GlyphStash 管理目录" IsChecked="True" />
+            <CheckBox Content="用户级安装" IsEnabled="False" />
+            <CheckBox Content="当前会话临时启用" IsEnabled="False" />
+            <CheckBox Content="加入集合：官网改版" />
+          </UniformGrid>
+          <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
+            <Button Content="取消" Command="{Binding CloseImportDialogCommand}" />
+            <Button Content="开始导入" Classes="primary" Command="{Binding StartImportCommand}" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+    </Grid>
+
+    <Grid Grid.RowSpan="3" Background="#99000000" IsVisible="{Binding IsTagsDialogOpen}">
+      <Border Width="620" Classes="panel" Padding="18" HorizontalAlignment="Center" VerticalAlignment="Center">
+        <StackPanel Spacing="14">
+          <TextBlock Text="标签" Classes="h1" />
+          <TextBox PlaceholderText="衬线、中文、项目A" />
+          <TextBlock Text="已选标签" Classes="h2" />
+          <WrapPanel>
+            <Border Classes="badge ok" Margin="0,0,7,7"><TextBlock Text="无衬线" /></Border>
+            <Border Classes="badge ok" Margin="0,0,7,7"><TextBlock Text="UI" /></Border>
+            <Border Classes="badge ok" Margin="0,0,7,7"><TextBlock Text="可商用" /></Border>
+          </WrapPanel>
+          <TextBlock Text="删除标签只移除标签和字体的关联，不删除字体。" Classes="muted" />
+          <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Content="完成" Classes="primary" Command="{Binding CloseTagsDialogCommand}" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+    </Grid>
+  </Grid>
+</UserControl>

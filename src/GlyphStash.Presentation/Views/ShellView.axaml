@@ -1,0 +1,75 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:views="using:GlyphStash.Presentation.Views"
+             x:Class="GlyphStash.Presentation.Views.ShellView"
+             x:CompileBindings="False"
+             Background="{DynamicResource GlyphBackgroundBrush}">
+  <Grid ColumnDefinitions="244,*,360">
+    <Border Grid.Column="0"
+            Background="{DynamicResource GlyphSurfaceMutedBrush}"
+            BorderBrush="{DynamicResource GlyphBorderBrush}"
+            BorderThickness="0,0,1,0"
+            Padding="14,18">
+      <DockPanel LastChildFill="True">
+        <StackPanel DockPanel.Dock="Top" Spacing="18">
+          <StackPanel Orientation="Horizontal" Spacing="11" Margin="10,8,10,10">
+            <Border Width="34" Height="34" CornerRadius="11" Background="{DynamicResource GlyphAccentBrush}">
+              <TextBlock Text="G" Foreground="White" FontFamily="Georgia" FontSize="23" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Border>
+            <StackPanel>
+              <TextBlock Text="GlyphStash" FontWeight="SemiBold" FontSize="16" />
+              <TextBlock Text="字体资产工作台" Classes="caption" />
+            </StackPanel>
+          </StackPanel>
+
+          <StackPanel Spacing="5">
+            <TextBlock Text="MAIN" Classes="caption" Margin="12,0,0,5" FontWeight="Bold" />
+            <ListBox Classes="nav-list"
+                     ItemsSource="{Binding NavigationItems}"
+                     SelectedItem="{Binding SelectedNavigationItem, Mode=TwoWay}">
+              <ListBox.ItemTemplate>
+                <DataTemplate>
+                  <StackPanel Orientation="Horizontal" Spacing="10">
+                    <Ellipse Width="9" Height="9" Fill="{DynamicResource GlyphAccentBrush}" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
+                  </StackPanel>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </StackPanel>
+        </StackPanel>
+
+        <Border DockPanel.Dock="Bottom" Classes="panel" Padding="12">
+          <StackPanel Spacing="8">
+            <TextBlock Text="当前会话" Classes="caption" />
+            <TextBlock Text="临时启用将在 M2 实现" FontWeight="SemiBold" />
+            <TextBlock Text="M1 不写入永久安装记录，也不执行真实卸载。" Classes="muted" TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+      </DockPanel>
+    </Border>
+
+    <views:FontLibraryPageView Grid.Column="1" IsVisible="{Binding IsFontLibraryPage}" />
+    <views:ComponentDemoView Grid.Column="1" Grid.ColumnSpan="2" IsVisible="{Binding IsComponentDemoPage}" />
+    <views:PlaceholderPageView Grid.Column="1" Grid.ColumnSpan="2" IsVisible="{Binding IsPlaceholderPage}" />
+
+    <Border Grid.Column="2"
+            Background="{DynamicResource GlyphSurfaceBrush}"
+            BorderBrush="{DynamicResource GlyphBorderBrush}"
+            BorderThickness="1,0,0,0"
+            IsVisible="{Binding IsFontLibraryPage}">
+      <views:FontDetailsPanelView />
+    </Border>
+
+    <Border Grid.ColumnSpan="3"
+            Classes="panel"
+            Background="{DynamicResource GlyphTextBrush}"
+            Padding="14,12"
+            HorizontalAlignment="Right"
+            VerticalAlignment="Bottom"
+            Margin="18"
+            IsVisible="{Binding IsToastVisible}">
+      <TextBlock Text="{Binding ToastMessage}" Foreground="{DynamicResource GlyphSurfaceBrush}" />
+    </Border>
+  </Grid>
+</UserControl>

@@ -1,0 +1,102 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="GlyphStash.Presentation.Views.FontDetailsPanelView"
+             x:CompileBindings="False">
+  <Grid>
+    <Border Padding="18" IsVisible="{Binding HasNoSelectedFont}">
+      <StackPanel Spacing="12" VerticalAlignment="Center">
+        <TextBlock Text="请选择字体" Classes="h1" />
+        <TextBlock Text="从字体库列表中选择一个字体族后，这里会显示预览、管理操作、基础信息和样式列表。" Classes="muted" TextWrapping="Wrap" />
+      </StackPanel>
+    </Border>
+
+    <ScrollViewer IsVisible="{Binding HasSelectedFont}">
+      <StackPanel Spacing="16" Margin="18">
+        <StackPanel Spacing="10">
+          <Grid ColumnDefinitions="*,Auto">
+            <StackPanel>
+              <TextBlock Text="{Binding SelectedFont.FamilyName}" Classes="h1" />
+              <WrapPanel Margin="0,8,0,0">
+                <Border Classes="badge" Margin="0,0,7,0"><TextBlock Text="{Binding SelectedFont.SourceLabel}" FontSize="12" /></Border>
+                <Border Classes="badge ok" Margin="0,0,7,0"><TextBlock Text="{Binding SelectedFont.StateLabel}" FontSize="12" /></Border>
+              </WrapPanel>
+            </StackPanel>
+            <Button Grid.Column="1" Classes="sm" Content="{Binding SelectedFont.FavoriteLabel}" Command="{Binding ToggleFavoriteCommand}" CommandParameter="{Binding SelectedFont}" />
+          </Grid>
+          <TextBlock Text="{Binding PreviewText}" FontFamily="{Binding SelectedFont.FamilyName}" FontSize="{Binding PreviewFontSize}" TextWrapping="Wrap" />
+        </StackPanel>
+
+        <StackPanel Spacing="10">
+          <TextBlock Text="管理操作" Classes="h2" />
+          <WrapPanel>
+            <Button Content="临时启用/关闭" Classes="primary sm" IsEnabled="False" Margin="0,0,8,8" />
+            <Button Content="用户级安装" Classes="sm" IsEnabled="False" Margin="0,0,8,8" />
+            <Button Content="卸载管理字体" Classes="danger sm" Command="{Binding OpenUninstallDialogCommand}" Margin="0,0,8,8" />
+            <Button Content="查看字形" Classes="sm" IsEnabled="False" Margin="0,0,8,8" />
+          </WrapPanel>
+          <TextBlock Text="临时启用、安装和卸载在 M1 只展示入口与安全提示，真实系统修改将在 M2 实现。" Classes="muted" TextWrapping="Wrap" />
+        </StackPanel>
+
+        <StackPanel Spacing="10">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="基础信息" Classes="h2" />
+            <Border Grid.Column="1" Classes="badge warn">
+              <TextBlock Text="{Binding SelectedFont.LicenseLabel}" FontSize="12" />
+            </Border>
+          </Grid>
+          <UniformGrid Columns="2" Rows="3">
+            <Border Classes="card" Margin="0,0,8,8"><StackPanel><TextBlock Text="样式" Classes="caption" /><TextBlock Text="{Binding SelectedFont.StyleCountLabel}" /></StackPanel></Border>
+            <Border Classes="card" Margin="0,0,0,8"><StackPanel><TextBlock Text="格式" Classes="caption" /><TextBlock Text="{Binding SelectedFont.FormatSummary}" /></StackPanel></Border>
+            <Border Classes="card" Margin="0,0,8,8"><StackPanel><TextBlock Text="版本" Classes="caption" /><TextBlock Text="{Binding SelectedFont.VersionLabel}" /></StackPanel></Border>
+            <Border Classes="card" Margin="0,0,0,8"><StackPanel><TextBlock Text="制造商" Classes="caption" /><TextBlock Text="{Binding SelectedFont.ManufacturerLabel}" /></StackPanel></Border>
+            <Border Classes="card" Margin="0,0,8,0"><StackPanel><TextBlock Text="覆盖" Classes="caption" /><TextBlock Text="{Binding SelectedFont.CoverageLabel}" TextWrapping="Wrap" /></StackPanel></Border>
+            <Border Classes="card"><StackPanel><TextBlock Text="文件 Hash" Classes="caption" /><TextBlock Text="{Binding SelectedFont.HashLabel}" TextWrapping="Wrap" /></StackPanel></Border>
+          </UniformGrid>
+          <Border Classes="card">
+            <StackPanel>
+              <TextBlock Text="文件路径" Classes="caption" />
+              <TextBlock Text="{Binding SelectedFont.FilePath}" TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+        </StackPanel>
+
+        <StackPanel Spacing="10">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="样式列表" Classes="h2" />
+            <Button Grid.Column="1" Classes="sm" Content="标签/集合" Command="{Binding OpenTagsDialogCommand}" />
+          </Grid>
+          <ItemsControl ItemsSource="{Binding SelectedFont.Faces}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Border Classes="card" Margin="0,0,0,8">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <StackPanel>
+                      <TextBlock Text="{Binding SubfamilyName}" FontWeight="SemiBold" />
+                      <TextBlock Text="{Binding PostScriptName}" Classes="muted" />
+                    </StackPanel>
+                    <Border Grid.Column="1" Classes="badge ok" VerticalAlignment="Center">
+                      <TextBlock Text="可预览" FontSize="12" />
+                    </Border>
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </StackPanel>
+    </ScrollViewer>
+
+    <Grid Background="#99000000" IsVisible="{Binding IsUninstallDialogOpen}">
+      <Border Width="520" Classes="panel" Padding="18" HorizontalAlignment="Center" VerticalAlignment="Center">
+        <StackPanel Spacing="14">
+          <TextBlock Text="卸载字体" Classes="h1" />
+          <TextBlock Text="M1 不执行真实卸载。v1 中系统字体不会被删除，非 GlyphStash 管理字体也不会直接卸载。" Classes="muted" TextWrapping="Wrap" />
+          <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
+            <Button Content="取消" Command="{Binding CloseUninstallDialogCommand}" />
+            <Button Content="确认卸载" Classes="danger" Command="{Binding ConfirmUninstallCommand}" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+    </Grid>
+  </Grid>
+</UserControl>

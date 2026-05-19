@@ -1,0 +1,30 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="GlyphStash.Presentation.Views.PlaceholderPageView"
+             x:CompileBindings="False">
+  <Grid RowDefinitions="76,*">
+    <Border Grid.Row="0"
+            Background="{DynamicResource GlyphSurfaceBrush}"
+            BorderBrush="{DynamicResource GlyphBorderBrush}"
+            BorderThickness="0,0,0,1"
+            Padding="24,0">
+      <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+        <StackPanel>
+          <TextBlock Text="{Binding CurrentPageTitle}" Classes="h1" />
+          <TextBlock Text="{Binding CurrentPageDescription}" Classes="muted" Margin="0,5,0,0" />
+        </StackPanel>
+        <Border Grid.Column="1" Classes="badge warn" VerticalAlignment="Center">
+          <TextBlock Text="{Binding CurrentPageMilestone}" FontSize="12" />
+        </Border>
+      </Grid>
+    </Border>
+
+    <Border Grid.Row="1" Classes="panel" Margin="{StaticResource GlyphPagePadding}" Padding="24">
+      <StackPanel Spacing="12" HorizontalAlignment="Center" VerticalAlignment="Center">
+        <TextBlock Text="该页面不属于 M1 真实交互范围" Classes="h1" HorizontalAlignment="Center" />
+        <TextBlock Text="{Binding CurrentPageDescription}" Classes="muted" TextWrapping="Wrap" MaxWidth="520" TextAlignment="Center" />
+        <TextBlock Text="当前仅保留导航和占位，避免误导为已实现业务功能。" Classes="muted" TextWrapping="Wrap" MaxWidth="520" TextAlignment="Center" />
+      </StackPanel>
+    </Border>
+  </Grid>
+</UserControl>

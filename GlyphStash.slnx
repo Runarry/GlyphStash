@@ -1,0 +1,17 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/GlyphStash.Application/GlyphStash.Application.csproj" />
+    <Project Path="src/GlyphStash.Desktop/GlyphStash.Desktop.csproj" />
+    <Project Path="src/GlyphStash.Domain/GlyphStash.Domain.csproj" />
+    <Project Path="src/GlyphStash.Infrastructure/GlyphStash.Infrastructure.csproj" />
+    <Project Path="src/GlyphStash.Platform.Windows/GlyphStash.Platform.Windows.csproj" />
+    <Project Path="src/GlyphStash.Presentation/GlyphStash.Presentation.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/GlyphStash.Application.Tests/GlyphStash.Application.Tests.csproj" />
+    <Project Path="tests/GlyphStash.Domain.Tests/GlyphStash.Domain.Tests.csproj" />
+    <Project Path="tests/GlyphStash.Infrastructure.Tests/GlyphStash.Infrastructure.Tests.csproj" />
+    <Project Path="tests/GlyphStash.Platform.Windows.Tests/GlyphStash.Platform.Windows.Tests.csproj" />
+    <Project Path="tests/GlyphStash.Presentation.Tests/GlyphStash.Presentation.Tests.csproj" />
+  </Folder>
+</Solution>
