@@ -6,6 +6,7 @@ using GlyphStash.Application.Abstractions.Fonts;
 using GlyphStash.Application.Abstractions.Storage;
 using GlyphStash.Application.Fonts;
 using GlyphStash.Infrastructure.Fonts;
+using GlyphStash.Infrastructure.FontTools;
 using GlyphStash.Infrastructure.Glyphs;
 using GlyphStash.Infrastructure.Providers.GoogleFonts;
 using GlyphStash.Infrastructure.Storage.Sqlite;
@@ -83,6 +84,7 @@ public partial class App : Avalonia.Application
         services.AddSingleton<IFontInventoryService, WindowsFontInventoryService>();
         services.AddSingleton<IFontMetadataReader, OpenTypeFontMetadataReader>();
         services.AddSingleton<IGlyphCatalogService, OpenTypeGlyphCatalogService>();
+        services.AddSingleton<IFontMergeWorker, FontToolsWorkerClient>();
         services.AddSingleton<IManagedFontFileStore, ManagedFontFileStore>();
         services.AddSingleton<IWindowsFontApi, WindowsFontApi>();
         services.AddSingleton<IFontInstallService, WindowsFontInstallService>();
@@ -93,6 +95,7 @@ public partial class App : Avalonia.Application
         services.AddSingleton<FontActivationCoordinator>();
         services.AddSingleton<LocalFontManagementService>();
         services.AddSingleton<OnlineFontService>();
+        services.AddSingleton<FontMergeService>();
         services.AddSingleton<DesktopStorageDialogService>();
         services.AddSingleton<IUserFileDialogService>(provider => provider.GetRequiredService<DesktopStorageDialogService>());
         services.AddSingleton<IUserClipboardService>(provider => provider.GetRequiredService<DesktopStorageDialogService>());

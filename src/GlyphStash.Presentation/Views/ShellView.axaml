@@ -42,6 +42,7 @@
     <views:FontLibraryPageView Grid.Column="1" IsVisible="{Binding IsFontLibraryPage}" />
     <views:CollectionsPageView Grid.Column="1" Grid.ColumnSpan="2" IsVisible="{Binding IsCollectionsPage}" />
     <views:OnlineFontsPageView Grid.Column="1" Grid.ColumnSpan="2" IsVisible="{Binding IsOnlineFontsPage}" />
+    <views:MergeToolPageView Grid.Column="1" Grid.ColumnSpan="2" IsVisible="{Binding IsMergeToolPage}" />
     <views:GlyphBrowserPageView Grid.Column="1" Grid.ColumnSpan="2" IsVisible="{Binding IsGlyphBrowserPage}" />
     <views:SettingsPageView Grid.Column="1" Grid.ColumnSpan="2" IsVisible="{Binding IsSettingsPage}" />
     <views:ComponentDemoView Grid.Column="1" Grid.ColumnSpan="2" IsVisible="{Binding IsComponentDemoPage}" />

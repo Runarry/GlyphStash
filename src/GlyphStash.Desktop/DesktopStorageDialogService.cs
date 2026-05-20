@@ -52,6 +52,52 @@ public sealed class DesktopStorageDialogService : IUserFileDialogService, IUserC
         return folders.FirstOrDefault()?.TryGetLocalPath();
     }
 
+    public async Task<string?> PickMergeOutputFileAsync(string suggestedFileName, CancellationToken cancellationToken)
+    {
+        if (TopLevel?.StorageProvider is not { CanSave: true } storageProvider)
+        {
+            return null;
+        }
+
+        var file = await storageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "选择合并输出字体文件",
+            SuggestedFileName = string.IsNullOrWhiteSpace(suggestedFileName) ? "GlyphStash-Merged.ttf" : suggestedFileName,
+            FileTypeChoices =
+            [
+                new FilePickerFileType("字体文件")
+                {
+                    Patterns = ["*.ttf", "*.otf"]
+                }
+            ]
+        });
+
+        return file?.TryGetLocalPath();
+    }
+
+    public async Task<string?> PickMergeReportFileAsync(CancellationToken cancellationToken)
+    {
+        if (TopLevel?.StorageProvider is not { CanOpen: true } storageProvider)
+        {
+            return null;
+        }
+
+        var files = await storageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "选择 GlyphStash 合并报告",
+            AllowMultiple = false,
+            FileTypeFilter =
+            [
+                new FilePickerFileType("GlyphStash 合并报告")
+                {
+                    Patterns = ["*.glyphstash-merge-report.json", "*.json"]
+                }
+            ]
+        });
+
+        return files.FirstOrDefault()?.TryGetLocalPath();
+    }
+
     public async Task SetTextAsync(string text, CancellationToken cancellationToken)
     {
         if (TopLevel?.Clipboard is null)

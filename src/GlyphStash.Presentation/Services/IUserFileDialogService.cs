@@ -5,6 +5,10 @@ public interface IUserFileDialogService
     Task<IReadOnlyList<string>> PickFontFilesAsync(CancellationToken cancellationToken);
 
     Task<string?> PickManagedDirectoryAsync(CancellationToken cancellationToken);
+
+    Task<string?> PickMergeOutputFileAsync(string suggestedFileName, CancellationToken cancellationToken);
+
+    Task<string?> PickMergeReportFileAsync(CancellationToken cancellationToken);
 }
 
 public interface IUserClipboardService
@@ -24,6 +28,12 @@ public sealed class NullUserFileDialogService : IUserFileDialogService, IUserCli
         Task.FromResult<IReadOnlyList<string>>([]);
 
     public Task<string?> PickManagedDirectoryAsync(CancellationToken cancellationToken) =>
+        Task.FromResult<string?>(null);
+
+    public Task<string?> PickMergeOutputFileAsync(string suggestedFileName, CancellationToken cancellationToken) =>
+        Task.FromResult<string?>(null);
+
+    public Task<string?> PickMergeReportFileAsync(CancellationToken cancellationToken) =>
         Task.FromResult<string?>(null);
 
     public Task SetTextAsync(string text, CancellationToken cancellationToken) => Task.CompletedTask;

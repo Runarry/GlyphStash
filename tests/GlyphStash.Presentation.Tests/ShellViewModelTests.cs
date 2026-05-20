@@ -78,6 +78,52 @@ public sealed class ShellViewModelTests
         {
             throw new InvalidOperationException("Expected online fonts page to be implemented in M3.");
         }
+
+        vm.SelectedNavigationItem = vm.NavigationItems.Single(item => item.Key == "merge-tool");
+        if (!vm.IsMergeToolPage || vm.CurrentPageMilestone != "M4")
+        {
+            throw new InvalidOperationException("Expected merge tool page to be implemented in M4.");
+        }
+    }
+
+    [Fact]
+    public async Task MergeWizard_PreviewsConflictsAndRequiresLicenseConfirmation()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "GlyphStash.Tests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        var basePath = Path.Combine(directory, "Base.ttf");
+        var supplementalPath = Path.Combine(directory, "Patch.ttf");
+        var outputPath = Path.Combine(directory, "Merged.ttf");
+        await File.WriteAllBytesAsync(basePath, [1], CancellationToken.None);
+        await File.WriteAllBytesAsync(supplementalPath, [1], CancellationToken.None);
+        var fonts =
+            new[]
+            {
+                CreateFontWithFaces("Base", ("Regular", 400, "Normal", basePath)),
+                CreateFontWithFaces("Patch", ("Regular", 400, "Normal", supplementalPath))
+            };
+        var vm = new ShellViewModel(
+            new FontLibraryService(new FakeInventory([]), new FakeStore(fonts)),
+            null,
+            NullUserFileDialogService.Instance,
+            fontMergeService: new FontMergeService(new FakeMergeWorker()));
+
+        await vm.InitializeAsync();
+        vm.SelectedNavigationItem = vm.NavigationItems.Single(item => item.Key == "merge-tool");
+        vm.MergeUnicodeRanges = "U+0041";
+        await vm.NextMergeStepCommand.ExecuteAsync(null);
+        await vm.NextMergeStepCommand.ExecuteAsync(null);
+
+        Assert.True(vm.IsMergeStepPreview);
+        Assert.True(vm.HasMergeConflicts);
+
+        vm.MergeOutputPath = outputPath;
+        vm.MergeStepIndex = 3;
+        await vm.NextMergeStepCommand.ExecuteAsync(null);
+
+        Assert.True(vm.IsMergeStepReport);
+        Assert.Contains("未完成授权确认", vm.MergeStatus, StringComparison.Ordinal);
+        Assert.False(File.Exists(outputPath));
     }
 
     [Fact]
@@ -881,6 +927,34 @@ public sealed class ShellViewModelTests
             LastQuery = query;
             return Task.FromResult(new GlyphPage([], [new UnicodeBlockOption("全部区块", 0, 0)], query.PageNumber, 120, 240, "empty"));
         }
+    }
+
+    private sealed class FakeMergeWorker : IFontMergeWorker
+    {
+        public Task<FontMergeWorkerPreviewResult> PreviewAsync(
+            FontMergeWorkerRequest request,
+            IProgress<FontMergeProgress>? progress,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(CreatePreview());
+
+        public async Task<FontMergeWorkerMergeResult> MergeAsync(
+            FontMergeWorkerRequest request,
+            IProgress<FontMergeProgress>? progress,
+            CancellationToken cancellationToken)
+        {
+            await File.WriteAllBytesAsync(request.OutputPath, [1, 2, 3], cancellationToken);
+            return new FontMergeWorkerMergeResult(CreatePreview(), request.OutputPath);
+        }
+
+        private static FontMergeWorkerPreviewResult CreatePreview() =>
+            new(
+                [],
+                [new FontMergeConflictItem(0x0041, "A", FontMergeCodePointState.Present, FontMergeCodePointState.Present, FontMergeDecision.SkipDuplicate, "基础字体已存在")],
+                1,
+                1,
+                0,
+                1,
+                0);
     }
 
     private sealed class QueueingFontSourceProvider : IFontSourceProvider

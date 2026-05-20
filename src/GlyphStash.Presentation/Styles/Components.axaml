@@ -126,6 +126,25 @@
     <Setter Property="BorderBrush" Value="{DynamicResource GlyphDangerBrush}" />
   </Style>
 
+  <Style Selector="Border.merge-step">
+    <Setter Property="MinHeight" Value="42" />
+    <Setter Property="Padding" Value="10" />
+    <Setter Property="CornerRadius" Value="{StaticResource GlyphRadiusMd}" />
+    <Setter Property="Background" Value="{DynamicResource GlyphSurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource GlyphBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+
+  <Style Selector="Border.merge-step.active">
+    <Setter Property="Background" Value="{DynamicResource GlyphAccentSoftBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource GlyphAccentBrush}" />
+  </Style>
+
+  <Style Selector="Border.merge-step.active TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource GlyphAccentBrush}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+
   <Style Selector="ListBox.font-list">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderThickness" Value="0" />

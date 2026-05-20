@@ -1,0 +1,276 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="GlyphStash.Presentation.Views.MergeToolPageView"
+             x:CompileBindings="False">
+  <Grid x:Name="MergeToolRoot" RowDefinitions="76,*,Auto">
+    <Border Grid.Row="0" Background="{DynamicResource GlyphSurfaceBrush}" BorderBrush="{DynamicResource GlyphBorderBrush}" BorderThickness="0,0,0,1" Padding="24,0">
+      <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+        <StackPanel>
+          <TextBlock Text="合并工具" Classes="h1" />
+          <TextBlock Text="按指定 Unicode 范围从补充字体合并字形，并生成可追踪报告。" Classes="muted" Margin="0,5,0,0" />
+        </StackPanel>
+        <Button Grid.Column="1" Content="查看历史报告" Command="{Binding LoadMergeReportCommand}" />
+      </Grid>
+    </Border>
+
+    <Grid Grid.Row="1" RowDefinitions="Auto,*" RowSpacing="16" Margin="{StaticResource GlyphPagePadding}">
+      <ItemsControl ItemsSource="{Binding MergeSteps}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <UniformGrid Columns="5" />
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate>
+            <Button Command="{Binding $parent[UserControl].DataContext.SetMergeStepCommand}"
+                    CommandParameter="{Binding .}"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    Padding="0"
+                    Margin="0,0,8,0">
+              <Border Classes="merge-step" Classes.active="{Binding IsActive}">
+                <TextBlock Text="{Binding Label}" />
+              </Border>
+            </Button>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+
+      <Border Grid.Row="1" Classes="panel" Padding="{StaticResource GlyphPanelPadding}">
+        <Grid RowDefinitions="*,Auto" RowSpacing="16">
+          <ScrollViewer>
+            <Grid>
+              <Grid IsVisible="{Binding IsMergeStepSelectFonts}" ColumnDefinitions="*,*" ColumnSpacing="16">
+                <Border Classes="card" Padding="14">
+                  <Grid RowDefinitions="Auto,Auto,*" RowSpacing="12">
+                    <Grid ColumnDefinitions="*,Auto">
+                      <TextBlock Text="基础字体 A" Classes="h2" />
+                      <Border Grid.Column="1" Classes="badge blue"><TextBlock Text="保留优先" FontSize="12" /></Border>
+                    </Grid>
+                    <TextBox Grid.Row="1" Text="{Binding MergeBaseSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="搜索本地字体" />
+                    <ListBox Grid.Row="2"
+                             Classes="font-list"
+                             ItemsSource="{Binding MergeBaseFonts}"
+                             SelectedItem="{Binding SelectedMergeBaseFont, Mode=TwoWay}">
+                      <ListBox.ItemTemplate>
+                        <DataTemplate>
+                          <Border Classes="card" Margin="0,0,0,8">
+                            <StackPanel Spacing="6">
+                              <TextBlock Text="{Binding FamilyName}" Classes="h2" />
+                              <TextBlock Text="{Binding FormatSummary}" Classes="muted" />
+                              <WrapPanel>
+                                <Border Classes="badge ok" Margin="0,0,7,7"><TextBlock Text="{Binding StateLabel}" FontSize="12" /></Border>
+                                <Border Classes="badge" Margin="0,0,7,7"><TextBlock Text="{Binding SourceLabel}" FontSize="12" /></Border>
+                                <Border Classes="badge" Margin="0,0,7,7"><TextBlock Text="{Binding LicenseLabel}" FontSize="12" /></Border>
+                              </WrapPanel>
+                            </StackPanel>
+                          </Border>
+                        </DataTemplate>
+                      </ListBox.ItemTemplate>
+                    </ListBox>
+                  </Grid>
+                </Border>
+
+                <Border Grid.Column="1" Classes="card" Padding="14">
+                  <Grid RowDefinitions="Auto,Auto,*" RowSpacing="12">
+                    <Grid ColumnDefinitions="*,Auto">
+                      <TextBlock Text="补充字体 B" Classes="h2" />
+                      <Border Grid.Column="1" Classes="badge warn"><TextBlock Text="仅取指定范围" FontSize="12" /></Border>
+                    </Grid>
+                    <TextBox Grid.Row="1" Text="{Binding MergeSupplementalSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="搜索本地字体" />
+                    <ListBox Grid.Row="2"
+                             Classes="font-list"
+                             ItemsSource="{Binding MergeSupplementalFonts}"
+                             SelectedItem="{Binding SelectedMergeSupplementalFont, Mode=TwoWay}">
+                      <ListBox.ItemTemplate>
+                        <DataTemplate>
+                          <Border Classes="card" Margin="0,0,0,8">
+                            <StackPanel Spacing="6">
+                              <TextBlock Text="{Binding FamilyName}" Classes="h2" />
+                              <TextBlock Text="{Binding FormatSummary}" Classes="muted" />
+                              <WrapPanel>
+                                <Border Classes="badge ok" Margin="0,0,7,7"><TextBlock Text="{Binding StateLabel}" FontSize="12" /></Border>
+                                <Border Classes="badge" Margin="0,0,7,7"><TextBlock Text="{Binding SourceLabel}" FontSize="12" /></Border>
+                                <Border Classes="badge" Margin="0,0,7,7"><TextBlock Text="{Binding LicenseLabel}" FontSize="12" /></Border>
+                              </WrapPanel>
+                            </StackPanel>
+                          </Border>
+                        </DataTemplate>
+                      </ListBox.ItemTemplate>
+                    </ListBox>
+                  </Grid>
+                </Border>
+              </Grid>
+
+              <StackPanel IsVisible="{Binding IsMergeStepRanges}" Spacing="14">
+                <StackPanel Spacing="7">
+                  <TextBlock Text="Unicode 范围输入" Classes="caption" FontWeight="Bold" />
+                  <TextBox Text="{Binding MergeUnicodeRanges, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="U+4E00-U+9FFF, U+3000" />
+                </StackPanel>
+                <WrapPanel>
+                  <Button Content="CJK Unified Ideographs" Classes="sm" Margin="0,0,8,8" Command="{Binding ApplyMergeUnicodeBlockCommand}" CommandParameter="U+4E00-U+9FFF" />
+                  <Button Content="Basic Latin" Classes="sm" Margin="0,0,8,8" Command="{Binding ApplyMergeUnicodeBlockCommand}" CommandParameter="U+0000-U+007F" />
+                  <Button Content="CJK Symbols" Classes="sm" Margin="0,0,8,8" Command="{Binding ApplyMergeUnicodeBlockCommand}" CommandParameter="U+3000-U+303F" />
+                  <Button Content="Punctuation" Classes="sm" Margin="0,0,8,8" Command="{Binding ApplyMergeUnicodeBlockCommand}" CommandParameter="U+2000-U+206F" />
+                </WrapPanel>
+                <Border Classes="card">
+                  <StackPanel Spacing="8">
+                    <TextBlock Text="范围摘要" Classes="h2" />
+                    <TextBlock Text="{Binding MergePreviewSummary}" Classes="muted" TextWrapping="Wrap" />
+                    <TextBlock Text="点击下一步会执行 dry-run，检查补充字体覆盖、重复码位和阻止级问题。" Classes="muted" TextWrapping="Wrap" />
+                  </StackPanel>
+                </Border>
+              </StackPanel>
+
+              <StackPanel IsVisible="{Binding IsMergeStepPreview}" Spacing="14">
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock Text="冲突摘要" Classes="h2" />
+                  <Border Grid.Column="1" Classes="badge warn"><TextBlock Text="{Binding MergeDefaultStrategy}" FontSize="12" /></Border>
+                </Grid>
+                <UniformGrid Columns="4">
+                  <Border Classes="card" Margin="0,0,8,8"><StackPanel><TextBlock Text="预检查码位" Classes="caption" /><TextBlock Text="{Binding MergePreviewSummary}" TextWrapping="Wrap" /></StackPanel></Border>
+                  <Border Classes="card" Margin="0,0,8,8"><StackPanel><TextBlock Text="默认策略" Classes="caption" /><TextBlock Text="{Binding MergeDefaultStrategy}" TextWrapping="Wrap" /></StackPanel></Border>
+                  <Border Classes="card" Margin="0,0,8,8"><StackPanel><TextBlock Text="状态" Classes="caption" /><TextBlock Text="{Binding MergeStatus}" TextWrapping="Wrap" /></StackPanel></Border>
+                  <Border Classes="card" Margin="0,0,0,8"><StackPanel><TextBlock Text="明细数量" Classes="caption" /><TextBlock Text="{Binding MergeConflicts.Count}" /></StackPanel></Border>
+                </UniformGrid>
+
+                <ItemsControl ItemsSource="{Binding MergeIssues}" IsVisible="{Binding HasMergeIssues}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Border Classes="card" Margin="0,0,0,8">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                          <Border Classes="badge" Classes.danger="{Binding IsError}" Classes.warn="{Binding IsWarning}" Classes.ok="{Binding IsInfo}" VerticalAlignment="Top">
+                            <TextBlock Text="{Binding SeverityLabel}" FontSize="12" />
+                          </Border>
+                          <StackPanel Grid.Column="1" Spacing="3">
+                            <TextBlock Text="{Binding Message}" TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding Target}" Classes="muted" IsVisible="{Binding HasTarget}" />
+                          </StackPanel>
+                        </Grid>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <Grid RowDefinitions="Auto,*">
+                  <Grid ColumnDefinitions="1.1*,0.5*,1*,1*,1*" Margin="0,0,0,8">
+                    <TextBlock Text="码位" Classes="caption" FontWeight="Bold" />
+                    <TextBlock Grid.Column="1" Text="字符" Classes="caption" FontWeight="Bold" />
+                    <TextBlock Grid.Column="2" Text="基础字体状态" Classes="caption" FontWeight="Bold" />
+                    <TextBlock Grid.Column="3" Text="补充字体状态" Classes="caption" FontWeight="Bold" />
+                    <TextBlock Grid.Column="4" Text="默认处理" Classes="caption" FontWeight="Bold" />
+                  </Grid>
+                  <ItemsControl Grid.Row="1" ItemsSource="{Binding MergeConflicts}" IsVisible="{Binding HasMergeConflicts}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate>
+                        <Border Classes="card" Margin="0,0,0,8">
+                          <Grid ColumnDefinitions="1.1*,0.5*,1*,1*,1*" ColumnSpacing="10">
+                            <TextBlock Text="{Binding UnicodeLabel}" FontFamily="{StaticResource GlyphFontMono}" />
+                            <TextBlock Grid.Column="1" Text="{Binding Character}" FontSize="22" />
+                            <TextBlock Grid.Column="2" Text="{Binding BaseStateLabel}" />
+                            <TextBlock Grid.Column="3" Text="{Binding SupplementalStateLabel}" />
+                            <Border Grid.Column="4" Classes="badge" Classes.ok="{Binding IsMerge}" Classes.warn="{Binding IsSkip}" Classes.danger="{Binding IsMissing}">
+                              <TextBlock Text="{Binding DecisionLabel}" FontSize="12" />
+                            </Border>
+                          </Grid>
+                        </Border>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                  <TextBlock Grid.Row="1" Text="尚未生成冲突明细。" Classes="muted" HorizontalAlignment="Center" Margin="0,28,0,0" IsVisible="{Binding !HasMergeConflicts}" />
+                </Grid>
+              </StackPanel>
+
+              <Grid IsVisible="{Binding IsMergeStepExport}" ColumnDefinitions="*,*" ColumnSpacing="16">
+                <Border Classes="card" Padding="14">
+                  <StackPanel Spacing="12">
+                    <TextBlock Text="授权确认" Classes="h2" />
+                    <TextBlock Text="GlyphStash 不判断商业可用性；合并和导出前必须由用户确认输入字体授权风险。" Classes="muted" TextWrapping="Wrap" />
+                    <WrapPanel>
+                      <Border Classes="badge ok" Margin="0,0,7,7"><TextBlock Text="{Binding SelectedMergeBaseFont.LicenseLabel}" FontSize="12" /></Border>
+                      <Border Classes="badge warn" Margin="0,0,7,7"><TextBlock Text="{Binding SelectedMergeSupplementalFont.LicenseLabel}" FontSize="12" /></Border>
+                    </WrapPanel>
+                    <CheckBox IsChecked="{Binding MergeLicenseConfirmed, Mode=TwoWay}" Content="我确认有权执行合并和导出，并理解未知授权不代表可商用。" />
+                  </StackPanel>
+                </Border>
+
+                <Border Grid.Column="1" Classes="card" Padding="14">
+                  <StackPanel Spacing="12">
+                    <TextBlock Text="输出设置" Classes="h2" />
+                    <StackPanel Spacing="7">
+                      <TextBlock Text="输出字体名称" Classes="caption" FontWeight="Bold" />
+                      <TextBox Text="{Binding MergeOutputFontName, Mode=TwoWay}" />
+                    </StackPanel>
+                    <StackPanel Spacing="7">
+                      <TextBlock Text="输出文件路径" Classes="caption" FontWeight="Bold" />
+                      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                        <TextBox Text="{Binding MergeOutputPath, Mode=TwoWay}" />
+                        <Button Grid.Column="1" Content="选择" Command="{Binding ChooseMergeOutputPathCommand}" />
+                      </Grid>
+                    </StackPanel>
+                    <TextBlock Text="输出不能覆盖原始字体文件，也不能覆盖任何已有文件。" Classes="muted" TextWrapping="Wrap" />
+                  </StackPanel>
+                </Border>
+              </Grid>
+
+              <StackPanel IsVisible="{Binding IsMergeStepReport}" Spacing="14">
+                <Border Classes="card" Padding="14">
+                  <StackPanel Spacing="12">
+                    <Grid ColumnDefinitions="*,Auto">
+                      <TextBlock Text="{Binding MergeReportTitle}" Classes="h2" />
+                      <Border Grid.Column="1" Classes="badge ok"><TextBlock Text="{Binding MergeReportBadge}" FontSize="12" /></Border>
+                    </Grid>
+                    <TextBlock Text="{Binding MergeStatus}" Classes="muted" TextWrapping="Wrap" />
+                    <UniformGrid Columns="2">
+                      <Border Classes="card" Margin="0,0,8,8"><StackPanel><TextBlock Text="输入字体" Classes="caption" /><TextBlock Text="{Binding MergeReportInputFonts}" TextWrapping="Wrap" /></StackPanel></Border>
+                      <Border Classes="card" Margin="0,0,0,8"><StackPanel><TextBlock Text="范围" Classes="caption" /><TextBlock Text="{Binding MergeReportRangeLabel}" TextWrapping="Wrap" /></StackPanel></Border>
+                      <Border Classes="card" Margin="0,0,8,8"><StackPanel><TextBlock Text="输出文件" Classes="caption" /><TextBlock Text="{Binding MergeReportOutputPath}" TextWrapping="Wrap" /></StackPanel></Border>
+                      <Border Classes="card" Margin="0,0,0,8"><StackPanel><TextBlock Text="license 确认时间" Classes="caption" /><TextBlock Text="{Binding MergeReportLicenseTime}" /></StackPanel></Border>
+                    </UniformGrid>
+                    <Border Classes="card">
+                      <StackPanel>
+                        <TextBlock Text="统计" Classes="caption" />
+                        <TextBlock Text="{Binding MergeReportStatsLabel}" TextWrapping="Wrap" />
+                      </StackPanel>
+                    </Border>
+                    <Border Classes="card" IsVisible="{Binding HasMergeIssues}">
+                      <StackPanel Spacing="8">
+                        <TextBlock Text="错误详情或诊断" Classes="h2" />
+                        <TextBlock Text="{Binding MergeReportErrorMessage}" Classes="muted" TextWrapping="Wrap" />
+                        <ItemsControl ItemsSource="{Binding MergeIssues}">
+                          <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                              <TextBlock Text="{Binding Message}" Classes="muted" TextWrapping="Wrap" Margin="0,0,0,5" />
+                            </DataTemplate>
+                          </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                      </StackPanel>
+                    </Border>
+                    <TextBlock Text="{Binding MergeReportPath}" Classes="muted" TextWrapping="Wrap" />
+                  </StackPanel>
+                </Border>
+              </StackPanel>
+            </Grid>
+          </ScrollViewer>
+
+          <Grid Grid.Row="1" RowDefinitions="Auto,Auto" RowSpacing="10">
+            <ProgressBar Minimum="0" Maximum="100" Value="{Binding MergeProgressPercent}" IsVisible="{Binding IsMergeBusy}" />
+            <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="10">
+              <Button Content="上一步" Command="{Binding PreviousMergeStepCommand}" IsEnabled="{Binding CanGoPreviousMergeStep}" />
+              <TextBlock Grid.Column="1" Text="{Binding MergeProgressLabel}" Classes="muted" VerticalAlignment="Center" TextWrapping="Wrap" />
+              <Button Grid.Column="2" Content="取消" Command="{Binding CancelMergeCommand}" IsVisible="{Binding CanCancelMerge}" />
+              <Button Grid.Column="3" Content="{Binding MergeNextActionLabel}" Classes="primary" Command="{Binding NextMergeStepCommand}" IsEnabled="{Binding !IsMergeBusy}" />
+            </Grid>
+          </Grid>
+        </Grid>
+      </Border>
+    </Grid>
+
+    <Border Grid.Row="2" Background="{DynamicResource GlyphSurfaceBrush}" BorderBrush="{DynamicResource GlyphBorderBrush}" BorderThickness="0,1,0,0" Padding="24,9">
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBlock Text="fontTools worker 在后台运行，不阻塞主界面；失败时报告区保留错误与诊断入口。" Classes="muted" />
+        <TextBlock Grid.Column="1" Text="{Binding MergeDefaultStrategy}" Classes="muted" />
+      </Grid>
+    </Border>
+  </Grid>
+</UserControl>

@@ -77,6 +77,27 @@ public sealed class AvaloniaHeadlessTests
         Assert.Contains(window.GetVisualDescendants().OfType<Control>(), control => control.Name == "OnlineDownloadQueueSection");
     }
 
+    [Fact]
+    public void ShellView_LoadsMergeToolPage()
+    {
+        EnsureAvalonia();
+        var vm = new ShellViewModel(new FontLibraryService(new FakeInventory(), new FakeStore()));
+        vm.SelectedNavigationItem = vm.NavigationItems.Single(item => item.Key == "merge-tool");
+        var window = new Window
+        {
+            Width = 1360,
+            Height = 860,
+            Content = new ShellView { DataContext = vm }
+        };
+
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+        AvaloniaHeadlessPlatform.ForceRenderTimerTick(3);
+
+        Assert.True(vm.IsMergeToolPage);
+        Assert.Contains(window.GetVisualDescendants().OfType<Control>(), control => control.Name == "MergeToolRoot");
+    }
+
     private static void EnsureAvalonia()
     {
         if (s_initialized)

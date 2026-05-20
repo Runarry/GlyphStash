@@ -18,10 +18,13 @@ public sealed partial class ShellViewModel : ObservableObject
     private readonly IFontPreviewRegistry _fontPreviewRegistry;
     private readonly OnlineFontService? _onlineFontService;
     private readonly IGlyphCatalogService? _glyphCatalogService;
+    private readonly FontMergeService? _fontMergeService;
     private readonly List<FontFamilyItemViewModel> _allFonts = [];
     private FontImportPreview? _currentImportPreview;
     private bool _isProcessingOnlineDownloadQueue;
     private FontFaceItemViewModel? _currentGlyphFace;
+    private FontMergePreview? _currentMergePreview;
+    private CancellationTokenSource? _mergeCancellation;
 
     [ObservableProperty]
     private NavigationItemViewModel? _selectedNavigationItem;
@@ -188,6 +191,75 @@ public sealed partial class ShellViewModel : ObservableObject
     [ObservableProperty]
     private int _glyphTotalPages = 1;
 
+    [ObservableProperty]
+    private int _mergeStepIndex;
+
+    [ObservableProperty]
+    private string _mergeBaseSearchText = "";
+
+    [ObservableProperty]
+    private string _mergeSupplementalSearchText = "";
+
+    [ObservableProperty]
+    private FontFamilyItemViewModel? _selectedMergeBaseFont;
+
+    [ObservableProperty]
+    private FontFamilyItemViewModel? _selectedMergeSupplementalFont;
+
+    [ObservableProperty]
+    private string _mergeUnicodeRanges = "U+4E00-U+9FFF";
+
+    [ObservableProperty]
+    private bool _mergeLicenseConfirmed;
+
+    [ObservableProperty]
+    private string _mergeOutputFontName = "";
+
+    [ObservableProperty]
+    private string _mergeOutputPath = "";
+
+    [ObservableProperty]
+    private string _mergeStatus = "请选择基础字体和补充字体。";
+
+    [ObservableProperty]
+    private bool _isMergeBusy;
+
+    [ObservableProperty]
+    private int _mergeProgressPercent;
+
+    [ObservableProperty]
+    private string _mergeProgressStage = "";
+
+    [ObservableProperty]
+    private string _mergeProgressMessage = "";
+
+    [ObservableProperty]
+    private string _mergeReportTitle = "等待导出";
+
+    [ObservableProperty]
+    private string _mergeReportBadge = "待生成";
+
+    [ObservableProperty]
+    private string _mergeReportOutputPath = "";
+
+    [ObservableProperty]
+    private string _mergeReportInputFonts = "";
+
+    [ObservableProperty]
+    private string _mergeReportRangeLabel = "";
+
+    [ObservableProperty]
+    private string _mergeReportStatsLabel = "";
+
+    [ObservableProperty]
+    private string _mergeReportLicenseTime = "";
+
+    [ObservableProperty]
+    private string _mergeReportErrorMessage = "";
+
+    [ObservableProperty]
+    private string _mergeReportPath = "";
+
     public ShellViewModel(FontLibraryService fontLibraryService)
         : this(fontLibraryService, null, NullUserFileDialogService.Instance)
     {
@@ -200,15 +272,18 @@ public sealed partial class ShellViewModel : ObservableObject
         OnlineFontService? onlineFontService = null,
         IGlyphCatalogService? glyphCatalogService = null,
         IUserClipboardService? clipboardService = null,
-        IFontPreviewRegistry? fontPreviewRegistry = null)
+        IFontPreviewRegistry? fontPreviewRegistry = null,
+        FontMergeService? fontMergeService = null)
     {
         _fontLibraryService = fontLibraryService;
         _localManagementService = localManagementService;
         _fileDialogService = fileDialogService;
         _onlineFontService = onlineFontService;
         _glyphCatalogService = glyphCatalogService;
+        _fontMergeService = fontMergeService;
         _clipboardService = clipboardService ?? NullUserFileDialogService.Instance;
         _fontPreviewRegistry = fontPreviewRegistry ?? NullFontPreviewRegistry.Instance;
+        RefreshMergeStepState();
     }
 
     public ObservableCollection<FontFamilyItemViewModel> Fonts { get; } = [];
@@ -241,12 +316,29 @@ public sealed partial class ShellViewModel : ObservableObject
 
     public ObservableCollection<string> UnicodeBlocks { get; } = ["全部区块"];
 
+    public ObservableCollection<FontFamilyItemViewModel> MergeBaseFonts { get; } = [];
+
+    public ObservableCollection<FontFamilyItemViewModel> MergeSupplementalFonts { get; } = [];
+
+    public ObservableCollection<MergeStepItemViewModel> MergeSteps { get; } =
+    [
+        new(0, "1 选择字体"),
+        new(1, "2 指定范围"),
+        new(2, "3 预览冲突"),
+        new(3, "4 授权与导出"),
+        new(4, "5 报告")
+    ];
+
+    public ObservableCollection<MergeConflictItemViewModel> MergeConflicts { get; } = [];
+
+    public ObservableCollection<MergeIssueItemViewModel> MergeIssues { get; } = [];
+
     public ObservableCollection<NavigationItemViewModel> NavigationItems { get; } =
     [
         new("font-library", "字体库", "字体库", "查看、搜索和预览本地字体。", "M2", true),
         new("collections", "集合", "集合", "项目字体包、批量临时启用、关闭与导出清单。", "M2", true),
         new("online-fonts", "在线字体", "在线字体", "Google Fonts 搜索、授权信息与下载流程。", "M3", true),
-        new("merge-tool", "合并工具", "合并工具", "指定 Unicode 范围合并字形并导出报告。", "M4", false),
+        new("merge-tool", "合并工具", "合并工具", "指定 Unicode 范围合并字形并导出报告。", "M4", true),
         new("settings", "设置", "设置", "管理目录、临时字体兼容性矩阵和诊断日志。", "M2", true),
         new("component-demo", "组件演示", "组件演示", "检查通用组件、状态和主题资源。", "M1", true)
     ];
@@ -346,6 +438,8 @@ public sealed partial class ShellViewModel : ObservableObject
 
     public bool IsOnlineFontsPage => !IsGlyphBrowserOpen && SelectedNavigationItem?.Key == "online-fonts";
 
+    public bool IsMergeToolPage => !IsGlyphBrowserOpen && SelectedNavigationItem?.Key == "merge-tool";
+
     public bool IsSettingsPage => !IsGlyphBrowserOpen && SelectedNavigationItem?.IsSettings == true;
 
     public bool IsComponentDemoPage => !IsGlyphBrowserOpen && SelectedNavigationItem?.IsComponentDemo == true;
@@ -403,6 +497,57 @@ public sealed partial class ShellViewModel : ObservableObject
     public bool HasSelectedCollection => SelectedCollection is not null;
 
     public string PreviewFontSizeLabel => $"{PreviewFontSize:0}px";
+
+    public IReadOnlyList<string> MergeUnicodeBlockOptions { get; } =
+    [
+        "U+4E00-U+9FFF",
+        "U+0000-U+007F",
+        "U+3000-U+303F",
+        "U+2000-U+206F"
+    ];
+
+    public bool IsMergeStepSelectFonts => MergeStepIndex == 0;
+
+    public bool IsMergeStepRanges => MergeStepIndex == 1;
+
+    public bool IsMergeStepPreview => MergeStepIndex == 2;
+
+    public bool IsMergeStepExport => MergeStepIndex == 3;
+
+    public bool IsMergeStepReport => MergeStepIndex == 4;
+
+    public bool HasSelectedMergeBaseFont => SelectedMergeBaseFont is not null;
+
+    public bool HasSelectedMergeSupplementalFont => SelectedMergeSupplementalFont is not null;
+
+    public bool HasMergePreview => _currentMergePreview is not null;
+
+    public bool HasMergeConflicts => MergeConflicts.Count > 0;
+
+    public bool HasMergeIssues => MergeIssues.Count > 0;
+
+    public bool HasMergeReport => !string.IsNullOrWhiteSpace(MergeReportOutputPath) || !string.IsNullOrWhiteSpace(MergeReportErrorMessage);
+
+    public bool CanGoPreviousMergeStep => MergeStepIndex > 0 && !IsMergeBusy;
+
+    public bool CanCancelMerge => IsMergeBusy;
+
+    public string MergeNextActionLabel => MergeStepIndex switch
+    {
+        3 => "开始导出",
+        4 => "完成",
+        _ => "下一步"
+    };
+
+    public string MergePreviewSummary => _currentMergePreview is null
+        ? "尚未执行冲突预览。"
+        : $"范围 {string.Join(", ", _currentMergePreview.Ranges.Select(range => range.Label))} · 预计检查 {_currentMergePreview.RequestedCodePointCount:N0} 个码位 · 补充字体覆盖 {_currentMergePreview.SupplementalCoverageCount:N0} 个 · 默认合并 {_currentMergePreview.MergeCodePointCount:N0} 个";
+
+    public string MergeDefaultStrategy => _currentMergePreview?.DefaultConflictStrategy ?? "基础字体已有码位默认跳过";
+
+    public string MergeProgressLabel => IsMergeBusy
+        ? $"{MergeProgressStage} {MergeProgressPercent}% · {MergeProgressMessage}"
+        : MergeStatus;
 
     [RelayCommand]
     public async Task InitializeAsync()
@@ -491,6 +636,220 @@ public sealed partial class ShellViewModel : ObservableObject
         StatusMessage = item.IsImplemented
             ? $"当前页面：{item.Title}"
             : $"{item.Title} 属于 {item.Milestone}，当前仅显示占位页";
+    }
+
+    [RelayCommand]
+    private void SetMergeStep(MergeStepItemViewModel? step)
+    {
+        if (step is null || IsMergeBusy)
+        {
+            return;
+        }
+
+        MergeStepIndex = Math.Clamp(step.Index, 0, 4);
+    }
+
+    [RelayCommand]
+    private async Task NextMergeStepAsync()
+    {
+        if (IsMergeBusy)
+        {
+            return;
+        }
+
+        if (MergeStepIndex == 0)
+        {
+            if (SelectedMergeBaseFont is null || SelectedMergeSupplementalFont is null)
+            {
+                MergeStatus = "请先选择基础字体 A 和补充字体 B。";
+                ShowToast("请选择两个字体");
+                return;
+            }
+
+            MergeStepIndex = 1;
+            return;
+        }
+
+        if (MergeStepIndex == 1)
+        {
+            await PreviewMergeAsync();
+            if (_currentMergePreview is { HasBlockingIssues: false })
+            {
+                MergeStepIndex = 2;
+            }
+
+            return;
+        }
+
+        if (MergeStepIndex == 2)
+        {
+            MergeStepIndex = 3;
+            return;
+        }
+
+        if (MergeStepIndex == 3)
+        {
+            await StartMergeAsync();
+            return;
+        }
+
+        ShowToast("合并报告已保留");
+    }
+
+    [RelayCommand]
+    private void PreviousMergeStep()
+    {
+        if (CanGoPreviousMergeStep)
+        {
+            MergeStepIndex--;
+        }
+    }
+
+    [RelayCommand]
+    private void ApplyMergeUnicodeBlock(string block)
+    {
+        if (string.IsNullOrWhiteSpace(block))
+        {
+            return;
+        }
+
+        MergeUnicodeRanges = block;
+        MergeStatus = $"已选择 Unicode 范围：{block}";
+    }
+
+    [RelayCommand]
+    private async Task PreviewMergeAsync()
+    {
+        if (_fontMergeService is null)
+        {
+            MergeStatus = "合并服务不可用。";
+            return;
+        }
+
+        IsMergeBusy = true;
+        MergeProgressPercent = 0;
+        MergeProgressStage = "预览";
+        MergeProgressMessage = "正在预检查输入。";
+        try
+        {
+            var preview = await _fontMergeService.PreviewAsync(CreateMergeRequest(includeOutput: false), CancellationToken.None);
+            ApplyMergePreview(preview);
+            MergeStatus = preview.HasBlockingIssues
+                ? "冲突预览存在阻止级问题，请检查提示。"
+                : "冲突预览完成，可继续授权与导出。";
+        }
+        catch (Exception ex)
+        {
+            MergeStatus = BuildErrorMessage(ex);
+            ShowToast("合并预览失败");
+        }
+        finally
+        {
+            IsMergeBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task ChooseMergeOutputPathAsync()
+    {
+        var suggested = BuildSuggestedMergeOutputFileName();
+        var path = await _fileDialogService.PickMergeOutputFileAsync(suggested, CancellationToken.None);
+        if (!string.IsNullOrWhiteSpace(path))
+        {
+            MergeOutputPath = path;
+        }
+    }
+
+    [RelayCommand]
+    private async Task StartMergeAsync()
+    {
+        if (_fontMergeService is null)
+        {
+            MergeStatus = "合并服务不可用。";
+            return;
+        }
+
+        _mergeCancellation?.Dispose();
+        _mergeCancellation = new CancellationTokenSource();
+        IsMergeBusy = true;
+        MergeProgressPercent = 0;
+        MergeProgressStage = "准备";
+        MergeProgressMessage = "正在准备合并任务。";
+        var progress = new Progress<FontMergeProgress>(item =>
+        {
+            MergeProgressPercent = item.Percent;
+            MergeProgressStage = item.Stage;
+            MergeProgressMessage = item.Message;
+            OnPropertyChanged(nameof(MergeProgressLabel));
+        });
+
+        try
+        {
+            var result = await _fontMergeService.MergeAsync(
+                CreateMergeRequest(includeOutput: true) with { LicenseConfirmedAt = DateTimeOffset.UtcNow },
+                progress,
+                _mergeCancellation.Token);
+            ApplyMergePreview(new FontMergePreview(
+                result.Report.Ranges.Select(ParseReportRange).ToList(),
+                result.Issues,
+                _currentMergePreview?.Conflicts ?? [],
+                result.Report.RequestedCodePointCount,
+                result.Report.MergedCodePointCount + result.Report.SkippedDuplicateCodePointCount,
+                result.Report.MergedCodePointCount,
+                result.Report.SkippedDuplicateCodePointCount,
+                result.Report.MissingCodePointCount));
+            ApplyMergeReport(result.Report, result.ReportPath);
+            MergeStepIndex = 4;
+            MergeStatus = result.Summary;
+            ShowToast(result.Succeeded ? "合并导出完成" : "合并导出失败");
+        }
+        catch (Exception ex)
+        {
+            MergeStatus = BuildErrorMessage(ex);
+            ShowToast("合并导出失败");
+        }
+        finally
+        {
+            IsMergeBusy = false;
+            _mergeCancellation?.Dispose();
+            _mergeCancellation = null;
+        }
+    }
+
+    [RelayCommand]
+    private void CancelMerge()
+    {
+        _mergeCancellation?.Cancel();
+        MergeStatus = "正在取消合并任务...";
+    }
+
+    [RelayCommand]
+    private async Task LoadMergeReportAsync()
+    {
+        if (_fontMergeService is null)
+        {
+            MergeStatus = "合并服务不可用。";
+            return;
+        }
+
+        var path = await _fileDialogService.PickMergeReportFileAsync(CancellationToken.None);
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return;
+        }
+
+        try
+        {
+            var report = await _fontMergeService.ReadReportAsync(path, CancellationToken.None);
+            ApplyMergeReport(report, path);
+            MergeStepIndex = 4;
+            MergeStatus = "历史合并报告已加载。";
+        }
+        catch (Exception ex)
+        {
+            MergeStatus = BuildErrorMessage(ex);
+            ShowToast("合并报告加载失败");
+        }
     }
 
     [RelayCommand]
@@ -1303,6 +1662,53 @@ public sealed partial class ShellViewModel : ObservableObject
 
     partial void OnGlyphTotalPagesChanged(int value) => OnPropertyChanged(nameof(GlyphPageLabel));
 
+    partial void OnMergeStepIndexChanged(int value) => RefreshMergeStepState();
+
+    partial void OnMergeBaseSearchTextChanged(string value) => RefreshMergeFontLists();
+
+    partial void OnMergeSupplementalSearchTextChanged(string value) => RefreshMergeFontLists();
+
+    partial void OnSelectedMergeBaseFontChanged(FontFamilyItemViewModel? value)
+    {
+        OnPropertyChanged(nameof(HasSelectedMergeBaseFont));
+        UpdateDefaultMergeOutputName();
+    }
+
+    partial void OnSelectedMergeSupplementalFontChanged(FontFamilyItemViewModel? value)
+    {
+        OnPropertyChanged(nameof(HasSelectedMergeSupplementalFont));
+        UpdateDefaultMergeOutputName();
+    }
+
+    partial void OnMergeUnicodeRangesChanged(string value)
+    {
+        _currentMergePreview = null;
+        MergeConflicts.Clear();
+        MergeIssues.Clear();
+        NotifyMergePreviewState();
+    }
+
+    partial void OnMergeOutputFontNameChanged(string value) => NotifyMergeExportState();
+
+    partial void OnMergeOutputPathChanged(string value) => NotifyMergeExportState();
+
+    partial void OnMergeLicenseConfirmedChanged(bool value) => NotifyMergeExportState();
+
+    partial void OnIsMergeBusyChanged(bool value)
+    {
+        OnPropertyChanged(nameof(CanGoPreviousMergeStep));
+        OnPropertyChanged(nameof(CanCancelMerge));
+        OnPropertyChanged(nameof(MergeProgressLabel));
+    }
+
+    partial void OnMergeStatusChanged(string value) => OnPropertyChanged(nameof(MergeProgressLabel));
+
+    partial void OnMergeProgressPercentChanged(int value) => OnPropertyChanged(nameof(MergeProgressLabel));
+
+    partial void OnMergeProgressStageChanged(string value) => OnPropertyChanged(nameof(MergeProgressLabel));
+
+    partial void OnMergeProgressMessageChanged(string value) => OnPropertyChanged(nameof(MergeProgressLabel));
+
     partial void OnPreviewFontSizeChanged(double value)
     {
         foreach (var font in _allFonts)
@@ -1333,6 +1739,7 @@ public sealed partial class ShellViewModel : ObservableObject
         ApplyFilters();
         SelectedFont ??= Fonts.FirstOrDefault();
         RefreshCollectionFonts();
+        RefreshMergeFontLists();
         OnPropertyChanged(nameof(FontCountLabel));
     }
 
@@ -1508,6 +1915,201 @@ public sealed partial class ShellViewModel : ObservableObject
         }
     }
 
+    private void RefreshMergeFontLists()
+    {
+        var selectedBase = SelectedMergeBaseFont?.FamilyName;
+        var selectedSupplemental = SelectedMergeSupplementalFont?.FamilyName;
+        ReplaceMergeFontList(MergeBaseFonts, MergeBaseSearchText, selectedBase, value => SelectedMergeBaseFont = value);
+        ReplaceMergeFontList(MergeSupplementalFonts, MergeSupplementalSearchText, selectedSupplemental, value => SelectedMergeSupplementalFont = value);
+        if (SelectedMergeBaseFont is null && MergeBaseFonts.Count > 0)
+        {
+            SelectedMergeBaseFont = MergeBaseFonts[0];
+        }
+
+        if (SelectedMergeSupplementalFont is null && MergeSupplementalFonts.Count > 0)
+        {
+            SelectedMergeSupplementalFont = MergeSupplementalFonts.FirstOrDefault(font => !ReferenceEquals(font, SelectedMergeBaseFont)) ?? MergeSupplementalFonts[0];
+        }
+        else if (SelectedMergeBaseFont is not null
+                 && SelectedMergeSupplementalFont is not null
+                 && string.Equals(SelectedMergeBaseFont.FamilyName, SelectedMergeSupplementalFont.FamilyName, StringComparison.CurrentCultureIgnoreCase))
+        {
+            SelectedMergeSupplementalFont = MergeSupplementalFonts.FirstOrDefault(font => !string.Equals(font.FamilyName, SelectedMergeBaseFont.FamilyName, StringComparison.CurrentCultureIgnoreCase))
+                                            ?? SelectedMergeSupplementalFont;
+        }
+    }
+
+    private void ReplaceMergeFontList(
+        ObservableCollection<FontFamilyItemViewModel> target,
+        string searchText,
+        string? selectedFamilyName,
+        Action<FontFamilyItemViewModel?> select)
+    {
+        target.Clear();
+        foreach (var font in _allFonts.Where(font => MatchesMergeSearch(font, searchText)))
+        {
+            target.Add(font);
+        }
+
+        select(target.FirstOrDefault(font => string.Equals(font.FamilyName, selectedFamilyName, StringComparison.CurrentCultureIgnoreCase))
+               ?? target.FirstOrDefault());
+    }
+
+    private static bool MatchesMergeSearch(FontFamilyItemViewModel font, string searchText)
+    {
+        if (string.IsNullOrWhiteSpace(searchText))
+        {
+            return true;
+        }
+
+        return font.FamilyName.Contains(searchText, StringComparison.CurrentCultureIgnoreCase)
+               || font.FormatSummary.Contains(searchText, StringComparison.CurrentCultureIgnoreCase)
+               || font.Faces.Any(face => face.FullName.Contains(searchText, StringComparison.CurrentCultureIgnoreCase));
+    }
+
+    private FontMergeRequest CreateMergeRequest(bool includeOutput)
+    {
+        return new FontMergeRequest(
+            CreateMergeSelection(SelectedMergeBaseFont),
+            CreateMergeSelection(SelectedMergeSupplementalFont),
+            MergeUnicodeRanges,
+            includeOutput ? MergeOutputPath : "",
+            MergeOutputFontName,
+            MergeLicenseConfirmed);
+    }
+
+    private static FontMergeFontSelection? CreateMergeSelection(FontFamilyItemViewModel? font)
+    {
+        if (font is null)
+        {
+            return null;
+        }
+
+        var record = font.ToRecord();
+        var face = SelectDefaultPreviewFace(font)?.ToRecord() ?? record.Faces.FirstOrDefault();
+        if (face is null)
+        {
+            return null;
+        }
+
+        return new FontMergeFontSelection(
+            record.FamilyName,
+            FontStyleVariantFormatter.FormatFaceStyle(face.SubfamilyName, face.Weight, face.Slant),
+            new FontFileRef(face.File.Path, face.File.Format, face.File.Sha256),
+            new LicenseSnapshot(record.LicenseStatus, record.LicenseText));
+    }
+
+    private void ApplyMergePreview(FontMergePreview preview)
+    {
+        _currentMergePreview = preview;
+        MergeConflicts.Clear();
+        foreach (var conflict in preview.Conflicts)
+        {
+            MergeConflicts.Add(new MergeConflictItemViewModel(conflict));
+        }
+
+        MergeIssues.Clear();
+        foreach (var issue in preview.Issues)
+        {
+            MergeIssues.Add(new MergeIssueItemViewModel(issue));
+        }
+
+        NotifyMergePreviewState();
+    }
+
+    private void ApplyMergeReport(FontMergeReport report, string reportPath)
+    {
+        MergeReportTitle = report.Succeeded ? "合并结果：成功" : "合并结果：失败";
+        MergeReportBadge = report.Succeeded ? "成功" : "失败";
+        MergeReportOutputPath = string.IsNullOrWhiteSpace(report.OutputPath) ? "未生成输出字体" : report.OutputPath;
+        MergeReportInputFonts = $"{report.BaseFontFamily} + {report.SupplementalFontFamily}";
+        MergeReportRangeLabel = report.Ranges.Count == 0 ? "未记录" : string.Join(", ", report.Ranges);
+        MergeReportStatsLabel =
+            $"检查 {report.RequestedCodePointCount:N0} · 合并 {report.MergedCodePointCount:N0} · 跳过 {report.SkippedDuplicateCodePointCount:N0} · 缺失 {report.MissingCodePointCount:N0} · 冲突 {report.ConflictCount:N0}";
+        MergeReportLicenseTime = report.LicenseConfirmedAt?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") ?? "未确认";
+        MergeReportErrorMessage = report.ErrorMessage;
+        MergeReportPath = reportPath;
+        MergeIssues.Clear();
+        foreach (var issue in report.Issues)
+        {
+            MergeIssues.Add(new MergeIssueItemViewModel(issue));
+        }
+
+        NotifyMergeReportState();
+        NotifyMergePreviewState();
+    }
+
+    private void RefreshMergeStepState()
+    {
+        foreach (var step in MergeSteps)
+        {
+            step.IsActive = step.Index == MergeStepIndex;
+        }
+
+        OnPropertyChanged(nameof(IsMergeStepSelectFonts));
+        OnPropertyChanged(nameof(IsMergeStepRanges));
+        OnPropertyChanged(nameof(IsMergeStepPreview));
+        OnPropertyChanged(nameof(IsMergeStepExport));
+        OnPropertyChanged(nameof(IsMergeStepReport));
+        OnPropertyChanged(nameof(CanGoPreviousMergeStep));
+        OnPropertyChanged(nameof(MergeNextActionLabel));
+    }
+
+    private void NotifyMergePreviewState()
+    {
+        OnPropertyChanged(nameof(HasMergePreview));
+        OnPropertyChanged(nameof(HasMergeConflicts));
+        OnPropertyChanged(nameof(HasMergeIssues));
+        OnPropertyChanged(nameof(MergePreviewSummary));
+        OnPropertyChanged(nameof(MergeDefaultStrategy));
+    }
+
+    private void NotifyMergeExportState()
+    {
+        OnPropertyChanged(nameof(HasSelectedMergeBaseFont));
+        OnPropertyChanged(nameof(HasSelectedMergeSupplementalFont));
+    }
+
+    private void NotifyMergeReportState()
+    {
+        OnPropertyChanged(nameof(HasMergeReport));
+    }
+
+    private void UpdateDefaultMergeOutputName()
+    {
+        if (!string.IsNullOrWhiteSpace(MergeOutputFontName) || SelectedMergeBaseFont is null)
+        {
+            return;
+        }
+
+        MergeOutputFontName = $"{SelectedMergeBaseFont.FamilyName} Patch";
+    }
+
+    private string BuildSuggestedMergeOutputFileName()
+    {
+        var name = string.IsNullOrWhiteSpace(MergeOutputFontName)
+            ? "GlyphStash-Merged"
+            : MergeOutputFontName;
+        foreach (var invalid in Path.GetInvalidFileNameChars())
+        {
+            name = name.Replace(invalid, '-');
+        }
+
+        return $"{name}.ttf";
+    }
+
+    private static GlyphStash.Domain.Fonts.UnicodeRange ParseReportRange(string label)
+    {
+        try
+        {
+            return UnicodeRangeParser.Parse(label).FirstOrDefault() ?? new GlyphStash.Domain.Fonts.UnicodeRange(0, 0);
+        }
+        catch
+        {
+            return new GlyphStash.Domain.Fonts.UnicodeRange(0, 0);
+        }
+    }
+
     private void RebuildManagementOptions()
     {
         TagOptions.Clear();
@@ -1553,6 +2155,7 @@ public sealed partial class ShellViewModel : ObservableObject
         OnPropertyChanged(nameof(IsFontLibraryPage));
         OnPropertyChanged(nameof(IsCollectionsPage));
         OnPropertyChanged(nameof(IsOnlineFontsPage));
+        OnPropertyChanged(nameof(IsMergeToolPage));
         OnPropertyChanged(nameof(IsSettingsPage));
         OnPropertyChanged(nameof(IsComponentDemoPage));
         OnPropertyChanged(nameof(IsPlaceholderPage));
