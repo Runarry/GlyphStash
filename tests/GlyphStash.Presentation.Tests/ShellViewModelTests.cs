@@ -146,15 +146,14 @@ public sealed class ShellViewModelTests
     }
 
     [Fact]
-    public async Task Navigation_CanSwitchToM2CollectionsComponentDemoAndPlaceholder()
+    public async Task Navigation_HidesComponentDemoAndCanSwitchToImplementedPages()
     {
         var vm = new ShellViewModel(new FontLibraryService(new FakeInventory([]), new FakeStore([CreateFont("Inter")])));
         await vm.InitializeAsync();
 
-        vm.SelectedNavigationItem = vm.NavigationItems.Single(item => item.Key == "component-demo");
-        if (!vm.IsComponentDemoPage)
+        if (vm.NavigationItems.Any(item => item.Key == "component-demo"))
         {
-            throw new InvalidOperationException("Expected component demo page to become active.");
+            throw new InvalidOperationException("Expected component demo page to be hidden from main navigation.");
         }
 
         vm.SelectedNavigationItem = vm.NavigationItems.Single(item => item.Key == "collections");

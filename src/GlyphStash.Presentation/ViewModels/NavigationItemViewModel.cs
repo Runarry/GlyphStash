@@ -43,8 +43,6 @@ public sealed partial class NavigationItemViewModel : ObservableObject
 
     public bool IsSettings => Key == "settings";
 
-    public bool IsComponentDemo => Key == "component-demo";
-
     public void RefreshLocalizedState()
     {
         OnPropertyChanged(nameof(Label));

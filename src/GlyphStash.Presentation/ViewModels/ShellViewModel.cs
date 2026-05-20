@@ -444,8 +444,7 @@ public sealed partial class ShellViewModel : ObservableObject
         new("collections", "集合", "集合", "项目字体包、批量临时启用、关闭与导出清单。", "M2", true),
         new("online-fonts", "在线字体", "在线字体", "Google Fonts 搜索、授权信息与下载流程。", "M3", true),
         new("merge-tool", "合并工具", "合并工具", "指定 Unicode 范围合并字形并导出报告。", "M4", true),
-        new("settings", "设置", "设置", "管理目录、临时字体兼容性矩阵和诊断日志。", "M2", true),
-        new("component-demo", "组件演示", "组件演示", "检查通用组件、状态和主题资源。", "M1", true)
+        new("settings", "设置", "设置", "管理目录、临时字体兼容性矩阵和诊断日志。", "M2", true)
     ];
 
     public IReadOnlyList<string> SourceFilters { get; } =
@@ -550,8 +549,6 @@ public sealed partial class ShellViewModel : ObservableObject
     public bool IsMergeToolPage => !IsGlyphBrowserOpen && SelectedNavigationItem?.Key == "merge-tool";
 
     public bool IsSettingsPage => !IsGlyphBrowserOpen && SelectedNavigationItem?.IsSettings == true;
-
-    public bool IsComponentDemoPage => !IsGlyphBrowserOpen && SelectedNavigationItem?.IsComponentDemo == true;
 
     public bool IsPlaceholderPage => !IsGlyphBrowserOpen && SelectedNavigationItem is { IsImplemented: false };
 
@@ -3171,7 +3168,6 @@ public sealed partial class ShellViewModel : ObservableObject
         OnPropertyChanged(nameof(IsOnlineFontsPage));
         OnPropertyChanged(nameof(IsMergeToolPage));
         OnPropertyChanged(nameof(IsSettingsPage));
-        OnPropertyChanged(nameof(IsComponentDemoPage));
         OnPropertyChanged(nameof(IsPlaceholderPage));
         OnPropertyChanged(nameof(IsGlyphBrowserPage));
     }

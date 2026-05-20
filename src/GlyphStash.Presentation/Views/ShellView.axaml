@@ -46,7 +46,6 @@
     <views:MergeToolPageView Grid.Column="1" Grid.ColumnSpan="2" IsVisible="{Binding IsMergeToolPage}" />
     <views:GlyphBrowserPageView Grid.Column="1" Grid.ColumnSpan="2" IsVisible="{Binding IsGlyphBrowserPage}" />
     <views:SettingsPageView Grid.Column="1" Grid.ColumnSpan="2" IsVisible="{Binding IsSettingsPage}" />
-    <views:ComponentDemoView Grid.Column="1" Grid.ColumnSpan="2" IsVisible="{Binding IsComponentDemoPage}" />
     <views:PlaceholderPageView Grid.Column="1" Grid.ColumnSpan="2" IsVisible="{Binding IsPlaceholderPage}" />
 
     <Border Grid.Column="2"
