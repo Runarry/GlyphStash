@@ -5,25 +5,25 @@
              x:DataType="vm:ShellViewModel">
   <ScrollViewer Background="{DynamicResource GlyphBackgroundBrush}">
     <StackPanel Margin="{StaticResource GlyphPagePadding}" Spacing="16">
-      <TextBlock Text="组件演示" Classes="h1" />
+      <TextBlock Text="{DynamicResource L.Text.AA11006B0C9ABE4B}" Classes="h1" />
       <Border Classes="panel" Padding="{StaticResource GlyphPanelPadding}">
         <StackPanel Spacing="12">
           <TextBlock Text="Buttons / Badges / States" Classes="h2" />
           <WrapPanel>
-            <Button Content="普通按钮" Margin="0,0,8,8" />
-            <Button Content="主操作" Classes="primary" Margin="0,0,8,8" />
-            <Button Content="危险操作" Classes="danger" Margin="0,0,8,8" />
-            <Border Classes="badge ok" Margin="0,0,8,8"><TextBlock Text="已安装" /></Border>
-            <Border Classes="badge blue" Margin="0,0,8,8"><TextBlock Text="系统字体" /></Border>
-            <Border Classes="badge warn" Margin="0,0,8,8"><TextBlock Text="未知授权" /></Border>
-            <Border Classes="badge danger" Margin="0,0,8,8"><TextBlock Text="阻止操作" /></Border>
+            <Button Content="{DynamicResource L.Text.248BE9E13B46A3ED}" Margin="0,0,8,8" />
+            <Button Content="{DynamicResource L.Text.1A3065F0F33AC8DA}" Classes="primary" Margin="0,0,8,8" />
+            <Button Content="{DynamicResource L.Text.CD84121ACB17F42D}" Classes="danger" Margin="0,0,8,8" />
+            <Border Classes="badge ok" Margin="0,0,8,8"><TextBlock Text="{DynamicResource L.Text.A8B6C39DCABFC14B}" /></Border>
+            <Border Classes="badge blue" Margin="0,0,8,8"><TextBlock Text="{DynamicResource L.Text.96A2A0BC3CF68015}" /></Border>
+            <Border Classes="badge warn" Margin="0,0,8,8"><TextBlock Text="{DynamicResource L.Text.BC3F968F53642385}" /></Border>
+            <Border Classes="badge danger" Margin="0,0,8,8"><TextBlock Text="{DynamicResource L.Text.D0A22BFFA0CE786B}" /></Border>
           </WrapPanel>
         </StackPanel>
       </Border>
       <Border Classes="panel" Padding="{StaticResource GlyphPanelPadding}">
         <StackPanel Spacing="12">
           <TextBlock Text="Empty / Error / Permission" Classes="h2" />
-          <TextBlock Text="当前筛选没有匹配字体。扫描失败、下载失败、权限不足和授权风险都复用页面内状态区或确认对话框。" Classes="muted" TextWrapping="Wrap" />
+          <TextBlock Text="{DynamicResource L.Text.FE41F8CD11FB8811}" Classes="muted" TextWrapping="Wrap" />
         </StackPanel>
       </Border>
     </StackPanel>

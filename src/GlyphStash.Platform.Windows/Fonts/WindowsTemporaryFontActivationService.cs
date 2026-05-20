@@ -2,6 +2,7 @@ using System.Runtime.Versioning;
 using GlyphStash.Application.Abstractions.Fonts;
 using GlyphStash.Application.Fonts;
 using GlyphStash.Domain.Fonts;
+using GlyphStash.Localization;
 
 namespace GlyphStash.Platform.Windows.Fonts;
 
@@ -26,14 +27,14 @@ public sealed class WindowsTemporaryFontActivationService : ITemporaryFontActiva
             cancellationToken.ThrowIfCancellationRequested();
             if (!font.HasPhysicalPath || !File.Exists(font.Path))
             {
-                results.Add(new FontActivationFileResult(font, false, 0, PublicSessionFlags, "字体文件不存在或不是本地物理路径。"));
+                results.Add(new FontActivationFileResult(font, false, 0, PublicSessionFlags, L("字体文件不存在或不是本地物理路径。")));
                 continue;
             }
 
             var count = _fontApi.AddFontResourceEx(font.Path, PublicSessionFlags);
             if (count <= 0)
             {
-                results.Add(new FontActivationFileResult(font, false, 0, PublicSessionFlags, "Windows 未能加载该字体资源。"));
+                results.Add(new FontActivationFileResult(font, false, 0, PublicSessionFlags, L("Windows 未能加载该字体资源。")));
                 continue;
             }
 
@@ -47,7 +48,12 @@ public sealed class WindowsTemporaryFontActivationService : ITemporaryFontActiva
         }
 
         var failed = results.Count(result => !result.Succeeded);
-        return Task.FromResult(new ActivationResult(failed == 0, results, failed == 0 ? "字体已临时启用，并已广播 WM_FONTCHANGE。" : $"部分字体临时启用失败：{failed} 个。"));
+        return Task.FromResult(new ActivationResult(
+            failed == 0,
+            results,
+            failed == 0
+                ? L("字体已临时启用，并已广播 WM_FONTCHANGE。")
+                : AppText.FormatLiteral("部分字体临时启用失败：{0} 个。", "Some fonts failed temporary activation: {0}.", failed)));
     }
 
     public Task<ActivationResult> DeactivateForCurrentUserSessionAsync(IReadOnlyList<FontFileRef> fonts, CancellationToken cancellationToken)
@@ -72,7 +78,7 @@ public sealed class WindowsTemporaryFontActivationService : ITemporaryFontActiva
                 removed > 0,
                 removed,
                 PublicSessionFlags,
-                removed > 0 ? null : "Windows 未确认释放该字体资源。"));
+                removed > 0 ? null : L("Windows 未确认释放该字体资源。")));
         }
 
         if (results.Any(result => result.Succeeded))
@@ -81,7 +87,12 @@ public sealed class WindowsTemporaryFontActivationService : ITemporaryFontActiva
         }
 
         var failed = results.Count(result => !result.Succeeded);
-        return Task.FromResult(new ActivationResult(failed == 0, results, failed == 0 ? "字体临时启用已关闭，并已广播 WM_FONTCHANGE。" : $"部分字体关闭失败：{failed} 个。"));
+        return Task.FromResult(new ActivationResult(
+            failed == 0,
+            results,
+            failed == 0
+                ? L("字体临时启用已关闭，并已广播 WM_FONTCHANGE。")
+                : AppText.FormatLiteral("部分字体关闭失败：{0} 个。", "Some fonts failed to deactivate: {0}.", failed)));
     }
 
     public async Task DeactivateAllOwnedActivationsAsync(CancellationToken cancellationToken)
@@ -92,4 +103,6 @@ public sealed class WindowsTemporaryFontActivationService : ITemporaryFontActiva
             await DeactivateForCurrentUserSessionAsync(fonts, cancellationToken).ConfigureAwait(false);
         }
     }
+
+    private static string L(string text) => AppText.TranslateLiteral(text);
 }

@@ -11,12 +11,12 @@
             Padding="24,0">
       <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
         <StackPanel>
-          <TextBlock Text="集合" Classes="h1" />
-          <TextBlock Text="项目字体包、批量临时启用、关闭与导出清单。" Classes="muted" Margin="0,5,0,0" />
+          <TextBlock Text="{DynamicResource L.Text.528E5174C2D4E5C8}" Classes="h1" />
+          <TextBlock Text="{DynamicResource L.Text.40EC71DB2F483B6C}" Classes="muted" Margin="0,5,0,0" />
         </StackPanel>
         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
-          <TextBox Width="190" PlaceholderText="新建集合名称" Text="{Binding NewCollectionName, Mode=TwoWay}" />
-          <Button Content="新建集合" Classes="primary" Command="{Binding CreateCollectionCommand}" />
+          <TextBox Width="190" PlaceholderText="{DynamicResource L.Text.ED8D34385552DEE2}" Text="{Binding NewCollectionName, Mode=TwoWay}" />
+          <Button Content="{DynamicResource L.Text.BED62355F623E33A}" Classes="primary" Command="{Binding CreateCollectionCommand}" />
         </StackPanel>
       </Grid>
     </Border>
@@ -25,8 +25,8 @@
       <Border Grid.Column="0" Classes="panel" Padding="{StaticResource GlyphPanelPadding}">
         <StackPanel Spacing="14">
           <StackPanel Spacing="7">
-            <TextBlock Text="搜索集合" Classes="caption" FontWeight="Bold" />
-            <TextBox Text="{Binding CollectionSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="官网、项目、文档" />
+            <TextBlock Text="{DynamicResource L.Text.ACEBDAD2FDF3D37B}" Classes="caption" FontWeight="Bold" />
+            <TextBox Text="{Binding CollectionSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="{DynamicResource L.Text.43B4AFBB5CD68689}" />
           </StackPanel>
           <ListBox ItemsSource="{Binding Collections}"
                    SelectedItem="{Binding SelectedCollection, Mode=TwoWay}"
@@ -54,17 +54,17 @@
               <TextBlock Text="{Binding SelectedCollection.Summary}" Classes="muted" Margin="0,5,0,0" />
             </StackPanel>
             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-              <Button Content="临时启用全部" Classes="primary sm" Command="{Binding ActivateSelectedCollectionCommand}" />
-              <Button Content="关闭全部" Classes="sm" Command="{Binding DeactivateSelectedCollectionCommand}" />
-              <Button Content="导出清单" Classes="sm" Command="{Binding ExportSelectedCollectionCommand}" />
-              <Button Content="删除集合"
+              <Button Content="{DynamicResource L.Text.F16E2D731614379B}" Classes="primary sm" Command="{Binding ActivateSelectedCollectionCommand}" />
+              <Button Content="{DynamicResource L.Text.2E8456BB7D65651A}" Classes="sm" Command="{Binding DeactivateSelectedCollectionCommand}" />
+              <Button Content="{DynamicResource L.Text.0555B5CBB85D84C8}" Classes="sm" Command="{Binding ExportSelectedCollectionCommand}" />
+              <Button Content="{DynamicResource L.Text.E6A0ED4B53A8AA07}"
                       Classes="danger sm"
                       IsEnabled="{Binding HasSelectedCollection}"
                       Command="{Binding OpenDeleteCollectionDialogCommand}" />
             </StackPanel>
           </Grid>
           <TextBlock Grid.Row="1"
-                     Text="删除集合或移除字体只删除关系，不删除字体文件；批量关闭不会执行卸载。"
+                     Text="{DynamicResource L.Text.97A013430F4951F8}"
                      Classes="muted"
                      Margin="0,10,0,12"
                      TextWrapping="Wrap" />
@@ -83,7 +83,7 @@
                         </WrapPanel>
                       </StackPanel>
                       <Button Grid.Column="1"
-                              Content="移除"
+                              Content="{DynamicResource L.Text.6135D4159E892541}"
                               Classes="sm"
                               Command="{Binding $parent[UserControl].((vm:ShellViewModel)DataContext).RemoveFontFromCollectionCommand}"
                               CommandParameter="{Binding .}" />
@@ -98,18 +98,18 @@
 
       <Border Grid.Column="2" Classes="panel" Padding="{StaticResource GlyphPanelPadding}">
         <StackPanel Spacing="14">
-          <TextBlock Text="集合摘要" Classes="h1" />
-          <TextBlock Text="用于在项目之间切换字体资产，不污染永久安装列表。" Classes="muted" TextWrapping="Wrap" />
+          <TextBlock Text="{DynamicResource L.Text.53B9A21A334EAB03}" Classes="h1" />
+          <TextBlock Text="{DynamicResource L.Text.62039847115EE30E}" Classes="muted" TextWrapping="Wrap" />
           <UniformGrid Columns="2">
-            <Border Classes="card" Margin="0,0,8,8"><StackPanel><TextBlock Text="字体数量" Classes="caption" /><TextBlock Text="{Binding SelectedCollection.FontCount}" /></StackPanel></Border>
-            <Border Classes="card" Margin="0,0,0,8"><StackPanel><TextBlock Text="未知授权" Classes="caption" /><TextBlock Text="{Binding SelectedCollection.UnknownLicenseLabel}" /></StackPanel></Border>
-            <Border Classes="card" Margin="0,0,8,0"><StackPanel><TextBlock Text="最近导出" Classes="caption" /><TextBlock Text="{Binding SelectedCollection.LastExportedLabel}" /></StackPanel></Border>
-            <Border Classes="card"><StackPanel><TextBlock Text="当前会话" Classes="caption" /><TextBlock Text="按引用计数关闭" /></StackPanel></Border>
+            <Border Classes="card" Margin="0,0,8,8"><StackPanel><TextBlock Text="{DynamicResource L.Text.BAB73DD2F8B2015D}" Classes="caption" /><TextBlock Text="{Binding SelectedCollection.FontCount}" /></StackPanel></Border>
+            <Border Classes="card" Margin="0,0,0,8"><StackPanel><TextBlock Text="{DynamicResource L.Text.BC3F968F53642385}" Classes="caption" /><TextBlock Text="{Binding SelectedCollection.UnknownLicenseLabel}" /></StackPanel></Border>
+            <Border Classes="card" Margin="0,0,8,0"><StackPanel><TextBlock Text="{DynamicResource L.Text.9C2943546C58493C}" Classes="caption" /><TextBlock Text="{Binding SelectedCollection.LastExportedLabel}" /></StackPanel></Border>
+            <Border Classes="card"><StackPanel><TextBlock Text="{DynamicResource L.Text.9800A458C16B9A02}" Classes="caption" /><TextBlock Text="{DynamicResource L.Text.59D857994F8F0067}" /></StackPanel></Border>
           </UniformGrid>
           <Border Classes="card">
             <StackPanel>
-              <TextBlock Text="授权提示" Classes="h2" />
-              <TextBlock Text="集合导出只生成清单，不代表其中字体可再分发或可商用。" Classes="muted" TextWrapping="Wrap" />
+              <TextBlock Text="{DynamicResource L.Text.6A8A485165BCDCCF}" Classes="h2" />
+              <TextBlock Text="{DynamicResource L.Text.9F2F01BABD8BAA3C}" Classes="muted" TextWrapping="Wrap" />
             </StackPanel>
           </Border>
         </StackPanel>
@@ -122,7 +122,7 @@
             BorderThickness="0,1,0,0"
             Padding="24,9">
       <Grid ColumnDefinitions="*,Auto">
-        <TextBlock Text="集合操作记录会写入诊断日志" Classes="muted" />
+        <TextBlock Text="{DynamicResource L.Text.A08A61A4ABF4AB2D}" Classes="muted" />
         <TextBlock Grid.Column="1" Text="{Binding StatusMessage}" Classes="muted" />
       </Grid>
     </Border>
@@ -130,12 +130,12 @@
     <Grid Grid.RowSpan="3" Background="{DynamicResource GlyphModalScrimBrush}" IsVisible="{Binding IsDeleteCollectionDialogOpen}">
       <Border Width="460" Classes="panel" Padding="18" HorizontalAlignment="Center" VerticalAlignment="Center">
         <StackPanel Spacing="14">
-          <TextBlock Text="删除集合" Classes="h1" />
+          <TextBlock Text="{DynamicResource L.Text.E6A0ED4B53A8AA07}" Classes="h1" />
           <TextBlock Text="{Binding SelectedCollection.Name}" Classes="h2" />
-          <TextBlock Text="只会删除集合和字体关联，不会删除字体文件，也不会卸载字体。" Classes="muted" TextWrapping="Wrap" />
+          <TextBlock Text="{DynamicResource L.Text.6062F656E61A079A}" Classes="muted" TextWrapping="Wrap" />
           <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
-            <Button Content="取消" Command="{Binding CloseDeleteCollectionDialogCommand}" />
-            <Button Content="确认删除" Classes="danger" Command="{Binding ConfirmDeleteCollectionCommand}" />
+            <Button Content="{DynamicResource L.Text.2CD0F3BE8738A86C}" Command="{Binding CloseDeleteCollectionDialogCommand}" />
+            <Button Content="{DynamicResource L.Text.A3EA3C17B401BD2F}" Classes="danger" Command="{Binding ConfirmDeleteCollectionCommand}" />
           </StackPanel>
         </StackPanel>
       </Border>

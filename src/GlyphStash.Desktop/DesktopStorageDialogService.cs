@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Input.Platform;
 using Avalonia.Platform.Storage;
+using GlyphStash.Localization;
 using GlyphStash.Presentation.Services;
 
 namespace GlyphStash.Desktop;
@@ -18,11 +19,11 @@ public sealed class DesktopStorageDialogService : IUserFileDialogService, IUserC
 
         var files = await storageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            Title = "选择字体文件",
+            Title = AppText.Get("Dialog.PickFontFilesTitle"),
             AllowMultiple = true,
             FileTypeFilter =
             [
-                new FilePickerFileType("字体文件")
+                new FilePickerFileType(AppText.Get("Common.FontFiles"))
                 {
                     Patterns = ["*.ttf", "*.otf", "*.ttc", "*.otc", "*.woff", "*.woff2"]
                 }
@@ -45,7 +46,7 @@ public sealed class DesktopStorageDialogService : IUserFileDialogService, IUserC
 
         var folders = await storageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
         {
-            Title = "选择 GlyphStash 管理目录",
+            Title = AppText.Get("Dialog.PickManagedDirectoryTitle"),
             AllowMultiple = false
         });
 
@@ -61,11 +62,11 @@ public sealed class DesktopStorageDialogService : IUserFileDialogService, IUserC
 
         var file = await storageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
-            Title = "选择合并输出字体文件",
+            Title = AppText.Get("Dialog.PickMergeOutputTitle"),
             SuggestedFileName = string.IsNullOrWhiteSpace(suggestedFileName) ? "GlyphStash-Merged.ttf" : suggestedFileName,
             FileTypeChoices =
             [
-                new FilePickerFileType("字体文件")
+                new FilePickerFileType(AppText.Get("Common.FontFiles"))
                 {
                     Patterns = ["*.ttf", "*.otf"]
                 }
@@ -84,11 +85,11 @@ public sealed class DesktopStorageDialogService : IUserFileDialogService, IUserC
 
         var files = await storageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            Title = "选择 GlyphStash 合并报告",
+            Title = AppText.Get("Dialog.PickMergeReportTitle"),
             AllowMultiple = false,
             FileTypeFilter =
             [
-                new FilePickerFileType("GlyphStash 合并报告")
+                new FilePickerFileType(AppText.Get("Dialog.MergeReportFileType"))
                 {
                     Patterns = ["*.glyphstash-merge-report.json", "*.json"]
                 }

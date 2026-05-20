@@ -1,3 +1,5 @@
+using GlyphStash.Localization;
+
 namespace GlyphStash.Domain.Fonts;
 
 public sealed record UnicodeRange(int Start, int End)
@@ -19,7 +21,7 @@ public static class UnicodeRangeParser
     {
         if (string.IsNullOrWhiteSpace(text))
         {
-            throw new InvalidOperationException("请输入 Unicode 范围。");
+            throw new InvalidOperationException(AppText.TranslateLiteral("请输入 Unicode 范围。"));
         }
 
         var ranges = new List<UnicodeRange>();
@@ -30,7 +32,7 @@ public static class UnicodeRangeParser
 
         if (ranges.Count == 0)
         {
-            throw new InvalidOperationException("请输入 Unicode 范围。");
+            throw new InvalidOperationException(AppText.TranslateLiteral("请输入 Unicode 范围。"));
         }
 
         return Normalize(ranges);
@@ -64,14 +66,14 @@ public static class UnicodeRangeParser
 
         if (pieces.Length != 2)
         {
-            throw new InvalidOperationException($"Unicode 范围格式无效：{value}");
+            throw new InvalidOperationException(AppText.FormatLiteral("Unicode 范围格式无效：{0}", "Invalid Unicode range format: {0}", value));
         }
 
         var start = ParseCodePoint(pieces[0]);
         var end = ParseCodePoint(pieces[1]);
         if (start > end)
         {
-            throw new InvalidOperationException($"Unicode 范围起点不能大于终点：{value}");
+            throw new InvalidOperationException(AppText.FormatLiteral("Unicode 范围起点不能大于终点：{0}", "Unicode range start cannot be greater than the end: {0}", value));
         }
 
         EnsureNoSurrogates(start, end, value);
@@ -92,18 +94,18 @@ public static class UnicodeRangeParser
 
         if (normalized.Length is < 1 or > 6 || normalized.Any(character => !Uri.IsHexDigit(character)))
         {
-            throw new InvalidOperationException($"Unicode 码位格式无效：{value}");
+            throw new InvalidOperationException(AppText.FormatLiteral("Unicode 码位格式无效：{0}", "Invalid Unicode code point format: {0}", value));
         }
 
         var codePoint = Convert.ToInt32(normalized, 16);
         if (codePoint is < 0 or > 0x10FFFF)
         {
-            throw new InvalidOperationException($"Unicode 码位超出范围：{value}");
+            throw new InvalidOperationException(AppText.FormatLiteral("Unicode 码位超出范围：{0}", "Unicode code point is out of range: {0}", value));
         }
 
         if (codePoint is >= 0xD800 and <= 0xDFFF)
         {
-            throw new InvalidOperationException($"Unicode 码位不能位于代理区：{value}");
+            throw new InvalidOperationException(AppText.FormatLiteral("Unicode 码位不能位于代理区：{0}", "Unicode code point cannot be in the surrogate range: {0}", value));
         }
 
         return codePoint;
@@ -113,7 +115,7 @@ public static class UnicodeRangeParser
     {
         if (start <= 0xDFFF && end >= 0xD800)
         {
-            throw new InvalidOperationException($"Unicode 范围不能包含代理区：{original}");
+            throw new InvalidOperationException(AppText.FormatLiteral("Unicode 范围不能包含代理区：{0}", "Unicode range cannot include the surrogate range: {0}", original));
         }
     }
 
@@ -182,7 +184,7 @@ public sealed record FontMergePreview(
     int DuplicateCodePointCount,
     int MissingCodePointCount,
     int OverwrittenCodePointCount = 0,
-    string DefaultConflictStrategy = "基础字体已有码位默认跳过")
+    string DefaultConflictStrategy = "")
 {
     public bool HasBlockingIssues => Issues.Any(issue => issue.Severity == FontMergeIssueSeverity.Error);
 }
@@ -276,6 +278,11 @@ public sealed record FontMergeResult(
     IReadOnlyList<FontMergeIssue> Issues)
 {
     public string Summary => Succeeded
-        ? $"导出成功：跳过重复码位 {Report.SkippedDuplicateCodePointCount:N0} 个，覆盖 {Report.OverwrittenCodePointCount:N0} 个，合并 {Report.MergedCodePointCount:N0} 个字形。"
-        : $"导出失败：{Report.ErrorMessage}";
+        ? AppText.FormatLiteral(
+            "导出成功：跳过重复码位 {0:N0} 个，覆盖 {1:N0} 个，合并 {2:N0} 个字形。",
+            "Export succeeded: skipped {0:N0} duplicate code points, overwritten {1:N0}, merged {2:N0} glyphs.",
+            Report.SkippedDuplicateCodePointCount,
+            Report.OverwrittenCodePointCount,
+            Report.MergedCodePointCount)
+        : AppText.FormatLiteral("导出失败：{0}", "Export failed: {0}", Report.ErrorMessage);
 }

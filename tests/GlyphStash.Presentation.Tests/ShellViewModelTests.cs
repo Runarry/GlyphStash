@@ -4,6 +4,7 @@ using GlyphStash.Application.Abstractions.Fonts;
 using GlyphStash.Application.Abstractions.Storage;
 using GlyphStash.Application.Fonts;
 using GlyphStash.Domain.Fonts;
+using GlyphStash.Localization;
 using GlyphStash.Presentation.Services;
 using GlyphStash.Presentation.ViewModels;
 using DomainUnicodeRange = GlyphStash.Domain.Fonts.UnicodeRange;
@@ -53,6 +54,94 @@ public sealed class ShellViewModelTests
         if (!vm.IsFontLibraryPage || vm.SelectedNavigationItem?.Key != "font-library")
         {
             throw new InvalidOperationException("Expected font library to be the default page.");
+        }
+    }
+
+    [Fact]
+    public async Task LanguageSelection_PersistsAndUpdatesLocalizationService()
+    {
+        AppText.SetCulture("zh-CN");
+        var settingsStore = new FakeSettingsStore();
+        var service = CreateLocalService(new FakePlatformActivation(), [], settingsStore: settingsStore);
+        var localization = new AppLocalizationService();
+        var vm = new ShellViewModel(
+            new FontLibraryService(new FakeInventory([]), new FakeStore([CreateFont("Inter")])),
+            service,
+            NullUserFileDialogService.Instance,
+            localizationService: localization);
+
+        await vm.InitializeAsync();
+        vm.SelectedLanguage = vm.LanguageOptions.Single(language => language.CultureCode == "en-US");
+        await Task.Delay(50);
+
+        Assert.Equal("en-US", localization.CurrentCulture.Name);
+        Assert.Equal("en-US", (await settingsStore.GetSettingsAsync(CancellationToken.None))?.UiCultureCode);
+        Assert.Equal("Configured", AppText.Get("Common.Configured"));
+
+        AppText.SetCulture("zh-CN");
+    }
+
+    [Fact]
+    public async Task Constructor_DoesNotOverwritePersistedLanguageBeforeSettingsLoad()
+    {
+        AppText.SetCulture("zh-CN");
+        try
+        {
+            var settingsStore = new FakeSettingsStore(uiCultureCode: "en-US");
+            var service = CreateLocalService(new FakePlatformActivation(), [], settingsStore: settingsStore);
+            var localization = new AppLocalizationService();
+            var vm = new ShellViewModel(
+                new FontLibraryService(new FakeInventory([]), new FakeStore([CreateFont("Inter")])),
+                service,
+                NullUserFileDialogService.Instance,
+                localizationService: localization);
+
+            await Task.Delay(50);
+            Assert.Equal("en-US", (await settingsStore.GetSettingsAsync(CancellationToken.None))?.UiCultureCode);
+
+            await vm.InitializeAsync();
+
+            Assert.Equal("en-US", localization.CurrentCulture.Name);
+            Assert.Equal("en-US", (await settingsStore.GetSettingsAsync(CancellationToken.None))?.UiCultureCode);
+        }
+        finally
+        {
+            AppText.SetCulture("zh-CN");
+        }
+    }
+
+    [Fact]
+    public void CultureChange_LocalizesStableViewModelLabels()
+    {
+        AppText.SetCulture("zh-CN");
+        try
+        {
+            var localization = new AppLocalizationService();
+            var vm = new ShellViewModel(
+                new FontLibraryService(new FakeInventory([]), new FakeStore([])),
+                null,
+                NullUserFileDialogService.Instance,
+                localizationService: localization);
+
+            localization.SetCulture("en-US");
+
+            Assert.Equal("1 Select fonts", vm.MergeSteps[0].Label);
+            Assert.Equal("All subsets", vm.OnlineSubsetOptionModels[0].DisplayName);
+            Assert.Equal("All categories", vm.OnlineCategoryOptionModels[0].DisplayName);
+            Assert.Equal("Select a base font and supplemental font.", vm.MergeStatus);
+            Assert.Contains("Notepad: covers newly started", vm.CompatibilityMatrix[0], StringComparison.Ordinal);
+            Assert.Equal("Unknown license", new FontFamilyItemViewModel(CreateFont("Inter")).LicenseLabel);
+
+            var linkedFont = new FontFamilyItemViewModel(CreateFont("Noto Sans") with
+            {
+                LicenseStatus = LicenseStatus.ExternalLink,
+                LicenseText = "请查看来源页面：https://fonts.example/Noto"
+            });
+            Assert.Equal("See source page: https://fonts.example/Noto", linkedFont.LicenseLabel);
+        }
+        finally
+        {
+            AppText.SetCulture("zh-CN");
         }
     }
 
@@ -846,13 +935,14 @@ public sealed class ShellViewModelTests
         IReadOnlyList<FontCollectionRecord> collections,
         FakeMutationStore? mutationStore = null,
         FakeCollectionStore? collectionStore = null,
-        FakeTagStore? tagStore = null)
+        FakeTagStore? tagStore = null,
+        FakeSettingsStore? settingsStore = null)
     {
         var logStore = new FakeOperationLogStore();
         return new LocalFontManagementService(
             new FakeMetadataReader(),
             new FakeManagedFontFileStore(),
-            new FakeSettingsStore(),
+            settingsStore ?? new FakeSettingsStore(),
             new FakeMetadataStore(),
             mutationStore ?? new FakeMutationStore(),
             tagStore ?? new FakeTagStore(),
@@ -956,17 +1046,21 @@ public sealed class ShellViewModelTests
 
     private sealed class FakeSettingsStore : IAppSettingsStore
     {
-        private readonly string _apiKey;
+        private UserFontSettings _settings;
 
-        public FakeSettingsStore(string apiKey = "")
+        public FakeSettingsStore(string apiKey = "", string uiCultureCode = "")
         {
-            _apiKey = apiKey;
+            _settings = new UserFontSettings("C:/GlyphStash", apiKey, uiCultureCode);
         }
 
         public Task<UserFontSettings?> GetSettingsAsync(CancellationToken cancellationToken) =>
-            Task.FromResult<UserFontSettings?>(new UserFontSettings("C:/GlyphStash", _apiKey));
+            Task.FromResult<UserFontSettings?>(_settings);
 
-        public Task SaveSettingsAsync(UserFontSettings settings, CancellationToken cancellationToken) => Task.CompletedTask;
+        public Task SaveSettingsAsync(UserFontSettings settings, CancellationToken cancellationToken)
+        {
+            _settings = settings;
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class ThrowingFontSourceProvider : IFontSourceProvider

@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using GlyphStash.Application.Fonts;
 using GlyphStash.Domain.Fonts;
+using GlyphStash.Localization;
 
 namespace GlyphStash.Presentation.ViewModels;
 
@@ -18,7 +19,7 @@ public sealed partial class OnlineFontDownloadQueueItemViewModel : ObservableObj
     private OnlineFontDownloadStatus _status = OnlineFontDownloadStatus.Queued;
 
     [ObservableProperty]
-    private string _message = "等待下载";
+    private string _message = AppText.TranslateLiteral("等待下载");
 
     [ObservableProperty]
     private string _errorMessage = "";
@@ -48,16 +49,16 @@ public sealed partial class OnlineFontDownloadQueueItemViewModel : ObservableObj
     public string FamilyName => Family.FamilyName;
 
     public string StylesLabel => Styles.Count == 0
-        ? "未选择样式"
+        ? L("未选择样式")
         : string.Join(", ", Styles.Select(style => RemoteFontStyleOptionViewModel.FormatVariantLabel(style.Variant)));
 
     public string StatusLabel => Status switch
     {
-        OnlineFontDownloadStatus.Queued => "排队中",
-        OnlineFontDownloadStatus.Downloading => "下载中",
-        OnlineFontDownloadStatus.Succeeded => "已完成",
-        OnlineFontDownloadStatus.Failed => "失败",
-        _ => "未知"
+        OnlineFontDownloadStatus.Queued => L("排队中"),
+        OnlineFontDownloadStatus.Downloading => L("下载中"),
+        OnlineFontDownloadStatus.Succeeded => L("已完成"),
+        OnlineFontDownloadStatus.Failed => L("失败"),
+        _ => L("未知")
     };
 
     public bool IsFailed => Status == OnlineFontDownloadStatus.Failed;
@@ -67,7 +68,7 @@ public sealed partial class OnlineFontDownloadQueueItemViewModel : ObservableObj
     public void MarkDownloading()
     {
         Status = OnlineFontDownloadStatus.Downloading;
-        Message = "正在下载";
+        Message = L("正在下载");
         ErrorMessage = "";
         CompletedAt = null;
     }
@@ -75,7 +76,7 @@ public sealed partial class OnlineFontDownloadQueueItemViewModel : ObservableObj
     public void MarkSucceeded(string message)
     {
         Status = OnlineFontDownloadStatus.Succeeded;
-        Message = string.IsNullOrWhiteSpace(message) ? "下载完成" : message;
+        Message = string.IsNullOrWhiteSpace(message) ? L("下载完成") : message;
         ErrorMessage = "";
         CompletedAt = DateTimeOffset.UtcNow;
     }
@@ -83,7 +84,7 @@ public sealed partial class OnlineFontDownloadQueueItemViewModel : ObservableObj
     public void MarkFailed(string errorMessage)
     {
         Status = OnlineFontDownloadStatus.Failed;
-        Message = "下载失败";
+        Message = L("下载失败");
         ErrorMessage = errorMessage;
         CompletedAt = DateTimeOffset.UtcNow;
     }
@@ -91,7 +92,7 @@ public sealed partial class OnlineFontDownloadQueueItemViewModel : ObservableObj
     public void ResetForRetry()
     {
         Status = OnlineFontDownloadStatus.Queued;
-        Message = "等待重试";
+        Message = L("等待重试");
         ErrorMessage = "";
         CompletedAt = null;
     }
@@ -102,4 +103,12 @@ public sealed partial class OnlineFontDownloadQueueItemViewModel : ObservableObj
         OnPropertyChanged(nameof(IsFailed));
         OnPropertyChanged(nameof(CanRetry));
     }
+
+    public void RefreshLocalizedState()
+    {
+        OnPropertyChanged(nameof(StylesLabel));
+        OnPropertyChanged(nameof(StatusLabel));
+    }
+
+    private static string L(string text) => AppText.TranslateLiteral(text);
 }

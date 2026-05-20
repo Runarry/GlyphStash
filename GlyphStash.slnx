@@ -4,6 +4,7 @@
     <Project Path="src/GlyphStash.Desktop/GlyphStash.Desktop.csproj" />
     <Project Path="src/GlyphStash.Domain/GlyphStash.Domain.csproj" />
     <Project Path="src/GlyphStash.Infrastructure/GlyphStash.Infrastructure.csproj" />
+    <Project Path="src/GlyphStash.Localization/GlyphStash.Localization.csproj" />
     <Project Path="src/GlyphStash.Platform.Windows/GlyphStash.Platform.Windows.csproj" />
     <Project Path="src/GlyphStash.Presentation/GlyphStash.Presentation.csproj" />
   </Folder>

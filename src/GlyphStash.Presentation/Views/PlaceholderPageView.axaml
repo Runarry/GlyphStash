@@ -22,9 +22,9 @@
 
     <Border Grid.Row="1" Classes="panel" Margin="{StaticResource GlyphPagePadding}" Padding="24">
       <StackPanel Spacing="12" HorizontalAlignment="Center" VerticalAlignment="Center">
-        <TextBlock Text="该页面不属于 M1 真实交互范围" Classes="h1" HorizontalAlignment="Center" />
+        <TextBlock Text="{DynamicResource L.Text.05D90ABFAB51256B}" Classes="h1" HorizontalAlignment="Center" />
         <TextBlock Text="{Binding CurrentPageDescription}" Classes="muted" TextWrapping="Wrap" MaxWidth="520" TextAlignment="Center" />
-        <TextBlock Text="当前仅保留导航和占位，避免误导为已实现业务功能。" Classes="muted" TextWrapping="Wrap" MaxWidth="520" TextAlignment="Center" />
+        <TextBlock Text="{DynamicResource L.Text.45001262D832465C}" Classes="muted" TextWrapping="Wrap" MaxWidth="520" TextAlignment="Center" />
       </StackPanel>
     </Border>
   </Grid>

@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using GlyphStash.Domain.Fonts;
+using GlyphStash.Localization;
 
 namespace GlyphStash.Presentation.ViewModels;
 
@@ -21,14 +22,16 @@ public sealed partial class MergeRangeSegmentItemViewModel : ObservableObject
 
     public string RangeLabel => Segment.RangeLabel;
 
-    public string CountLabel => $"{Segment.CodePointCount:N0} 个码位";
+    public string CountLabel => AppText.CurrentCultureCode == AppText.EnglishCultureCode
+        ? $"{Segment.CodePointCount:N0} code points"
+        : $"{Segment.CodePointCount:N0} 个码位";
 
     public string PresenceLabel => Segment.Presence switch
     {
-        GlyphCoveragePresence.BaseOnly => "仅 A",
-        GlyphCoveragePresence.SupplementalOnly => "仅 B",
+        GlyphCoveragePresence.BaseOnly => L("仅 A"),
+        GlyphCoveragePresence.SupplementalOnly => L("仅 B"),
         GlyphCoveragePresence.Both => "A+B",
-        _ => "覆盖"
+        _ => L("覆盖")
     };
 
     public bool IsBaseOnly => Segment.Presence == GlyphCoveragePresence.BaseOnly;
@@ -41,6 +44,12 @@ public sealed partial class MergeRangeSegmentItemViewModel : ObservableObject
         ? CharacterFor(Range.Start)
         : $"{CharacterFor(Range.Start)} {CharacterFor(Range.End)}";
 
+    public void RefreshLocalizedState()
+    {
+        OnPropertyChanged(nameof(CountLabel));
+        OnPropertyChanged(nameof(PresenceLabel));
+    }
+
     private static string CharacterFor(int codePoint)
     {
         try
@@ -52,4 +61,6 @@ public sealed partial class MergeRangeSegmentItemViewModel : ObservableObject
             return "";
         }
     }
+
+    private static string L(string text) => AppText.TranslateLiteral(text);
 }

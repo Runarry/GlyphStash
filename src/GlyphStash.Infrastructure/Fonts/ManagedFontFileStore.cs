@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using GlyphStash.Application.Abstractions.Fonts;
 using GlyphStash.Application.Fonts;
 using GlyphStash.Domain.Fonts;
+using GlyphStash.Localization;
 
 namespace GlyphStash.Infrastructure.Fonts;
 
@@ -13,17 +14,17 @@ public sealed class ManagedFontFileStore : IManagedFontFileStore
     {
         if (string.IsNullOrWhiteSpace(settings.ManagedFontDirectory))
         {
-            throw new InvalidOperationException("需要先选择 GlyphStash 管理目录。");
+            throw new InvalidOperationException(AppText.TranslateLiteral("需要先选择 GlyphStash 管理目录。"));
         }
 
         if (!File.Exists(sourcePath))
         {
-            throw new FileNotFoundException("字体文件不存在。", sourcePath);
+            throw new FileNotFoundException(AppText.TranslateLiteral("字体文件不存在。"), sourcePath);
         }
 
         if (!IsSupportedFontPath(sourcePath))
         {
-            throw new InvalidOperationException("当前字体库不支持该格式导入，仅支持 TTF、OTF、TTC、OTC。");
+            throw new InvalidOperationException(AppText.TranslateLiteral("当前字体库不支持该格式导入，仅支持 TTF、OTF、TTC、OTC。"));
         }
 
         Directory.CreateDirectory(settings.ManagedFontDirectory);

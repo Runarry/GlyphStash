@@ -3,6 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="..\GlyphStash.Application\GlyphStash.Application.csproj" />
     <ProjectReference Include="..\GlyphStash.Domain\GlyphStash.Domain.csproj" />
+    <ProjectReference Include="..\GlyphStash.Localization\GlyphStash.Localization.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

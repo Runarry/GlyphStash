@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using GlyphStash.Application.Abstractions.Fonts;
 using GlyphStash.Application.Fonts;
+using GlyphStash.Localization;
 
 namespace GlyphStash.Infrastructure.Fonts;
 
@@ -21,13 +22,13 @@ public sealed class OpenTypeFontMetadataReader : IFontMetadataReader
         var extension = Path.GetExtension(fontFilePath);
         if (!SupportedExtensions.Contains(extension))
         {
-            throw new InvalidOperationException("M2 仅支持 TTF、OTF、TTC、OTC 的本地安装和临时启用。");
+            throw new InvalidOperationException(AppText.TranslateLiteral("M2 仅支持 TTF、OTF、TTC、OTC 的本地安装和临时启用。"));
         }
 
         var bytes = await File.ReadAllBytesAsync(fontFilePath, cancellationToken).ConfigureAwait(false);
         if (bytes.Length < 12)
         {
-            throw new InvalidOperationException("字体文件过小或已损坏。");
+            throw new InvalidOperationException(AppText.TranslateLiteral("字体文件过小或已损坏。"));
         }
 
         var fontOffset = GetFirstFontOffset(bytes);
@@ -66,19 +67,19 @@ public sealed class OpenTypeFontMetadataReader : IFontMetadataReader
 
         if (bytes.Length < 16)
         {
-            throw new InvalidOperationException("TTC/OTC 文件头不完整。");
+            throw new InvalidOperationException(AppText.TranslateLiteral("TTC/OTC 文件头不完整。"));
         }
 
         var count = ReadUInt32(bytes, 8);
         if (count == 0)
         {
-            throw new InvalidOperationException("TTC/OTC 文件没有包含字体。");
+            throw new InvalidOperationException(AppText.TranslateLiteral("TTC/OTC 文件没有包含字体。"));
         }
 
         var offset = checked((int)ReadUInt32(bytes, 12));
         if (offset < 0 || offset + 12 > bytes.Length)
         {
-            throw new InvalidOperationException("TTC/OTC 字体偏移无效。");
+            throw new InvalidOperationException(AppText.TranslateLiteral("TTC/OTC 字体偏移无效。"));
         }
 
         return offset;
@@ -88,12 +89,12 @@ public sealed class OpenTypeFontMetadataReader : IFontMetadataReader
     {
         if (fontOffset + 12 > bytes.Length)
         {
-            throw new InvalidOperationException("OpenType 字体表头不完整。");
+            throw new InvalidOperationException(AppText.TranslateLiteral("OpenType 字体表头不完整。"));
         }
 
         if (!TryReadTable(bytes, fontOffset, "name", out var nameOffset, out var nameLength))
         {
-            throw new InvalidOperationException("字体缺少有效 name 表。");
+            throw new InvalidOperationException(AppText.TranslateLiteral("字体缺少有效 name 表。"));
         }
 
         var count = ReadUInt16(bytes, nameOffset + 2);
@@ -175,7 +176,7 @@ public sealed class OpenTypeFontMetadataReader : IFontMetadataReader
             var recordOffset = tableRecordsOffset + i * 16;
             if (recordOffset + 16 > bytes.Length)
             {
-                throw new InvalidOperationException("OpenType 表目录不完整。");
+                throw new InvalidOperationException(AppText.TranslateLiteral("OpenType 表目录不完整。"));
             }
 
             if (ReadUInt32(bytes, recordOffset) != Tag(tag))

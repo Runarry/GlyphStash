@@ -5,6 +5,7 @@
     <ProjectReference Include="..\GlyphStash.Application\GlyphStash.Application.csproj" />
     <ProjectReference Include="..\GlyphStash.Infrastructure\GlyphStash.Infrastructure.csproj" />
     <ProjectReference Include="..\GlyphStash.Platform.Windows\GlyphStash.Platform.Windows.csproj" />
+    <ProjectReference Include="..\GlyphStash.Localization\GlyphStash.Localization.csproj" />
   </ItemGroup>
 
   <PropertyGroup>
@@ -29,8 +30,7 @@
   </ItemGroup>
 
   <Target Name="ValidateFontToolsWorkerForNativeAot" BeforeTargets="ComputeFilesToPublish" Condition="'$(PublishAot)' == 'true'">
-    <Error Condition="!Exists('$(GlyphStashFontToolsWorkerPath)')"
-           Text="NativeAOT publish requires tools\fonttools-worker\dist\glyphstash-fonttools-worker.exe. Run tools\fonttools-worker\build.ps1 before publishing." />
+    <Error Condition="!Exists('$(GlyphStashFontToolsWorkerPath)')" Text="NativeAOT publish requires tools\fonttools-worker\dist\glyphstash-fonttools-worker.exe. Run tools\fonttools-worker\build.ps1 before publishing." />
   </Target>
 
   <ItemGroup>

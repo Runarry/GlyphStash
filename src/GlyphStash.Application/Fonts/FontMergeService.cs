@@ -2,6 +2,7 @@ using System.Text.Json;
 using GlyphStash.Application.Abstractions.Fonts;
 using GlyphStash.Application.Abstractions.Storage;
 using GlyphStash.Domain.Fonts;
+using GlyphStash.Localization;
 
 namespace GlyphStash.Application.Fonts;
 
@@ -46,7 +47,7 @@ public sealed class FontMergeService
         {
             return EmptyPreview(
                 validation.Ranges,
-                [.. validation.Issues, new FontMergeIssue(FontMergeIssueKind.Canceled, FontMergeIssueSeverity.Error, "合并预览已取消。")]);
+                [.. validation.Issues, new FontMergeIssue(FontMergeIssueKind.Canceled, FontMergeIssueSeverity.Error, L("合并预览已取消。"))]);
         }
         catch (Exception ex)
         {
@@ -70,7 +71,7 @@ public sealed class FontMergeService
             return new FontMergeResult(false, request.OutputPath, "", failedReport, validation.Issues);
         }
 
-        progress?.Report(new FontMergeProgress(4, "准备", "正在启动 fontTools worker..."));
+        progress?.Report(new FontMergeProgress(4, L("准备"), L("正在启动 fontTools worker...")));
         try
         {
             var workerResult = await _worker.MergeAsync(
@@ -81,29 +82,29 @@ public sealed class FontMergeService
             var issues = validation.Issues.Concat(workerResult.Preview.Issues).ToList();
             if (issues.Any(issue => issue.Severity == FontMergeIssueSeverity.Error))
             {
-                var failedReport = CreateReport(request, validation.Ranges, workerResult.Preview, issues, false, "合并任务存在阻止级问题。", "");
+                var failedReport = CreateReport(request, validation.Ranges, workerResult.Preview, issues, false, L("合并任务存在阻止级问题。"), "");
                 await LogAsync("merge", "export", failedReport.ErrorMessage, request.OutputPath, false, cancellationToken).ConfigureAwait(false);
                 return new FontMergeResult(false, request.OutputPath, "", failedReport, issues);
             }
 
             if (!File.Exists(request.OutputPath))
             {
-                var missingOutput = new FontMergeIssue(FontMergeIssueKind.WorkerFailed, FontMergeIssueSeverity.Error, "fontTools worker 未生成输出字体文件。", request.OutputPath);
+                var missingOutput = new FontMergeIssue(FontMergeIssueKind.WorkerFailed, FontMergeIssueSeverity.Error, L("fontTools worker 未生成输出字体文件。"), request.OutputPath);
                 var failedReport = CreateReport(request, validation.Ranges, workerResult.Preview, [.. validation.Issues, missingOutput], false, missingOutput.Message, "");
                 await LogAsync("merge", "export", failedReport.ErrorMessage, request.OutputPath, false, cancellationToken).ConfigureAwait(false);
                 return new FontMergeResult(false, request.OutputPath, "", failedReport, failedReport.Issues);
             }
 
-            progress?.Report(new FontMergeProgress(96, "报告", "正在写入合并报告..."));
+            progress?.Report(new FontMergeProgress(96, L("报告"), L("正在写入合并报告...")));
             var report = CreateReport(request, validation.Ranges, workerResult.Preview, issues, true, "", request.OutputPath);
             var reportPath = await WriteReportAsync(request.OutputPath, report, cancellationToken).ConfigureAwait(false);
-            await LogAsync("merge", "export", $"合并导出成功：{request.OutputPath}", request.OutputPath, true, cancellationToken).ConfigureAwait(false);
-            progress?.Report(new FontMergeProgress(100, "完成", "合并报告已生成。"));
+            await LogAsync("merge", "export", F("合并导出成功：{0}", "Merge export succeeded: {0}", request.OutputPath), request.OutputPath, true, cancellationToken).ConfigureAwait(false);
+            progress?.Report(new FontMergeProgress(100, L("完成"), L("合并报告已生成。")));
             return new FontMergeResult(true, request.OutputPath, reportPath, report, issues);
         }
         catch (OperationCanceledException)
         {
-            var issue = new FontMergeIssue(FontMergeIssueKind.Canceled, FontMergeIssueSeverity.Error, "合并任务已取消。");
+            var issue = new FontMergeIssue(FontMergeIssueKind.Canceled, FontMergeIssueSeverity.Error, L("合并任务已取消。"));
             var report = CreateReport(request, validation.Ranges, null, [.. validation.Issues, issue], false, issue.Message, "");
             var reportPath = await TryWriteReportAsync(request.OutputPath, report, CancellationToken.None).ConfigureAwait(false);
             await LogAsync("merge", "export", issue.Message, request.OutputPath, false, CancellationToken.None).ConfigureAwait(false);
@@ -123,12 +124,12 @@ public sealed class FontMergeService
     {
         if (string.IsNullOrWhiteSpace(reportPath) || !File.Exists(reportPath))
         {
-            throw new InvalidOperationException("合并报告文件不存在。");
+            throw new InvalidOperationException(L("合并报告文件不存在。"));
         }
 
         await using var stream = File.OpenRead(reportPath);
         return await JsonSerializer.DeserializeAsync(stream, ReportJsonContext.FontMergeReport, cancellationToken).ConfigureAwait(false)
-            ?? throw new InvalidOperationException("合并报告文件格式无效。");
+            ?? throw new InvalidOperationException(L("合并报告文件格式无效。"));
     }
 
     public static string BuildReportPath(string outputPath)
@@ -148,14 +149,14 @@ public sealed class FontMergeService
         }
         catch (Exception ex)
         {
-            issues.Add(new FontMergeIssue(FontMergeIssueKind.InvalidInput, FontMergeIssueSeverity.Error, BuildErrorMessage(ex), "Unicode 范围"));
+            issues.Add(new FontMergeIssue(FontMergeIssueKind.InvalidInput, FontMergeIssueSeverity.Error, BuildErrorMessage(ex), L("Unicode 范围")));
         }
 
-        ValidateFont(request.BaseFont, "基础字体 A", issues);
-        ValidateFont(request.SupplementalFont, "补充字体 B", issues);
+        ValidateFont(request.BaseFont, L("基础字体 A"), issues);
+        ValidateFont(request.SupplementalFont, L("补充字体 B"), issues);
         ValidateDistinctInputs(request, issues);
-        AddLicenseIssues(request.BaseFont, "基础字体 A", issues);
-        AddLicenseIssues(request.SupplementalFont, "补充字体 B", issues);
+        AddLicenseIssues(request.BaseFont, L("基础字体 A"), issues);
+        AddLicenseIssues(request.SupplementalFont, L("补充字体 B"), issues);
 
         if (validateOutput)
         {
@@ -169,32 +170,32 @@ public sealed class FontMergeService
     {
         if (font is null)
         {
-            issues.Add(new FontMergeIssue(FontMergeIssueKind.MissingFont, FontMergeIssueSeverity.Error, $"请选择{target}。", target));
+            issues.Add(new FontMergeIssue(FontMergeIssueKind.MissingFont, FontMergeIssueSeverity.Error, F("请选择{0}。", "Select {0}.", target), target));
             return;
         }
 
         if (!font.File.HasPhysicalPath)
         {
-            issues.Add(new FontMergeIssue(FontMergeIssueKind.MissingFile, FontMergeIssueSeverity.Error, $"{target}没有可读取的本地字体文件路径。", target));
+            issues.Add(new FontMergeIssue(FontMergeIssueKind.MissingFile, FontMergeIssueSeverity.Error, F("{0}没有可读取的本地字体文件路径。", "{0} has no readable local font file path.", target), target));
             return;
         }
 
         if (!File.Exists(font.File.Path))
         {
-            issues.Add(new FontMergeIssue(FontMergeIssueKind.MissingFile, FontMergeIssueSeverity.Error, $"{target}文件不存在：{font.File.Path}", target));
+            issues.Add(new FontMergeIssue(FontMergeIssueKind.MissingFile, FontMergeIssueSeverity.Error, F("{0}文件不存在：{1}", "{0} file does not exist: {1}", target, font.File.Path), target));
             return;
         }
 
         var extension = Path.GetExtension(font.File.Path);
         if (RecognizedButUnsupportedExtensions.Contains(extension, StringComparer.OrdinalIgnoreCase))
         {
-            issues.Add(new FontMergeIssue(FontMergeIssueKind.UnsupportedFontKind, FontMergeIssueSeverity.Error, $"{target}是 {extension.TrimStart('.').ToUpperInvariant()}，M4 v1 仅支持静态单字体 TTF/OTF。", target));
+            issues.Add(new FontMergeIssue(FontMergeIssueKind.UnsupportedFontKind, FontMergeIssueSeverity.Error, F("{0}是 {1}，M4 v1 仅支持静态单字体 TTF/OTF。", "{0} is {1}. M4 v1 only supports static single-font TTF/OTF.", target, extension.TrimStart('.').ToUpperInvariant()), target));
             return;
         }
 
         if (!SupportedExtensions.Contains(extension, StringComparer.OrdinalIgnoreCase))
         {
-            issues.Add(new FontMergeIssue(FontMergeIssueKind.UnsupportedFormat, FontMergeIssueSeverity.Error, $"{target}格式不支持，M4 v1 仅支持 TTF/OTF。", target));
+            issues.Add(new FontMergeIssue(FontMergeIssueKind.UnsupportedFormat, FontMergeIssueSeverity.Error, F("{0}格式不支持，M4 v1 仅支持 TTF/OTF。", "{0} format is unsupported. M4 v1 only supports TTF/OTF.", target), target));
         }
     }
 
@@ -209,7 +210,7 @@ public sealed class FontMergeService
 
         if (PathsEqual(basePath, supplementalPath))
         {
-            issues.Add(new FontMergeIssue(FontMergeIssueKind.InvalidInput, FontMergeIssueSeverity.Error, "基础字体和补充字体不能是同一个文件。", "字体选择"));
+            issues.Add(new FontMergeIssue(FontMergeIssueKind.InvalidInput, FontMergeIssueSeverity.Error, L("基础字体和补充字体不能是同一个文件。"), L("字体选择")));
         }
     }
 
@@ -220,48 +221,48 @@ public sealed class FontMergeService
             return;
         }
 
-        issues.Add(new FontMergeIssue(FontMergeIssueKind.LicenseUnknown, FontMergeIssueSeverity.Warning, $"{target}授权状态为：{font.License.Text}", target));
+        issues.Add(new FontMergeIssue(FontMergeIssueKind.LicenseUnknown, FontMergeIssueSeverity.Warning, F("{0}授权状态为：{1}", "{0} license status: {1}", target, font.License.Text), target));
     }
 
     private static void ValidateOutput(FontMergeRequest request, List<FontMergeIssue> issues)
     {
         if (!request.LicenseConfirmed)
         {
-            issues.Add(new FontMergeIssue(FontMergeIssueKind.LicenseNotConfirmed, FontMergeIssueSeverity.Error, "未完成授权确认，不能开始导出。", "授权确认"));
+            issues.Add(new FontMergeIssue(FontMergeIssueKind.LicenseNotConfirmed, FontMergeIssueSeverity.Error, L("未完成授权确认，不能开始导出。"), L("授权确认")));
         }
 
         if (string.IsNullOrWhiteSpace(request.OutputFamilyName))
         {
-            issues.Add(new FontMergeIssue(FontMergeIssueKind.InvalidInput, FontMergeIssueSeverity.Error, "请输入输出字体名称。", "输出字体名称"));
+            issues.Add(new FontMergeIssue(FontMergeIssueKind.InvalidInput, FontMergeIssueSeverity.Error, L("请输入输出字体名称。"), L("输出字体名称")));
         }
 
         if (string.IsNullOrWhiteSpace(request.OutputPath))
         {
-            issues.Add(new FontMergeIssue(FontMergeIssueKind.OutputPathInvalid, FontMergeIssueSeverity.Error, "请选择输出文件路径。", "输出文件路径"));
+            issues.Add(new FontMergeIssue(FontMergeIssueKind.OutputPathInvalid, FontMergeIssueSeverity.Error, L("请选择输出文件路径。"), L("输出文件路径")));
             return;
         }
 
         var extension = Path.GetExtension(request.OutputPath);
         if (!SupportedExtensions.Contains(extension, StringComparer.OrdinalIgnoreCase))
         {
-            issues.Add(new FontMergeIssue(FontMergeIssueKind.UnsupportedFormat, FontMergeIssueSeverity.Error, "输出文件扩展名必须是 .ttf 或 .otf。", "输出文件路径"));
+            issues.Add(new FontMergeIssue(FontMergeIssueKind.UnsupportedFormat, FontMergeIssueSeverity.Error, L("输出文件扩展名必须是 .ttf 或 .otf。"), L("输出文件路径")));
         }
 
         if (request.BaseFont is not null && PathsEqual(request.OutputPath, request.BaseFont.File.Path)
             || request.SupplementalFont is not null && PathsEqual(request.OutputPath, request.SupplementalFont.File.Path))
         {
-            issues.Add(new FontMergeIssue(FontMergeIssueKind.OutputPathInvalid, FontMergeIssueSeverity.Error, "输出不能覆盖原始字体文件。", "输出文件路径"));
+            issues.Add(new FontMergeIssue(FontMergeIssueKind.OutputPathInvalid, FontMergeIssueSeverity.Error, L("输出不能覆盖原始字体文件。"), L("输出文件路径")));
         }
 
         if (File.Exists(request.OutputPath))
         {
-            issues.Add(new FontMergeIssue(FontMergeIssueKind.OutputPathExists, FontMergeIssueSeverity.Error, "输出路径已存在，M4 v1 不覆盖任何已有文件。", "输出文件路径"));
+            issues.Add(new FontMergeIssue(FontMergeIssueKind.OutputPathExists, FontMergeIssueSeverity.Error, L("输出路径已存在，M4 v1 不覆盖任何已有文件。"), L("输出文件路径")));
         }
 
         var directory = Path.GetDirectoryName(request.OutputPath);
         if (string.IsNullOrWhiteSpace(directory) || !Directory.Exists(directory))
         {
-            issues.Add(new FontMergeIssue(FontMergeIssueKind.OutputPathInvalid, FontMergeIssueSeverity.Error, "输出目录不存在。", "输出文件路径"));
+            issues.Add(new FontMergeIssue(FontMergeIssueKind.OutputPathInvalid, FontMergeIssueSeverity.Error, L("输出目录不存在。"), L("输出文件路径")));
         }
     }
 
@@ -331,8 +332,13 @@ public sealed class FontMergeService
 
     private static string BuildConflictStrategy(FontMergeMode mergeMode) =>
         mergeMode == FontMergeMode.Overwrite
-            ? "覆盖模式：指定范围内补充字体存在的码位覆盖基础字体"
-            : "补全模式：基础字体已有码位默认跳过";
+            ? L("覆盖模式：指定范围内补充字体存在的码位覆盖基础字体")
+            : L("补全模式：基础字体已有码位默认跳过");
+
+    private static string L(string text) => AppText.TranslateLiteral(text);
+
+    private static string F(string zhTemplate, string enTemplate, params object?[] args) =>
+        AppText.FormatLiteral(zhTemplate, enTemplate, args);
 
     private static async Task<string> WriteReportAsync(string outputPath, FontMergeReport report, CancellationToken cancellationToken)
     {

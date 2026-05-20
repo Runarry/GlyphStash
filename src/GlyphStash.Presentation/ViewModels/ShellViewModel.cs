@@ -5,6 +5,7 @@ using CommunityToolkit.Mvvm.Input;
 using GlyphStash.Application.Abstractions.Fonts;
 using GlyphStash.Application.Fonts;
 using GlyphStash.Domain.Fonts;
+using GlyphStash.Localization;
 using GlyphStash.Presentation.Services;
 using DomainUnicodeRange = GlyphStash.Domain.Fonts.UnicodeRange;
 
@@ -12,11 +13,23 @@ namespace GlyphStash.Presentation.ViewModels;
 
 public sealed partial class ShellViewModel : ObservableObject
 {
+    private const string AllSourceFilter = "全部来源";
+    private const string AllStateFilter = "全部状态";
+    private const string AllTagFilter = "全部标签";
+    private const string AllCollectionFilter = "全部集合";
+    private const string AllOnlineSubset = "全部子集";
+    private const string AllOnlineCategory = "全部分类";
+    private const string SupplementMergeModeLabel = "补全（追加）";
+    private const string OverwriteMergeModeLabel = "覆盖";
+    private const string DefaultPreviewTextZh = "GlyphStash 字体预览 Aa 123 你好";
+    private const string DefaultPreviewTextEn = "GlyphStash font preview Aa 123 Hello";
+
     private readonly FontLibraryService _fontLibraryService;
     private readonly LocalFontManagementService? _localManagementService;
     private readonly IUserFileDialogService _fileDialogService;
     private readonly IUserClipboardService _clipboardService;
     private readonly IFontPreviewRegistry _fontPreviewRegistry;
+    private readonly IAppLocalizationService? _localizationService;
     private readonly OnlineFontService? _onlineFontService;
     private readonly IGlyphCatalogService? _glyphCatalogService;
     private readonly FontMergeService? _fontMergeService;
@@ -27,6 +40,8 @@ public sealed partial class ShellViewModel : ObservableObject
     private FontMergePreview? _currentMergePreview;
     private CancellationTokenSource? _mergeCancellation;
     private readonly List<MergeRangeSegmentItemViewModel> _allMergeRangeSegments = [];
+    private bool _isApplyingSettings;
+    private bool _isSyncingLocalizedOptions;
 
     [ObservableProperty]
     private NavigationItemViewModel? _selectedNavigationItem;
@@ -35,19 +50,31 @@ public sealed partial class ShellViewModel : ObservableObject
     private string _searchText = "";
 
     [ObservableProperty]
-    private string _selectedSourceFilter = "全部来源";
+    private string _selectedSourceFilter = AllSourceFilter;
 
     [ObservableProperty]
-    private string _selectedStateFilter = "全部状态";
+    private LocalizedOptionViewModel? _selectedSourceFilterOption;
 
     [ObservableProperty]
-    private string _selectedTagFilter = "全部标签";
+    private string _selectedStateFilter = AllStateFilter;
 
     [ObservableProperty]
-    private string _selectedCollectionFilter = "全部集合";
+    private LocalizedOptionViewModel? _selectedStateFilterOption;
 
     [ObservableProperty]
-    private string _previewText = "GlyphStash 字体预览 Aa 123 你好";
+    private string _selectedTagFilter = AllTagFilter;
+
+    [ObservableProperty]
+    private LocalizedOptionViewModel? _selectedTagFilterOption;
+
+    [ObservableProperty]
+    private string _selectedCollectionFilter = AllCollectionFilter;
+
+    [ObservableProperty]
+    private LocalizedOptionViewModel? _selectedCollectionFilterOption;
+
+    [ObservableProperty]
+    private string _previewText = AppText.TranslateLiteral(DefaultPreviewTextZh);
 
     [ObservableProperty]
     private double _previewFontSize = 30;
@@ -83,10 +110,10 @@ public sealed partial class ShellViewModel : ObservableObject
     private string _pendingDeleteTagName = "";
 
     [ObservableProperty]
-    private string _scanStatus = "准备加载字体索引";
+    private string _scanStatus = AppText.TranslateLiteral("准备加载字体索引");
 
     [ObservableProperty]
-    private string _statusMessage = "最近操作：等待字体索引";
+    private string _statusMessage = AppText.TranslateLiteral("最近操作：等待字体索引");
 
     [ObservableProperty]
     private string _toastMessage = "";
@@ -101,7 +128,7 @@ public sealed partial class ShellViewModel : ObservableObject
     private string _googleFontsApiKeyText = "";
 
     [ObservableProperty]
-    private string _importStatus = "请选择字体文件并选择 GlyphStash 管理目录。";
+    private string _importStatus = AppText.TranslateLiteral("请选择字体文件并选择 GlyphStash 管理目录。");
 
     [ObservableProperty]
     private bool _importInstallForCurrentUser;
@@ -134,10 +161,16 @@ public sealed partial class ShellViewModel : ObservableObject
     private string _onlineSearchText = "Noto Sans";
 
     [ObservableProperty]
-    private string _selectedOnlineSubset = "全部子集";
+    private string _selectedOnlineSubset = AllOnlineSubset;
 
     [ObservableProperty]
-    private string _selectedOnlineCategory = "全部分类";
+    private LocalizedOptionViewModel? _selectedOnlineSubsetOption;
+
+    [ObservableProperty]
+    private string _selectedOnlineCategory = AllOnlineCategory;
+
+    [ObservableProperty]
+    private LocalizedOptionViewModel? _selectedOnlineCategoryOption;
 
     [ObservableProperty]
     private string _selectedOnlineSort = "alpha";
@@ -152,7 +185,7 @@ public sealed partial class ShellViewModel : ObservableObject
     private RemoteFontFamilyItemViewModel? _selectedRemoteFont;
 
     [ObservableProperty]
-    private string _onlineStatus = "请在设置页配置 Google Fonts API key 后搜索在线字体。";
+    private string _onlineStatus = AppText.TranslateLiteral("请在设置页配置 Google Fonts API key 后搜索在线字体。");
 
     [ObservableProperty]
     private bool _isOnlineSearchBusy;
@@ -185,7 +218,7 @@ public sealed partial class ShellViewModel : ObservableObject
     private GlyphItemViewModel? _selectedGlyph;
 
     [ObservableProperty]
-    private string _glyphStatus = "请从字体详情进入字形浏览。";
+    private string _glyphStatus = AppText.TranslateLiteral("请从字体详情进入字形浏览。");
 
     [ObservableProperty]
     private int _glyphPageNumber = 1;
@@ -218,19 +251,22 @@ public sealed partial class ShellViewModel : ObservableObject
     private bool _isMergeRangeDialogBusy;
 
     [ObservableProperty]
-    private string _mergeRangeDialogStatus = "请选择基础字体和补充字体。";
+    private string _mergeRangeDialogStatus = AppText.TranslateLiteral("请选择基础字体和补充字体。");
 
     [ObservableProperty]
-    private string _mergeRangeBaseSummary = "未读取基础字体 A。";
+    private string _mergeRangeBaseSummary = AppText.TranslateLiteral("未读取基础字体 A。");
 
     [ObservableProperty]
-    private string _mergeRangeSupplementalSummary = "未读取补充字体 B。";
+    private string _mergeRangeSupplementalSummary = AppText.TranslateLiteral("未读取补充字体 B。");
 
     [ObservableProperty]
     private MergeRangeBlockItemViewModel? _selectedMergeRangeBlock;
 
     [ObservableProperty]
-    private string _selectedMergeModeLabel = "补全（追加）";
+    private string _selectedMergeModeLabel = SupplementMergeModeLabel;
+
+    [ObservableProperty]
+    private LocalizedOptionViewModel? _selectedMergeModeOption;
 
     [ObservableProperty]
     private bool _mergeLicenseConfirmed;
@@ -242,7 +278,7 @@ public sealed partial class ShellViewModel : ObservableObject
     private string _mergeOutputPath = "";
 
     [ObservableProperty]
-    private string _mergeStatus = "请选择基础字体和补充字体。";
+    private string _mergeStatus = AppText.TranslateLiteral("请选择基础字体和补充字体。");
 
     [ObservableProperty]
     private bool _isMergeBusy;
@@ -257,10 +293,10 @@ public sealed partial class ShellViewModel : ObservableObject
     private string _mergeProgressMessage = "";
 
     [ObservableProperty]
-    private string _mergeReportTitle = "等待导出";
+    private string _mergeReportTitle = AppText.TranslateLiteral("等待导出");
 
     [ObservableProperty]
-    private string _mergeReportBadge = "待生成";
+    private string _mergeReportBadge = AppText.TranslateLiteral("待生成");
 
     [ObservableProperty]
     private string _mergeReportOutputPath = "";
@@ -283,6 +319,9 @@ public sealed partial class ShellViewModel : ObservableObject
     [ObservableProperty]
     private string _mergeReportPath = "";
 
+    [ObservableProperty]
+    private LanguageOptionViewModel? _selectedLanguage;
+
     public ShellViewModel(FontLibraryService fontLibraryService)
         : this(fontLibraryService, null, NullUserFileDialogService.Instance)
     {
@@ -296,7 +335,8 @@ public sealed partial class ShellViewModel : ObservableObject
         IGlyphCatalogService? glyphCatalogService = null,
         IUserClipboardService? clipboardService = null,
         IFontPreviewRegistry? fontPreviewRegistry = null,
-        FontMergeService? fontMergeService = null)
+        FontMergeService? fontMergeService = null,
+        IAppLocalizationService? localizationService = null)
     {
         _fontLibraryService = fontLibraryService;
         _localManagementService = localManagementService;
@@ -306,6 +346,28 @@ public sealed partial class ShellViewModel : ObservableObject
         _fontMergeService = fontMergeService;
         _clipboardService = clipboardService ?? NullUserFileDialogService.Instance;
         _fontPreviewRegistry = fontPreviewRegistry ?? NullFontPreviewRegistry.Instance;
+        _localizationService = localizationService;
+        InitializeLocalizedOptions();
+        if (_localizationService is not null)
+        {
+            foreach (var language in _localizationService.SupportedLanguages)
+            {
+                LanguageOptions.Add(new LanguageOptionViewModel(language));
+            }
+
+            _isApplyingSettings = true;
+            try
+            {
+                SelectedLanguage = LanguageOptions.FirstOrDefault(language =>
+                    string.Equals(language.CultureCode, _localizationService.CurrentCulture.Name, StringComparison.OrdinalIgnoreCase));
+            }
+            finally
+            {
+                _isApplyingSettings = false;
+            }
+
+            _localizationService.CultureChanged += (_, _) => RefreshLocalizedState();
+        }
         RefreshMergeStepState();
     }
 
@@ -319,9 +381,21 @@ public sealed partial class ShellViewModel : ObservableObject
 
     public ObservableCollection<string> AvailableCollections { get; } = [];
 
-    public ObservableCollection<string> TagFilters { get; } = ["全部标签"];
+    public ObservableCollection<string> TagFilters { get; } = [AllTagFilter];
 
-    public ObservableCollection<string> CollectionFilters { get; } = ["全部集合"];
+    public ObservableCollection<string> CollectionFilters { get; } = [AllCollectionFilter];
+
+    public ObservableCollection<LocalizedOptionViewModel> SourceFilterOptions { get; } = [];
+
+    public ObservableCollection<LocalizedOptionViewModel> StateFilterOptions { get; } = [];
+
+    public ObservableCollection<LocalizedOptionViewModel> TagFilterOptions { get; } = [];
+
+    public ObservableCollection<LocalizedOptionViewModel> CollectionFilterOptions { get; } = [];
+
+    public ObservableCollection<LocalizedOptionViewModel> OnlineSubsetOptionModels { get; } = [];
+
+    public ObservableCollection<LocalizedOptionViewModel> OnlineCategoryOptionModels { get; } = [];
 
     public ObservableCollection<NameOptionViewModel> TagOptions { get; } = [];
 
@@ -360,6 +434,10 @@ public sealed partial class ShellViewModel : ObservableObject
 
     public ObservableCollection<MergeIssueItemViewModel> MergeIssues { get; } = [];
 
+    public ObservableCollection<LanguageOptionViewModel> LanguageOptions { get; } = [];
+
+    public ObservableCollection<LocalizedOptionViewModel> MergeModeOptionModels { get; } = [];
+
     public ObservableCollection<NavigationItemViewModel> NavigationItems { get; } =
     [
         new("font-library", "字体库", "字体库", "查看、搜索和预览本地字体。", "M2", true),
@@ -372,7 +450,7 @@ public sealed partial class ShellViewModel : ObservableObject
 
     public IReadOnlyList<string> SourceFilters { get; } =
     [
-        "全部来源",
+        AllSourceFilter,
         "系统字体",
         "用户级安装",
         "GlyphStash 管理",
@@ -381,7 +459,7 @@ public sealed partial class ShellViewModel : ObservableObject
 
     public IReadOnlyList<string> StateFilters { get; } =
     [
-        "全部状态",
+        AllStateFilter,
         "已安装",
         "已临时启用",
         "未启用"
@@ -391,7 +469,7 @@ public sealed partial class ShellViewModel : ObservableObject
 
     public IReadOnlyList<string> OnlineSubsetOptions { get; } =
     [
-        "全部子集",
+        AllOnlineSubset,
         "latin",
         "latin-ext",
         "cyrillic",
@@ -411,7 +489,7 @@ public sealed partial class ShellViewModel : ObservableObject
 
     public IReadOnlyList<string> OnlineCategoryOptions { get; } =
     [
-        "全部分类",
+        AllOnlineCategory,
         "serif",
         "sans-serif",
         "monospace",
@@ -428,13 +506,13 @@ public sealed partial class ShellViewModel : ObservableObject
         "trending"
     ];
 
-    public IReadOnlyList<string> CompatibilityMatrix { get; } =
+    public IReadOnlyList<string> CompatibilityMatrix =>
     [
-        "记事本：覆盖新启动与已运行应用，验证 WM_FONTCHANGE 后字体菜单刷新。",
-        "VS Code：覆盖常见开发工具，新启动应可见，已运行窗口可能需要重新打开字体列表。",
-        "Edge / Chrome：覆盖浏览器与前端预览，验证 CSS font-family 选择。",
-        "Word / PowerPoint：覆盖 Office 文档场景，已运行应用可能需要重启文档窗口。",
-        "Figma / Adobe 设计工具：覆盖设计工作流，未安装时标记为未验证。"
+        L("记事本：覆盖新启动与已运行应用，验证 WM_FONTCHANGE 后字体菜单刷新。"),
+        L("VS Code：覆盖常见开发工具，新启动应可见，已运行窗口可能需要重新打开字体列表。"),
+        L("Edge / Chrome：覆盖浏览器与前端预览，验证 CSS font-family 选择。"),
+        L("Word / PowerPoint：覆盖 Office 文档场景，已运行应用可能需要重启文档窗口。"),
+        L("Figma / Adobe 设计工具：覆盖设计工作流，未安装时标记为未验证。")
     ];
 
     public bool HasFonts => Fonts.Count > 0;
@@ -457,7 +535,11 @@ public sealed partial class ShellViewModel : ObservableObject
             ? FontStyle.Italic
             : FontStyle.Normal;
 
-    public string FontCountLabel => _allFonts.Count == 0 ? "字体索引为空" : $"索引就绪：{_allFonts.Count:N0} 个字体族";
+    public string FontCountLabel => _allFonts.Count == 0
+        ? L("字体索引为空")
+        : AppText.CurrentCultureCode == AppText.EnglishCultureCode
+            ? $"Index ready: {_allFonts.Count:N0} font families"
+            : $"索引就绪：{_allFonts.Count:N0} 个字体族";
 
     public bool IsFontLibraryPage => !IsGlyphBrowserOpen && SelectedNavigationItem?.IsFontLibrary == true;
 
@@ -475,21 +557,23 @@ public sealed partial class ShellViewModel : ObservableObject
 
     public bool IsGlyphBrowserPage => IsGlyphBrowserOpen;
 
-    public string CurrentPageTitle => SelectedNavigationItem?.Title ?? "字体库";
+    public string CurrentPageTitle => SelectedNavigationItem?.Title ?? L("字体库");
 
     public string CurrentPageDescription => SelectedNavigationItem?.Description ?? "";
 
     public string CurrentPageMilestone => SelectedNavigationItem?.Milestone ?? "M2";
 
     public string EmptyStateMessage => _allFonts.Count == 0
-        ? "字体索引为空。请重新扫描字体。"
-        : $"当前筛选没有匹配字体。索引中共有 {_allFonts.Count:N0} 个字体族。";
+        ? L("字体索引为空。请重新扫描字体。")
+        : AppText.CurrentCultureCode == AppText.EnglishCultureCode
+            ? $"No fonts match the current filters. The index contains {_allFonts.Count:N0} font families."
+            : $"当前筛选没有匹配字体。索引中共有 {_allFonts.Count:N0} 个字体族。";
 
     public bool HasManagedFontDirectory => !string.IsNullOrWhiteSpace(ManagedFontDirectory);
 
-    public string ManagedDirectoryStatus => HasManagedFontDirectory ? "已选择，可写性将在导入时验证" : "导入前必须选择";
+    public string ManagedDirectoryStatus => HasManagedFontDirectory ? T("Label.ManagedDirectoryReady") : T("Label.ManagedDirectoryRequired");
 
-    public string GoogleFontsApiKeyStatus => string.IsNullOrWhiteSpace(GoogleFontsApiKeyText) ? "未配置" : "已配置";
+    public string GoogleFontsApiKeyStatus => string.IsNullOrWhiteSpace(GoogleFontsApiKeyText) ? T("Common.NotConfigured") : T("Common.Configured");
 
     public bool HasRemoteFonts => RemoteFonts.Count > 0;
 
@@ -505,23 +589,30 @@ public sealed partial class ShellViewModel : ObservableObject
 
     public string GlyphBrowserTitle =>
         _currentGlyphFace is null
-            ? "字形浏览"
-            : $"字形浏览：{_currentGlyphFace.FamilyName}";
+            ? L("字形浏览")
+            : AppText.CurrentCultureCode == AppText.EnglishCultureCode
+                ? $"Glyph browser: {_currentGlyphFace.FamilyName}"
+                : $"字形浏览：{_currentGlyphFace.FamilyName}";
 
     public string GlyphBrowserDescription =>
         _currentGlyphFace is null
-            ? "查看 Unicode 映射字符，搜索字符或码位，并复制字形信息。"
-            : $"当前样式：{_currentGlyphFace.StyleLabel}。查看 Unicode 映射字符，搜索字符或码位，并复制字形信息。";
+            ? L("查看 Unicode 映射字符，搜索字符或码位，并复制字形信息。")
+            : AppText.CurrentCultureCode == AppText.EnglishCultureCode
+                ? $"Current style: {_currentGlyphFace.StyleLabel}. View Unicode-mapped characters, search by character or code point, and copy glyph details."
+                : $"当前样式：{_currentGlyphFace.StyleLabel}。查看 Unicode 映射字符，搜索字符或码位，并复制字形信息。";
 
     public bool HasImportPreview => ImportPreviewItems.Count > 0;
 
     public bool CanImportTemporarilyActivate => !ImportInstallForCurrentUser;
 
-    public string ImportTemporaryActivationReason => ImportInstallForCurrentUser ? "用户级安装后已安装，无需临时启用" : "";
+    public string ImportTemporaryActivationReason => ImportInstallForCurrentUser ? L("用户级安装后已安装，无需临时启用") : "";
 
     public bool HasCollections => Collections.Count > 0;
 
     public bool HasSelectedCollection => SelectedCollection is not null;
+
+    public string PendingDeleteTagConfirmationText =>
+        AppText.FormatLiteral("确定删除标签 {0}？", "Delete tag {0}?", PendingDeleteTagName);
 
     public string PreviewFontSizeLabel => $"{PreviewFontSize:0}px";
 
@@ -533,16 +624,16 @@ public sealed partial class ShellViewModel : ObservableObject
         "U+2000-U+206F"
     ];
 
-    public IReadOnlyList<string> MergeModeOptions { get; } = ["补全（追加）", "覆盖"];
+    public IReadOnlyList<string> MergeModeOptions { get; } = [SupplementMergeModeLabel, OverwriteMergeModeLabel];
 
     public FontMergeMode SelectedMergeMode =>
-        string.Equals(SelectedMergeModeLabel, "覆盖", StringComparison.CurrentCultureIgnoreCase)
+        string.Equals(SelectedMergeModeLabel, OverwriteMergeModeLabel, StringComparison.CurrentCultureIgnoreCase)
             ? FontMergeMode.Overwrite
             : FontMergeMode.Supplement;
 
     public string MergeModeDescription => SelectedMergeMode == FontMergeMode.Overwrite
-        ? "覆盖模式会用补充字体替换指定范围内基础字体已存在的码位，同时补齐基础字体缺失的码位。"
-        : "补全（追加）模式只合并基础字体缺失、补充字体存在的码位，基础字体已存在的码位会跳过。";
+        ? L("覆盖模式会用补充字体替换指定范围内基础字体已存在的码位，同时补齐基础字体缺失的码位。")
+        : L("补全（追加）模式只合并基础字体缺失、补充字体存在的码位，基础字体已存在的码位会跳过。");
 
     public bool IsMergeStepSelectFonts => MergeStepIndex == 0;
 
@@ -579,7 +670,9 @@ public sealed partial class ShellViewModel : ObservableObject
     public bool CanApplyMergeRangeSelection => !IsMergeRangeDialogBusy && HasSelectedMergeRangeSegments;
 
     public string MergeRangeSelectedCountLabel =>
-        $"{_allMergeRangeSegments.Count(segment => segment.IsSelected):N0} 段已选择";
+        AppText.CurrentCultureCode == AppText.EnglishCultureCode
+            ? $"{_allMergeRangeSegments.Count(segment => segment.IsSelected):N0} segments selected"
+            : $"{_allMergeRangeSegments.Count(segment => segment.IsSelected):N0} 段已选择";
 
     public bool HasMergeReport => !string.IsNullOrWhiteSpace(MergeReportOutputPath) || !string.IsNullOrWhiteSpace(MergeReportErrorMessage);
 
@@ -589,9 +682,9 @@ public sealed partial class ShellViewModel : ObservableObject
 
     public string MergeNextActionLabel => MergeStepIndex switch
     {
-        3 => "开始导出",
-        4 => "完成",
-        _ => "下一步"
+        3 => L("开始导出"),
+        4 => L("完成"),
+        _ => L("下一步")
     };
 
     public string MergePreviewSummary
@@ -600,13 +693,21 @@ public sealed partial class ShellViewModel : ObservableObject
         {
             if (_currentMergePreview is null)
             {
-                return "尚未执行冲突预览。";
+                return L("尚未执行冲突预览。");
             }
 
-            var overwriteText = SelectedMergeMode == FontMergeMode.Overwrite || _currentMergePreview.OverwrittenCodePointCount > 0
+            if (AppText.CurrentCultureCode == AppText.EnglishCultureCode)
+            {
+                var overwriteText = SelectedMergeMode == FontMergeMode.Overwrite || _currentMergePreview.OverwrittenCodePointCount > 0
+                    ? $" · overwrite {_currentMergePreview.OverwrittenCodePointCount:N0}"
+                    : "";
+                return $"Ranges {string.Join(", ", _currentMergePreview.Ranges.Select(range => range.Label))} · {_currentMergePreview.RequestedCodePointCount:N0} code points checked · supplemental coverage {_currentMergePreview.SupplementalCoverageCount:N0} · default merge {_currentMergePreview.MergeCodePointCount:N0}{overwriteText}";
+            }
+
+            var zhOverwriteText = SelectedMergeMode == FontMergeMode.Overwrite || _currentMergePreview.OverwrittenCodePointCount > 0
                 ? $" · 覆盖 {_currentMergePreview.OverwrittenCodePointCount:N0} 个"
                 : "";
-            return $"范围 {string.Join(", ", _currentMergePreview.Ranges.Select(range => range.Label))} · 预计检查 {_currentMergePreview.RequestedCodePointCount:N0} 个码位 · 补充字体覆盖 {_currentMergePreview.SupplementalCoverageCount:N0} 个 · 默认合并 {_currentMergePreview.MergeCodePointCount:N0} 个{overwriteText}";
+            return $"范围 {string.Join(", ", _currentMergePreview.Ranges.Select(range => range.Label))} · 预计检查 {_currentMergePreview.RequestedCodePointCount:N0} 个码位 · 补充字体覆盖 {_currentMergePreview.SupplementalCoverageCount:N0} 个 · 默认合并 {_currentMergePreview.MergeCodePointCount:N0} 个{zhOverwriteText}";
         }
     }
 
@@ -621,12 +722,27 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         SelectedNavigationItem ??= NavigationItems.First(item => item.Key == "font-library");
         IsBusy = true;
-        ScanStatus = "正在读取 SQLite 字体索引...";
+        ScanStatus = L("正在读取 SQLite 字体索引...");
         try
         {
             if (_localManagementService is not null)
             {
                 var settings = await _localManagementService.GetSettingsAsync(CancellationToken.None);
+                if (_localizationService is not null && !string.IsNullOrWhiteSpace(settings?.UiCultureCode))
+                {
+                    _isApplyingSettings = true;
+                    try
+                    {
+                        _localizationService.SetCulture(settings.UiCultureCode);
+                        SelectedLanguage = LanguageOptions.FirstOrDefault(language =>
+                            string.Equals(language.CultureCode, _localizationService.CurrentCulture.Name, StringComparison.OrdinalIgnoreCase));
+                    }
+                    finally
+                    {
+                        _isApplyingSettings = false;
+                    }
+                }
+
                 ManagedFontDirectory = settings?.ManagedFontDirectory ?? "";
                 GoogleFontsApiKeyText = settings?.GoogleFontsApiKey ?? "";
             }
@@ -634,21 +750,25 @@ public sealed partial class ShellViewModel : ObservableObject
             var cached = await _fontLibraryService.LoadCachedFontsAsync(new FontSearchQuery(), CancellationToken.None);
             if (cached.Count == 0)
             {
-                ScanStatus = "首次启动：正在扫描 Windows 字体目录...";
+                ScanStatus = L("首次启动：正在扫描 Windows 字体目录...");
                 cached = await _fontLibraryService.RescanAsync(CancellationToken.None);
             }
 
             ReplaceFonts(cached);
             await ReloadM2StateAsync();
-            StatusMessage = $"最近操作：已加载 {_allFonts.Count:N0} 个字体族";
-            ScanStatus = $"{FontCountLabel}，缓存可用";
+            StatusMessage = AppText.CurrentCultureCode == AppText.EnglishCultureCode
+                ? $"Recent action: loaded {_allFonts.Count:N0} font families"
+                : $"最近操作：已加载 {_allFonts.Count:N0} 个字体族";
+            ScanStatus = AppText.CurrentCultureCode == AppText.EnglishCultureCode
+                ? $"{FontCountLabel}, cache available"
+                : $"{FontCountLabel}，缓存可用";
         }
         catch (Exception ex)
         {
             var message = BuildErrorMessage(ex);
-            ScanStatus = $"字体索引加载失败：{message}";
-            StatusMessage = $"错误：{message}";
-            ShowToast("字体索引加载失败，可尝试重新扫描");
+            ScanStatus = AppText.CurrentCultureCode == AppText.EnglishCultureCode ? $"Font index failed to load: {message}" : $"字体索引加载失败：{message}";
+            StatusMessage = AppText.CurrentCultureCode == AppText.EnglishCultureCode ? $"Error: {message}" : $"错误：{message}";
+            ShowToast(L("字体索引加载失败，可尝试重新扫描"));
         }
         finally
         {
@@ -661,27 +781,29 @@ public sealed partial class ShellViewModel : ObservableObject
     private async Task RescanAsync()
     {
         IsBusy = true;
-        ScanStatus = "正在扫描 C:\\Windows\\Fonts 与用户字体目录...";
+        ScanStatus = L("正在扫描 C:\\Windows\\Fonts 与用户字体目录...");
         try
         {
             var fonts = await _fontLibraryService.RescanAsync(CancellationToken.None);
             SearchText = "";
-            SelectedSourceFilter = "全部来源";
-            SelectedStateFilter = "全部状态";
-            SelectedTagFilter = "全部标签";
-            SelectedCollectionFilter = "全部集合";
+            SelectedSourceFilter = AllSourceFilter;
+            SelectedStateFilter = AllStateFilter;
+            SelectedTagFilter = AllTagFilter;
+            SelectedCollectionFilter = AllCollectionFilter;
             ReplaceFonts(fonts);
             await ReloadM2StateAsync();
-            ScanStatus = $"扫描完成：{_allFonts.Count:N0} 个字体族，SQLite 缓存已刷新";
-            StatusMessage = "最近操作：字体索引已刷新";
-            ShowToast("字体索引已刷新");
+            ScanStatus = AppText.CurrentCultureCode == AppText.EnglishCultureCode
+                ? $"Scan complete: {_allFonts.Count:N0} font families, SQLite cache refreshed"
+                : $"扫描完成：{_allFonts.Count:N0} 个字体族，SQLite 缓存已刷新";
+            StatusMessage = L("最近操作：字体索引已刷新");
+            ShowToast(L("字体索引已刷新"));
         }
         catch (Exception ex)
         {
             var message = BuildErrorMessage(ex);
-            ScanStatus = $"扫描失败：{message}";
-            StatusMessage = $"错误：{message}";
-            ShowToast("扫描失败，详情已写入状态栏");
+            ScanStatus = AppText.CurrentCultureCode == AppText.EnglishCultureCode ? $"Scan failed: {message}" : $"扫描失败：{message}";
+            StatusMessage = AppText.CurrentCultureCode == AppText.EnglishCultureCode ? $"Error: {message}" : $"错误：{message}";
+            ShowToast(L("扫描失败，详情已写入状态栏"));
         }
         finally
         {
@@ -701,8 +823,8 @@ public sealed partial class ShellViewModel : ObservableObject
         SelectedNavigationItem = item;
         IsGlyphBrowserOpen = false;
         StatusMessage = item.IsImplemented
-            ? $"当前页面：{item.Title}"
-            : $"{item.Title} 属于 {item.Milestone}，当前仅显示占位页";
+            ? FormatCurrentPageStatus(item)
+            : FormatPlaceholderPageStatus(item);
     }
 
     [RelayCommand]
@@ -728,8 +850,8 @@ public sealed partial class ShellViewModel : ObservableObject
         {
             if (SelectedMergeBaseFont is null || SelectedMergeSupplementalFont is null)
             {
-                MergeStatus = "请先选择基础字体 A 和补充字体 B。";
-                ShowToast("请选择两个字体");
+                MergeStatus = L("请先选择基础字体 A 和补充字体 B。");
+                ShowToast(L("请选择两个字体"));
                 return;
             }
 
@@ -760,7 +882,7 @@ public sealed partial class ShellViewModel : ObservableObject
             return;
         }
 
-        ShowToast("合并报告已保留");
+        ShowToast(L("合并报告已保留"));
     }
 
     [RelayCommand]
@@ -781,7 +903,7 @@ public sealed partial class ShellViewModel : ObservableObject
         }
 
         MergeUnicodeRanges = block;
-        MergeStatus = $"已选择 Unicode 范围：{block}";
+        MergeStatus = AppText.CurrentCultureCode == AppText.EnglishCultureCode ? $"Selected Unicode range: {block}" : $"已选择 Unicode 范围：{block}";
     }
 
     [RelayCommand]
@@ -792,34 +914,38 @@ public sealed partial class ShellViewModel : ObservableObject
 
         if (_glyphCatalogService is null)
         {
-            MergeRangeDialogStatus = "字形覆盖服务未装配。";
+            MergeRangeDialogStatus = L("字形覆盖服务未装配。");
             return;
         }
 
         var baseFace = SelectMergeFace(SelectedMergeBaseFont);
         var supplementalFace = SelectMergeFace(SelectedMergeSupplementalFont);
-        MergeRangeBaseSummary = BuildPendingMergeRangeSummary(SelectedMergeBaseFont, baseFace, "基础字体 A");
-        MergeRangeSupplementalSummary = BuildPendingMergeRangeSummary(SelectedMergeSupplementalFont, supplementalFace, "补充字体 B");
+        MergeRangeBaseSummary = BuildPendingMergeRangeSummary(SelectedMergeBaseFont, baseFace, AppText.CurrentCultureCode == AppText.EnglishCultureCode ? "Base font A" : "基础字体 A");
+        MergeRangeSupplementalSummary = BuildPendingMergeRangeSummary(SelectedMergeSupplementalFont, supplementalFace, AppText.CurrentCultureCode == AppText.EnglishCultureCode ? "Supplemental font B" : "补充字体 B");
         if (SelectedMergeBaseFont is null || SelectedMergeSupplementalFont is null || baseFace is null || supplementalFace is null)
         {
-            MergeRangeDialogStatus = "请先选择基础字体 A 和补充字体 B。";
+            MergeRangeDialogStatus = L("请先选择基础字体 A 和补充字体 B。");
             return;
         }
 
         if (string.IsNullOrWhiteSpace(baseFace.FilePath) || !File.Exists(baseFace.FilePath))
         {
-            MergeRangeDialogStatus = $"基础字体 A 的样式 {baseFace.StyleLabel} 没有可读取的本地文件路径。";
+            MergeRangeDialogStatus = AppText.CurrentCultureCode == AppText.EnglishCultureCode
+                ? $"Base font A style {baseFace.StyleLabel} has no readable local file path."
+                : $"基础字体 A 的样式 {baseFace.StyleLabel} 没有可读取的本地文件路径。";
             return;
         }
 
         if (string.IsNullOrWhiteSpace(supplementalFace.FilePath) || !File.Exists(supplementalFace.FilePath))
         {
-            MergeRangeDialogStatus = $"补充字体 B 的样式 {supplementalFace.StyleLabel} 没有可读取的本地文件路径。";
+            MergeRangeDialogStatus = AppText.CurrentCultureCode == AppText.EnglishCultureCode
+                ? $"Supplemental font B style {supplementalFace.StyleLabel} has no readable local file path."
+                : $"补充字体 B 的样式 {supplementalFace.StyleLabel} 没有可读取的本地文件路径。";
             return;
         }
 
         IsMergeRangeDialogBusy = true;
-        MergeRangeDialogStatus = "正在读取两个字体的 Unicode cmap 覆盖...";
+        MergeRangeDialogStatus = L("正在读取两个字体的 Unicode cmap 覆盖...");
         try
         {
             var baseCoverage = await _glyphCatalogService.GetCoverageAsync(
@@ -833,8 +959,10 @@ public sealed partial class ShellViewModel : ObservableObject
             MergeRangeSupplementalSummary = BuildCoverageSummary(SelectedMergeSupplementalFont.FamilyName, supplementalFace.StyleLabel, supplementalCoverage);
             BuildMergeRangeComparison(baseCoverage, supplementalCoverage);
             MergeRangeDialogStatus = _allMergeRangeSegments.Count == 0
-                ? "两个字体都没有可选择的 Unicode 映射覆盖。"
-                : $"已读取 {_allMergeRangeSegments.Count:N0} 个实际连续覆盖段；选择后会替换当前 Unicode 范围输入。";
+                ? L("两个字体都没有可选择的 Unicode 映射覆盖。")
+                : AppText.CurrentCultureCode == AppText.EnglishCultureCode
+                    ? $"Read {_allMergeRangeSegments.Count:N0} actual continuous coverage segments; selecting them replaces the current Unicode range input."
+                    : $"已读取 {_allMergeRangeSegments.Count:N0} 个实际连续覆盖段；选择后会替换当前 Unicode 范围输入。";
         }
         catch (Exception ex)
         {
@@ -869,7 +997,7 @@ public sealed partial class ShellViewModel : ObservableObject
         {
             if (HasLoadedMergeRangeSegments)
             {
-                MergeRangeDialogStatus = "请至少选择一个实际覆盖段。";
+                MergeRangeDialogStatus = L("请至少选择一个实际覆盖段。");
             }
 
             return;
@@ -877,7 +1005,9 @@ public sealed partial class ShellViewModel : ObservableObject
 
         var normalized = NormalizeRanges(ranges);
         MergeUnicodeRanges = string.Join(", ", normalized.Select(range => range.Label));
-        MergeStatus = $"已从实际覆盖弹窗选择 {normalized.Count:N0} 段 Unicode 范围。";
+        MergeStatus = AppText.CurrentCultureCode == AppText.EnglishCultureCode
+            ? $"Selected {normalized.Count:N0} Unicode range segments from actual coverage."
+            : $"已从实际覆盖弹窗选择 {normalized.Count:N0} 段 Unicode 范围。";
         IsMergeRangeDialogOpen = false;
     }
 
@@ -886,26 +1016,26 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         if (_fontMergeService is null)
         {
-            MergeStatus = "合并服务不可用。";
+            MergeStatus = L("合并服务不可用。");
             return;
         }
 
         IsMergeBusy = true;
         MergeProgressPercent = 0;
-        MergeProgressStage = "预览";
-        MergeProgressMessage = "正在预检查输入。";
+        MergeProgressStage = L("预览");
+        MergeProgressMessage = L("正在预检查输入。");
         try
         {
             var preview = await _fontMergeService.PreviewAsync(CreateMergeRequest(includeOutput: false), CancellationToken.None);
             ApplyMergePreview(preview);
             MergeStatus = preview.HasBlockingIssues
-                ? "冲突预览存在阻止级问题，请检查提示。"
-                : "冲突预览完成，可继续授权与导出。";
+                ? L("冲突预览存在阻止级问题，请检查提示。")
+                : L("冲突预览完成，可继续授权与导出。");
         }
         catch (Exception ex)
         {
             MergeStatus = BuildErrorMessage(ex);
-            ShowToast("合并预览失败");
+            ShowToast(L("合并预览失败"));
         }
         finally
         {
@@ -929,7 +1059,7 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         if (_fontMergeService is null)
         {
-            MergeStatus = "合并服务不可用。";
+            MergeStatus = L("合并服务不可用。");
             return;
         }
 
@@ -937,8 +1067,8 @@ public sealed partial class ShellViewModel : ObservableObject
         _mergeCancellation = new CancellationTokenSource();
         IsMergeBusy = true;
         MergeProgressPercent = 0;
-        MergeProgressStage = "准备";
-        MergeProgressMessage = "正在准备合并任务。";
+        MergeProgressStage = L("准备");
+        MergeProgressMessage = L("正在准备合并任务。");
         var progress = new Progress<FontMergeProgress>(item =>
         {
             MergeProgressPercent = item.Percent;
@@ -967,12 +1097,12 @@ public sealed partial class ShellViewModel : ObservableObject
             ApplyMergeReport(result.Report, result.ReportPath);
             MergeStepIndex = 4;
             MergeStatus = result.Summary;
-            ShowToast(result.Succeeded ? "合并导出完成" : "合并导出失败");
+            ShowToast(result.Succeeded ? L("合并导出完成") : L("合并导出失败"));
         }
         catch (Exception ex)
         {
             MergeStatus = BuildErrorMessage(ex);
-            ShowToast("合并导出失败");
+            ShowToast(L("合并导出失败"));
         }
         finally
         {
@@ -986,7 +1116,7 @@ public sealed partial class ShellViewModel : ObservableObject
     private void CancelMerge()
     {
         _mergeCancellation?.Cancel();
-        MergeStatus = "正在取消合并任务...";
+        MergeStatus = L("正在取消合并任务...");
     }
 
     [RelayCommand]
@@ -994,7 +1124,7 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         if (_fontMergeService is null)
         {
-            MergeStatus = "合并服务不可用。";
+            MergeStatus = L("合并服务不可用。");
             return;
         }
 
@@ -1009,12 +1139,12 @@ public sealed partial class ShellViewModel : ObservableObject
             var report = await _fontMergeService.ReadReportAsync(path, CancellationToken.None);
             ApplyMergeReport(report, path);
             MergeStepIndex = 4;
-            MergeStatus = "历史合并报告已加载。";
+            MergeStatus = L("历史合并报告已加载。");
         }
         catch (Exception ex)
         {
             MergeStatus = BuildErrorMessage(ex);
-            ShowToast("合并报告加载失败");
+            ShowToast(L("合并报告加载失败"));
         }
     }
 
@@ -1022,7 +1152,7 @@ public sealed partial class ShellViewModel : ObservableObject
     private void SetPreviewMode(string mode)
     {
         PreviewMode = mode;
-        ShowToast($"预览模式已切换为：{mode}");
+        ShowToast(AppText.CurrentCultureCode == AppText.EnglishCultureCode ? $"Preview mode changed to: {L(mode)}" : $"预览模式已切换为：{mode}");
     }
 
     [RelayCommand]
@@ -1039,14 +1169,14 @@ public sealed partial class ShellViewModel : ObservableObject
             await _localManagementService.SetFavoriteAsync(font.FamilyName, font.IsFavorite, CancellationToken.None);
         }
 
-        ShowToast(font.IsFavorite ? "已加入收藏" : "已取消收藏");
+        ShowToast(font.IsFavorite ? L("已加入收藏") : L("已取消收藏"));
     }
 
     [RelayCommand]
     private async Task OpenImportDialogAsync()
     {
         IsImportDialogOpen = true;
-        ImportStatus = HasManagedFontDirectory ? "请选择字体文件。" : "导入前必须先选择 GlyphStash 管理目录。";
+        ImportStatus = HasManagedFontDirectory ? L("请选择字体文件。") : L("导入前必须先选择 GlyphStash 管理目录。");
         ImportPreviewItems.Clear();
         OnPropertyChanged(nameof(HasImportPreview));
 
@@ -1065,8 +1195,10 @@ public sealed partial class ShellViewModel : ObservableObject
             }
 
             ImportStatus = _currentImportPreview.HasImportableFonts
-                ? $"预检完成：{_currentImportPreview.Items.Count(item => item.CanImport)} 个可导入。"
-                : "没有可导入的字体文件。";
+                ? AppText.CurrentCultureCode == AppText.EnglishCultureCode
+                    ? $"Precheck complete: {_currentImportPreview.Items.Count(item => item.CanImport):N0} importable."
+                    : $"预检完成：{_currentImportPreview.Items.Count(item => item.CanImport)} 个可导入。"
+                : L("没有可导入的字体文件。");
         }
         catch (Exception ex)
         {
@@ -1092,9 +1224,9 @@ public sealed partial class ShellViewModel : ObservableObject
 
         await _localManagementService.SaveManagedDirectoryAsync(directory, CancellationToken.None);
         ManagedFontDirectory = directory;
-        ImportStatus = "管理目录已选择，可以开始导入。";
+        ImportStatus = L("管理目录已选择，可以开始导入。");
         await ReloadOperationLogsAsync();
-        ShowToast("管理目录已更新");
+        ShowToast(L("管理目录已更新"));
     }
 
     [RelayCommand]
@@ -1107,10 +1239,10 @@ public sealed partial class ShellViewModel : ObservableObject
 
         await _localManagementService.SaveGoogleFontsApiKeyAsync(GoogleFontsApiKeyText, CancellationToken.None);
         OnlineStatus = string.IsNullOrWhiteSpace(GoogleFontsApiKeyText)
-            ? "Google Fonts API key 已清空。"
-            : "Google Fonts API key 已保存，可以搜索在线字体。";
+            ? L("Google Fonts API key 已清空。")
+            : L("Google Fonts API key 已保存，可以搜索在线字体。");
         await ReloadOperationLogsAsync();
-        ShowToast("Google Fonts API key 已保存");
+        ShowToast(L("Google Fonts API key 已保存"));
     }
 
     [RelayCommand]
@@ -1118,20 +1250,20 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         if (_onlineFontService is null)
         {
-            OnlineStatus = "在线字体服务未装配。";
+            OnlineStatus = L("在线字体服务未装配。");
             return;
         }
 
         RemoteFonts.Clear();
         SelectedRemoteFont = null;
         IsOnlineSearchBusy = true;
-        OnlineStatus = "正在搜索 Google Fonts...";
+        OnlineStatus = L("正在搜索 Google Fonts...");
         try
         {
             var results = await _onlineFontService.SearchAsync(
                 OnlineSearchText,
-                NormalizeOnlineFilter(SelectedOnlineSubset, "全部子集"),
-                NormalizeOnlineFilter(SelectedOnlineCategory, "全部分类"),
+                NormalizeOnlineFilter(SelectedOnlineSubset, AllOnlineSubset),
+                NormalizeOnlineFilter(SelectedOnlineCategory, AllOnlineCategory),
                 BuildOnlineCapabilities(),
                 SelectedOnlineSort,
                 CancellationToken.None);
@@ -1141,7 +1273,11 @@ public sealed partial class ShellViewModel : ObservableObject
             }
 
             SelectedRemoteFont = RemoteFonts.FirstOrDefault();
-            OnlineStatus = RemoteFonts.Count == 0 ? "没有找到匹配的在线字体。" : $"搜索完成：{RemoteFonts.Count:N0} 个字体族。";
+            OnlineStatus = RemoteFonts.Count == 0
+                ? L("没有找到匹配的在线字体。")
+                : AppText.CurrentCultureCode == AppText.EnglishCultureCode
+                    ? $"Search complete: {RemoteFonts.Count:N0} font families."
+                    : $"搜索完成：{RemoteFonts.Count:N0} 个字体族。";
         }
         catch (Exception ex)
         {
@@ -1159,14 +1295,14 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         if (_onlineFontService is null || SelectedRemoteFont is null)
         {
-            OnlineStatus = "请先选择一个在线字体。";
+            OnlineStatus = L("请先选择一个在线字体。");
             return;
         }
 
         var selectedStyles = SelectedRemoteFont.SelectedStyles;
         if (selectedStyles.Count == 0)
         {
-            OnlineStatus = "请选择至少一个可下载样式。";
+            OnlineStatus = L("请选择至少一个可下载样式。");
             return;
         }
 
@@ -1176,7 +1312,7 @@ public sealed partial class ShellViewModel : ObservableObject
             new OnlineFontImportOptions(ParseNames(DownloadTagsText), ParseNames(DownloadCollectionsText), DownloadFavorite, DownloadInstallForCurrentUser, DownloadTemporarilyActivate));
         OnlineDownloadQueue.Add(item);
         OnPropertyChanged(nameof(HasOnlineDownloadQueue));
-        OnlineStatus = $"已加入下载队列：{item.FamilyName}";
+        OnlineStatus = AppText.CurrentCultureCode == AppText.EnglishCultureCode ? $"Added to download queue: {item.FamilyName}" : $"已加入下载队列：{item.FamilyName}";
         await ProcessOnlineDownloadQueueAsync();
     }
 
@@ -1189,7 +1325,7 @@ public sealed partial class ShellViewModel : ObservableObject
         }
 
         item.ResetForRetry();
-        OnlineStatus = $"已重新加入下载队列：{item.FamilyName}";
+        OnlineStatus = AppText.CurrentCultureCode == AppText.EnglishCultureCode ? $"Requeued download: {item.FamilyName}" : $"已重新加入下载队列：{item.FamilyName}";
         await ProcessOnlineDownloadQueueAsync();
     }
 
@@ -1206,7 +1342,9 @@ public sealed partial class ShellViewModel : ObservableObject
             while (OnlineDownloadQueue.FirstOrDefault(item => item.Status == OnlineFontDownloadStatus.Queued) is { } item)
             {
                 item.MarkDownloading();
-                OnlineStatus = $"队列中 {OnlineDownloadQueue.Count:N0} 项，正在下载 {item.FamilyName}...";
+                OnlineStatus = AppText.CurrentCultureCode == AppText.EnglishCultureCode
+                    ? $"{OnlineDownloadQueue.Count:N0} items in queue, downloading {item.FamilyName}..."
+                    : $"队列中 {OnlineDownloadQueue.Count:N0} 项，正在下载 {item.FamilyName}...";
                 try
                 {
                     var result = await _onlineFontService.DownloadAsync(item.Family, item.Styles, item.Options, CancellationToken.None);
@@ -1214,15 +1352,15 @@ public sealed partial class ShellViewModel : ObservableObject
                     var cached = await _fontLibraryService.LoadCachedFontsAsync(new FontSearchQuery(), CancellationToken.None);
                     ReplaceFonts(cached);
                     await ReloadM2StateAsync();
-                    OnlineStatus = $"下载完成：{item.FamilyName}";
-                    ShowToast($"已下载 {item.FamilyName}");
+                    OnlineStatus = AppText.CurrentCultureCode == AppText.EnglishCultureCode ? $"Download complete: {item.FamilyName}" : $"下载完成：{item.FamilyName}";
+                    ShowToast(AppText.CurrentCultureCode == AppText.EnglishCultureCode ? $"Downloaded {item.FamilyName}" : $"已下载 {item.FamilyName}");
                 }
                 catch (Exception ex)
                 {
                     var message = BuildErrorMessage(ex);
                     item.MarkFailed(message);
-                    OnlineStatus = $"下载失败：{item.FamilyName}。{message}";
-                    ShowToast("下载失败，可重试");
+                    OnlineStatus = AppText.CurrentCultureCode == AppText.EnglishCultureCode ? $"Download failed: {item.FamilyName}. {message}" : $"下载失败：{item.FamilyName}。{message}";
+                    ShowToast(L("下载失败，可重试"));
                 }
             }
         }
@@ -1243,8 +1381,12 @@ public sealed partial class ShellViewModel : ObservableObject
         var failed = OnlineDownloadQueue.Count(item => item.Status == OnlineFontDownloadStatus.Failed);
         var succeeded = OnlineDownloadQueue.Count(item => item.Status == OnlineFontDownloadStatus.Succeeded);
         OnlineStatus = failed > 0
-            ? $"下载队列完成：{succeeded:N0} 项成功，{failed:N0} 项失败，可重试失败项。"
-            : $"下载队列完成：{succeeded:N0} 项成功。";
+            ? AppText.CurrentCultureCode == AppText.EnglishCultureCode
+                ? $"Download queue complete: {succeeded:N0} succeeded, {failed:N0} failed. Failed items can be retried."
+                : $"下载队列完成：{succeeded:N0} 项成功，{failed:N0} 项失败，可重试失败项。"
+            : AppText.CurrentCultureCode == AppText.EnglishCultureCode
+                ? $"Download queue complete: {succeeded:N0} succeeded."
+                : $"下载队列完成：{succeeded:N0} 项成功。";
     }
 
     [RelayCommand]
@@ -1252,27 +1394,29 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         if (SelectedFont is null)
         {
-            ShowToast("请先选择一个字体");
+            ShowToast(L("请先选择一个字体"));
             return;
         }
 
         if (_glyphCatalogService is null)
         {
-            GlyphStatus = "字形浏览服务未装配。";
+            GlyphStatus = L("字形浏览服务未装配。");
             return;
         }
 
         SelectedPreviewFace ??= SelectDefaultPreviewFace(SelectedFont);
         if (SelectedPreviewFace is null)
         {
-            GlyphStatus = "当前字体没有可读取的样式。";
+            GlyphStatus = L("当前字体没有可读取的样式。");
             ShowToast(GlyphStatus);
             return;
         }
 
         if (string.IsNullOrWhiteSpace(SelectedPreviewFace.FilePath) || !File.Exists(SelectedPreviewFace.FilePath))
         {
-            GlyphStatus = $"当前样式 {SelectedPreviewFace.StyleLabel} 没有可读取的本地文件路径。";
+            GlyphStatus = AppText.CurrentCultureCode == AppText.EnglishCultureCode
+                ? $"Current style {SelectedPreviewFace.StyleLabel} has no readable local file path."
+                : $"当前样式 {SelectedPreviewFace.StyleLabel} 没有可读取的本地文件路径。";
             ShowToast(GlyphStatus);
             return;
         }
@@ -1331,7 +1475,7 @@ public sealed partial class ShellViewModel : ObservableObject
         }
 
         await _clipboardService.SetTextAsync(SelectedGlyph.Character, CancellationToken.None);
-        ShowToast($"已复制字符：{SelectedGlyph.Character}");
+        ShowToast(AppText.CurrentCultureCode == AppText.EnglishCultureCode ? $"Copied character: {SelectedGlyph.Character}" : $"已复制字符：{SelectedGlyph.Character}");
     }
 
     [RelayCommand]
@@ -1343,7 +1487,7 @@ public sealed partial class ShellViewModel : ObservableObject
         }
 
         await _clipboardService.SetTextAsync(SelectedGlyph.UnicodeLabel, CancellationToken.None);
-        ShowToast($"已复制 Unicode：{SelectedGlyph.UnicodeLabel}");
+        ShowToast(AppText.CurrentCultureCode == AppText.EnglishCultureCode ? $"Copied Unicode: {SelectedGlyph.UnicodeLabel}" : $"已复制 Unicode：{SelectedGlyph.UnicodeLabel}");
     }
 
     [RelayCommand]
@@ -1351,13 +1495,13 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         if (_localManagementService is null || _currentImportPreview is null)
         {
-            ShowToast("请先选择字体文件");
+            ShowToast(L("请先选择字体文件"));
             return;
         }
 
         if (!HasManagedFontDirectory)
         {
-            ShowToast("导入前必须先选择管理目录");
+            ShowToast(L("导入前必须先选择管理目录"));
             return;
         }
 
@@ -1373,12 +1517,14 @@ public sealed partial class ShellViewModel : ObservableObject
             ReplaceFonts(cached);
             await ReloadM2StateAsync();
             IsImportDialogOpen = false;
-            ShowToast($"导入完成：{result.ImportedCount} 个成功，{result.FailedCount} 个失败");
+            ShowToast(AppText.CurrentCultureCode == AppText.EnglishCultureCode
+                ? $"Import complete: {result.ImportedCount:N0} succeeded, {result.FailedCount:N0} failed"
+                : $"导入完成：{result.ImportedCount} 个成功，{result.FailedCount} 个失败");
         }
         catch (Exception ex)
         {
             ImportStatus = BuildErrorMessage(ex);
-            ShowToast("导入失败，详情已写入导入窗口");
+            ShowToast(L("导入失败，详情已写入导入窗口"));
         }
         finally
         {
@@ -1391,7 +1537,7 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         if (SelectedFont is null)
         {
-            ShowToast("请先选择一个字体");
+            ShowToast(L("请先选择一个字体"));
             return;
         }
 
@@ -1418,8 +1564,8 @@ public sealed partial class ShellViewModel : ObservableObject
 
         var tags = MergeNames(TagOptions.Where(option => option.IsSelected).Select(option => option.Name), ParseNames(TagEditorText));
         var collections = MergeNames(CollectionOptions.Where(option => option.IsSelected).Select(option => option.Name), ParseNames(CollectionEditorText));
-        var tagFilter = NormalizeFilter(SelectedTagFilter, "全部标签");
-        var collectionFilter = NormalizeFilter(SelectedCollectionFilter, "全部集合");
+        var tagFilter = NormalizeFilter(SelectedTagFilter, AllTagFilter);
+        var collectionFilter = NormalizeFilter(SelectedCollectionFilter, AllCollectionFilter);
         if (_localManagementService is not null)
         {
             await _localManagementService.SetTagsAsync(SelectedFont.FamilyName, tags, CancellationToken.None);
@@ -1430,7 +1576,7 @@ public sealed partial class ShellViewModel : ObservableObject
         await ReloadM2StateAsync(tagFilter, collectionFilter);
         ApplyFilters();
         IsTagsDialogOpen = false;
-        ShowToast("标签和集合已更新");
+        ShowToast(L("标签和集合已更新"));
     }
 
     [RelayCommand]
@@ -1470,7 +1616,7 @@ public sealed partial class ShellViewModel : ObservableObject
 
         if (string.Equals(SelectedTagFilter, deletedName, StringComparison.CurrentCultureIgnoreCase))
         {
-            SelectedTagFilter = "全部标签";
+            SelectedTagFilter = AllTagFilter;
         }
 
         CloseDeleteTagDialog();
@@ -1478,7 +1624,7 @@ public sealed partial class ShellViewModel : ObservableObject
         await ReloadOperationLogsAsync();
         RebuildManagementOptions();
         ApplyFilters();
-        ShowToast("标签已删除，字体文件不会被删除");
+        ShowToast(L("标签已删除，字体文件不会被删除"));
     }
 
     [RelayCommand]
@@ -1538,13 +1684,14 @@ public sealed partial class ShellViewModel : ObservableObject
         try
         {
             var owner = $"font:{font.FamilyName}";
-            var result = font.StateLabel == "已临时启用"
+            var wasTemporarilyEnabled = font.ActivationState == FontActivationState.TemporarilyEnabled;
+            var result = wasTemporarilyEnabled
                 ? await _localManagementService.DeactivateFontAsync(owner, font.ToRecord(), CancellationToken.None)
                 : await _localManagementService.ActivateFontAsync(owner, font.ToRecord(), CancellationToken.None);
 
             if (result.Succeeded)
             {
-                font.SetActivationState(font.StateLabel == "已临时启用" ? FontActivationState.NotEnabled : FontActivationState.TemporarilyEnabled);
+                font.SetActivationState(wasTemporarilyEnabled ? FontActivationState.NotEnabled : FontActivationState.TemporarilyEnabled);
             }
 
             ShowToast(result.Message);
@@ -1568,7 +1715,7 @@ public sealed partial class ShellViewModel : ObservableObject
         NewCollectionName = "";
         await ReloadCollectionsAsync();
         ApplyFilters();
-        ShowToast("集合已创建");
+        ShowToast(L("集合已创建"));
     }
 
     [RelayCommand]
@@ -1576,7 +1723,7 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         if (SelectedCollection is null)
         {
-            ShowToast("请先选择一个集合");
+            ShowToast(L("请先选择一个集合"));
             return;
         }
 
@@ -1599,14 +1746,14 @@ public sealed partial class ShellViewModel : ObservableObject
         await _localManagementService.DeleteCollectionAsync(deletedName, CancellationToken.None);
         if (SelectedCollectionFilter == deletedName)
         {
-            SelectedCollectionFilter = "全部集合";
+            SelectedCollectionFilter = AllCollectionFilter;
         }
 
         IsDeleteCollectionDialogOpen = false;
         await ReloadCollectionsAsync();
         await ReloadOperationLogsAsync();
         ApplyFilters();
-        ShowToast("集合已删除，字体文件不会被删除");
+        ShowToast(L("集合已删除，字体文件不会被删除"));
     }
 
     [RelayCommand]
@@ -1619,7 +1766,7 @@ public sealed partial class ShellViewModel : ObservableObject
 
         await _localManagementService.RemoveFontFromCollectionAsync(SelectedCollection.Name, font.FamilyName, CancellationToken.None);
         await ReloadCollectionsAsync();
-        ShowToast("已从集合移除字体");
+        ShowToast(L("已从集合移除字体"));
     }
 
     [RelayCommand]
@@ -1634,12 +1781,12 @@ public sealed partial class ShellViewModel : ObservableObject
         var skippedCount = 0;
         foreach (var font in CollectionFonts)
         {
-            if (!font.CanTemporarilyActivate || font.StateLabel != "未启用")
+            if (!font.CanTemporarilyActivate || font.ActivationState != FontActivationState.NotEnabled)
             {
                 var reason = font.TemporaryActivationDisabledReason;
                 if (string.IsNullOrWhiteSpace(reason))
                 {
-                    reason = "当前状态不需要临时启用";
+                    reason = L("当前状态不需要临时启用");
                 }
 
                 await _localManagementService.RecordTemporaryActivationSkippedAsync(
@@ -1664,7 +1811,9 @@ public sealed partial class ShellViewModel : ObservableObject
         }
 
         await ReloadM2StateAsync();
-        ShowToast($"集合临时启用：{activatedCount} 个，跳过 {skippedCount} 个已安装或不可启用字体");
+        ShowToast(AppText.CurrentCultureCode == AppText.EnglishCultureCode
+            ? $"Collection activated temporarily: {activatedCount:N0}; skipped {skippedCount:N0} installed or unavailable fonts"
+            : $"集合临时启用：{activatedCount} 个，跳过 {skippedCount} 个已安装或不可启用字体");
     }
 
     [RelayCommand]
@@ -1678,14 +1827,14 @@ public sealed partial class ShellViewModel : ObservableObject
         foreach (var font in CollectionFonts)
         {
             await _localManagementService.DeactivateFontAsync($"collection:{SelectedCollection.Name}", font.ToRecord(), CancellationToken.None);
-            if (font.StateLabel == "已临时启用")
+            if (font.ActivationState == FontActivationState.TemporarilyEnabled)
             {
                 font.SetActivationState(FontActivationState.NotEnabled);
             }
         }
 
         await ReloadM2StateAsync();
-        ShowToast("集合持有的临时启用引用已释放");
+        ShowToast(L("集合持有的临时启用引用已释放"));
     }
 
     [RelayCommand]
@@ -1696,24 +1845,80 @@ public sealed partial class ShellViewModel : ObservableObject
             return;
         }
 
-        StatusMessage = $"集合清单已准备：{SelectedCollection.Name}，包含 {CollectionFonts.Count:N0} 个字体。";
-        ShowToast("集合清单已导出为 CSV，包含字体、样式、状态和 license");
+        StatusMessage = AppText.CurrentCultureCode == AppText.EnglishCultureCode
+            ? $"Collection manifest ready: {SelectedCollection.Name}, {CollectionFonts.Count:N0} fonts."
+            : $"集合清单已准备：{SelectedCollection.Name}，包含 {CollectionFonts.Count:N0} 个字体。";
+        ShowToast(L("集合清单已导出为 CSV，包含字体、样式、状态和 license"));
     }
 
     partial void OnSearchTextChanged(string value) => ApplyFilters();
 
-    partial void OnSelectedSourceFilterChanged(string value) => ApplyFilters();
+    partial void OnSelectedSourceFilterChanged(string value)
+    {
+        if (!_isSyncingLocalizedOptions)
+        {
+            SelectSourceFilterOption(value);
+        }
 
-    partial void OnSelectedStateFilterChanged(string value) => ApplyFilters();
+        ApplyFilters();
+    }
+
+    partial void OnSelectedSourceFilterOptionChanged(LocalizedOptionViewModel? value)
+    {
+        if (_isSyncingLocalizedOptions)
+        {
+            return;
+        }
+
+        SetStableFilterFromOption(value, fallback: AllSourceFilter, selected => SelectedSourceFilter = selected);
+        ApplyFilters();
+    }
+
+    partial void OnSelectedStateFilterChanged(string value)
+    {
+        if (!_isSyncingLocalizedOptions)
+        {
+            SelectStateFilterOption(value);
+        }
+
+        ApplyFilters();
+    }
+
+    partial void OnSelectedStateFilterOptionChanged(LocalizedOptionViewModel? value)
+    {
+        if (_isSyncingLocalizedOptions)
+        {
+            return;
+        }
+
+        SetStableFilterFromOption(value, fallback: AllStateFilter, selected => SelectedStateFilter = selected);
+        ApplyFilters();
+    }
 
     partial void OnSelectedTagFilterChanged(string value)
     {
         if (string.IsNullOrWhiteSpace(value))
         {
-            SelectedTagFilter = "全部标签";
+            SelectTagFilter(AllTagFilter);
             return;
         }
 
+        if (!_isSyncingLocalizedOptions)
+        {
+            SelectTagFilterOption(value);
+        }
+
+        ApplyFilters();
+    }
+
+    partial void OnSelectedTagFilterOptionChanged(LocalizedOptionViewModel? value)
+    {
+        if (_isSyncingLocalizedOptions)
+        {
+            return;
+        }
+
+        SetStableFilterFromOption(value, fallback: AllTagFilter, selected => SelectedTagFilter = selected);
         ApplyFilters();
     }
 
@@ -1721,14 +1926,68 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         if (string.IsNullOrWhiteSpace(value))
         {
-            SelectedCollectionFilter = "全部集合";
+            SelectCollectionFilter(AllCollectionFilter);
             return;
+        }
+
+        if (!_isSyncingLocalizedOptions)
+        {
+            SelectCollectionFilterOption(value);
         }
 
         ApplyFilters();
     }
 
+    partial void OnSelectedCollectionFilterOptionChanged(LocalizedOptionViewModel? value)
+    {
+        if (_isSyncingLocalizedOptions)
+        {
+            return;
+        }
+
+        SetStableFilterFromOption(value, fallback: AllCollectionFilter, selected => SelectedCollectionFilter = selected);
+        ApplyFilters();
+    }
+
+    partial void OnSelectedOnlineSubsetChanged(string value)
+    {
+        if (!_isSyncingLocalizedOptions)
+        {
+            SelectOnlineSubsetOption(value);
+        }
+    }
+
+    partial void OnSelectedOnlineSubsetOptionChanged(LocalizedOptionViewModel? value)
+    {
+        if (_isSyncingLocalizedOptions)
+        {
+            return;
+        }
+
+        SetStableFilterFromOption(value, fallback: AllOnlineSubset, selected => SelectedOnlineSubset = selected);
+    }
+
+    partial void OnSelectedOnlineCategoryChanged(string value)
+    {
+        if (!_isSyncingLocalizedOptions)
+        {
+            SelectOnlineCategoryOption(value);
+        }
+    }
+
+    partial void OnSelectedOnlineCategoryOptionChanged(LocalizedOptionViewModel? value)
+    {
+        if (_isSyncingLocalizedOptions)
+        {
+            return;
+        }
+
+        SetStableFilterFromOption(value, fallback: AllOnlineCategory, selected => SelectedOnlineCategory = selected);
+    }
+
     partial void OnCollectionSearchTextChanged(string value) => ApplyCollectionFilter();
+
+    partial void OnPendingDeleteTagNameChanged(string value) => OnPropertyChanged(nameof(PendingDeleteTagConfirmationText));
 
     partial void OnSelectedCollectionChanged(CollectionItemViewModel? value)
     {
@@ -1743,6 +2002,22 @@ public sealed partial class ShellViewModel : ObservableObject
     }
 
     partial void OnGoogleFontsApiKeyTextChanged(string value) => OnPropertyChanged(nameof(GoogleFontsApiKeyStatus));
+
+    partial void OnSelectedLanguageChanged(LanguageOptionViewModel? value)
+    {
+        if (value is null || _localizationService is null)
+        {
+            return;
+        }
+
+        _localizationService.SetCulture(value.CultureCode);
+        if (_isApplyingSettings)
+        {
+            return;
+        }
+
+        _ = SaveSelectedLanguageAsync(value);
+    }
 
     partial void OnSelectedFontChanged(FontFamilyItemViewModel? value)
     {
@@ -1784,8 +2059,8 @@ public sealed partial class ShellViewModel : ObservableObject
         if (value is not null)
         {
             StatusMessage = value.IsImplemented
-                ? $"当前页面：{value.Title}"
-                : $"{value.Title} 属于 {value.Milestone}，当前仅显示占位页";
+                ? FormatCurrentPageStatus(value)
+                : FormatPlaceholderPageStatus(value);
         }
 
         NotifyNavigationState();
@@ -1861,12 +2136,27 @@ public sealed partial class ShellViewModel : ObservableObject
 
     partial void OnSelectedMergeModeLabelChanged(string value)
     {
+        if (!_isSyncingLocalizedOptions)
+        {
+            SelectMergeModeOption(value);
+        }
+
         _currentMergePreview = null;
         MergeConflicts.Clear();
         MergeIssues.Clear();
         OnPropertyChanged(nameof(SelectedMergeMode));
         OnPropertyChanged(nameof(MergeModeDescription));
         NotifyMergePreviewState();
+    }
+
+    partial void OnSelectedMergeModeOptionChanged(LocalizedOptionViewModel? value)
+    {
+        if (_isSyncingLocalizedOptions)
+        {
+            return;
+        }
+
+        SetStableFilterFromOption(value, fallback: SupplementMergeModeLabel, selected => SelectedMergeModeLabel = selected);
     }
 
     partial void OnMergeOutputFontNameChanged(string value) => NotifyMergeExportState();
@@ -1915,6 +2205,276 @@ public sealed partial class ShellViewModel : ObservableObject
         }
     }
 
+    private async Task SaveSelectedLanguageAsync(LanguageOptionViewModel language)
+    {
+        try
+        {
+            if (_localManagementService is not null)
+            {
+                await _localManagementService.SaveUiCultureAsync(language.CultureCode, CancellationToken.None);
+                await ReloadOperationLogsAsync();
+            }
+
+            ShowToast(T("Toast.LanguageChangedFormat", language.DisplayName));
+        }
+        catch (Exception ex)
+        {
+            ShowToast(BuildErrorMessage(ex));
+        }
+    }
+
+    private void RefreshLocalizedState()
+    {
+        RefreshLocalizedOptions(SourceFilterOptions);
+        RefreshLocalizedOptions(StateFilterOptions);
+        RefreshLocalizedOptions(TagFilterOptions);
+        RefreshLocalizedOptions(CollectionFilterOptions);
+        RefreshLocalizedOptions(OnlineSubsetOptionModels);
+        RefreshLocalizedOptions(OnlineCategoryOptionModels);
+        RefreshLocalizedOptions(MergeModeOptionModels);
+        foreach (var item in NavigationItems)
+        {
+            item.RefreshLocalizedState();
+        }
+
+        foreach (var step in MergeSteps)
+        {
+            step.RefreshLocalizedState();
+        }
+
+        foreach (var font in _allFonts)
+        {
+            font.RefreshLocalizedState();
+        }
+
+        foreach (var collection in Collections)
+        {
+            collection.RefreshLocalizedState();
+        }
+
+        foreach (var option in TagOptions.Concat(CollectionOptions))
+        {
+            option.RefreshLocalizedState();
+        }
+
+        foreach (var item in ImportPreviewItems)
+        {
+            item.RefreshLocalizedState();
+        }
+
+        foreach (var item in RemoteFonts)
+        {
+            item.RefreshLocalizedState();
+        }
+
+        foreach (var item in OnlineDownloadQueue)
+        {
+            item.RefreshLocalizedState();
+        }
+
+        foreach (var item in MergeConflicts)
+        {
+            item.RefreshLocalizedState();
+        }
+
+        foreach (var item in MergeIssues)
+        {
+            item.RefreshLocalizedState();
+        }
+
+        foreach (var item in _allMergeRangeSegments)
+        {
+            item.RefreshLocalizedState();
+        }
+
+        OnPropertyChanged(nameof(CurrentPageTitle));
+        OnPropertyChanged(nameof(CurrentPageDescription));
+        OnPropertyChanged(nameof(FontCountLabel));
+        OnPropertyChanged(nameof(EmptyStateMessage));
+        OnPropertyChanged(nameof(GlyphBrowserTitle));
+        OnPropertyChanged(nameof(GlyphBrowserDescription));
+        OnPropertyChanged(nameof(ImportTemporaryActivationReason));
+        OnPropertyChanged(nameof(MergeModeDescription));
+        OnPropertyChanged(nameof(MergeRangeSelectedCountLabel));
+        OnPropertyChanged(nameof(MergeNextActionLabel));
+        OnPropertyChanged(nameof(MergePreviewSummary));
+        OnPropertyChanged(nameof(MergeDefaultStrategy));
+        OnPropertyChanged(nameof(ManagedDirectoryStatus));
+        OnPropertyChanged(nameof(GoogleFontsApiKeyStatus));
+        OnPropertyChanged(nameof(PendingDeleteTagConfirmationText));
+        OnPropertyChanged(nameof(CompatibilityMatrix));
+        OnPropertyChanged(nameof(SelectedLanguage));
+        RefreshDefaultPreviewText();
+        RefreshLocalizedStoredMessages();
+    }
+
+    private void RefreshDefaultPreviewText()
+    {
+        if (string.Equals(PreviewText, DefaultPreviewTextZh, StringComparison.Ordinal)
+            || string.Equals(PreviewText, DefaultPreviewTextEn, StringComparison.Ordinal))
+        {
+            PreviewText = AppText.TranslateLiteral(DefaultPreviewTextZh);
+        }
+    }
+
+    private void RefreshLocalizedStoredMessages()
+    {
+        ScanStatus = RefreshScanStatusText(ScanStatus);
+        StatusMessage = RefreshStatusMessageText(StatusMessage);
+        ImportStatus = LocalizeStoredLiteral(ImportStatus);
+        OnlineStatus = LocalizeStoredLiteral(OnlineStatus);
+        GlyphStatus = LocalizeStoredLiteral(GlyphStatus);
+        MergeStatus = LocalizeStoredLiteral(MergeStatus);
+        MergeRangeDialogStatus = LocalizeStoredLiteral(MergeRangeDialogStatus);
+        MergeRangeBaseSummary = LocalizeStoredLiteral(MergeRangeBaseSummary);
+        MergeRangeSupplementalSummary = LocalizeStoredLiteral(MergeRangeSupplementalSummary);
+        MergeReportTitle = LocalizeStoredLiteral(MergeReportTitle);
+        MergeReportBadge = LocalizeStoredLiteral(MergeReportBadge);
+    }
+
+    private string RefreshScanStatusText(string value)
+    {
+        if (_allFonts.Count > 0
+            && (value.Contains("缓存可用", StringComparison.Ordinal)
+                || value.Contains("cache available", StringComparison.OrdinalIgnoreCase)))
+        {
+            return AppText.CurrentCultureCode == AppText.EnglishCultureCode
+                ? $"{FontCountLabel}, cache available"
+                : $"{FontCountLabel}，缓存可用";
+        }
+
+        if (_allFonts.Count > 0
+            && (value.StartsWith("扫描完成", StringComparison.Ordinal)
+                || value.StartsWith("Scan complete", StringComparison.Ordinal)))
+        {
+            return AppText.CurrentCultureCode == AppText.EnglishCultureCode
+                ? $"Scan complete: {_allFonts.Count:N0} font families, SQLite cache refreshed"
+                : $"扫描完成：{_allFonts.Count:N0} 个字体族，SQLite 缓存已刷新";
+        }
+
+        return LocalizeStoredLiteral(value);
+    }
+
+    private string RefreshStatusMessageText(string value)
+    {
+        if (_allFonts.Count > 0
+            && (value.StartsWith("最近操作：已加载", StringComparison.Ordinal)
+                || value.StartsWith("Recent action: loaded", StringComparison.Ordinal)))
+        {
+            return AppText.CurrentCultureCode == AppText.EnglishCultureCode
+                ? $"Recent action: loaded {_allFonts.Count:N0} font families"
+                : $"最近操作：已加载 {_allFonts.Count:N0} 个字体族";
+        }
+
+        return LocalizeStoredLiteral(value);
+    }
+
+    private static string LocalizeStoredLiteral(string value) =>
+        string.IsNullOrWhiteSpace(value) ? value : AppText.TranslateLiteral(value);
+
+    private static string T(string key) => AppText.Get(key);
+
+    private static string T(string key, params object?[] args) => AppText.Format(key, args);
+
+    private static string L(string text) => AppText.TranslateLiteral(text);
+
+    private static string FormatCurrentPageStatus(NavigationItemViewModel item) =>
+        AppText.CurrentCultureCode == AppText.EnglishCultureCode ? $"Current page: {item.Title}" : $"当前页面：{item.Title}";
+
+    private static string FormatPlaceholderPageStatus(NavigationItemViewModel item) =>
+        AppText.CurrentCultureCode == AppText.EnglishCultureCode
+            ? $"{item.Title} belongs to {item.Milestone}; only the placeholder page is shown"
+            : $"{item.Title} 属于 {item.Milestone}，当前仅显示占位页";
+
+    private void InitializeLocalizedOptions()
+    {
+        ReplaceLocalizedOptions(SourceFilterOptions, SourceFilters);
+        ReplaceLocalizedOptions(StateFilterOptions, StateFilters);
+        ReplaceLocalizedOptions(TagFilterOptions, TagFilters);
+        ReplaceLocalizedOptions(CollectionFilterOptions, CollectionFilters);
+        ReplaceLocalizedOptions(OnlineSubsetOptionModels, OnlineSubsetOptions);
+        ReplaceLocalizedOptions(OnlineCategoryOptionModels, OnlineCategoryOptions);
+        ReplaceMergeModeOptions();
+        SelectSourceFilterOption(SelectedSourceFilter);
+        SelectStateFilterOption(SelectedStateFilter);
+        SelectTagFilterOption(SelectedTagFilter);
+        SelectCollectionFilterOption(SelectedCollectionFilter);
+        SelectOnlineSubsetOption(SelectedOnlineSubset);
+        SelectOnlineCategoryOption(SelectedOnlineCategory);
+        SelectMergeModeOption(SelectedMergeModeLabel);
+    }
+
+    private static void ReplaceLocalizedOptions(ObservableCollection<LocalizedOptionViewModel> target, IEnumerable<string> values)
+    {
+        target.Clear();
+        foreach (var value in values)
+        {
+            target.Add(new LocalizedOptionViewModel(value, value));
+        }
+    }
+
+    private void ReplaceMergeModeOptions()
+    {
+        MergeModeOptionModels.Clear();
+        MergeModeOptionModels.Add(new LocalizedOptionViewModel(SupplementMergeModeLabel, SupplementMergeModeLabel, "Supplement (append)"));
+        MergeModeOptionModels.Add(new LocalizedOptionViewModel(OverwriteMergeModeLabel, OverwriteMergeModeLabel, "Overwrite"));
+    }
+
+    private static void RefreshLocalizedOptions(IEnumerable<LocalizedOptionViewModel> options)
+    {
+        foreach (var option in options)
+        {
+            option.RefreshLocalizedState();
+        }
+    }
+
+    private void SelectSourceFilterOption(string value) => SelectOption(SourceFilterOptions, value, option => SelectedSourceFilterOption = option);
+
+    private void SelectStateFilterOption(string value) => SelectOption(StateFilterOptions, value, option => SelectedStateFilterOption = option);
+
+    private void SelectTagFilterOption(string value) => SelectOption(TagFilterOptions, value, option => SelectedTagFilterOption = option);
+
+    private void SelectCollectionFilterOption(string value) => SelectOption(CollectionFilterOptions, value, option => SelectedCollectionFilterOption = option);
+
+    private void SelectOnlineSubsetOption(string value) => SelectOption(OnlineSubsetOptionModels, value, option => SelectedOnlineSubsetOption = option);
+
+    private void SelectOnlineCategoryOption(string value) => SelectOption(OnlineCategoryOptionModels, value, option => SelectedOnlineCategoryOption = option);
+
+    private void SelectMergeModeOption(string value) => SelectOption(MergeModeOptionModels, value, option => SelectedMergeModeOption = option);
+
+    private void SelectOption(
+        IReadOnlyList<LocalizedOptionViewModel> options,
+        string value,
+        Action<LocalizedOptionViewModel?> select)
+    {
+        _isSyncingLocalizedOptions = true;
+        try
+        {
+            select(options.FirstOrDefault(option => string.Equals(option.Value, value, StringComparison.CurrentCultureIgnoreCase))
+                   ?? options.FirstOrDefault());
+        }
+        finally
+        {
+            _isSyncingLocalizedOptions = false;
+        }
+    }
+
+    private void SetStableFilterFromOption(
+        LocalizedOptionViewModel? option,
+        string fallback,
+        Action<string> select)
+    {
+        _isSyncingLocalizedOptions = true;
+        try
+        {
+            select(option?.Value ?? fallback);
+        }
+        finally
+        {
+            _isSyncingLocalizedOptions = false;
+        }
+    }
+
     private void ReplaceFonts(IReadOnlyList<FontFamilyRecord> records)
     {
         _allFonts.Clear();
@@ -1940,13 +2500,13 @@ public sealed partial class ShellViewModel : ObservableObject
 
         if (_currentGlyphFace is null)
         {
-            GlyphStatus = "当前字体没有可读取的样式。";
+            GlyphStatus = L("当前字体没有可读取的样式。");
             return;
         }
 
         try
         {
-            GlyphStatus = "正在读取字体字形...";
+            GlyphStatus = L("正在读取字体字形...");
             var page = await _glyphCatalogService.GetGlyphsAsync(
                 new GlyphQuery(
                     _currentGlyphFace.FilePath,
@@ -1973,7 +2533,9 @@ public sealed partial class ShellViewModel : ObservableObject
             GlyphTotalPages = page.TotalPages;
             SelectedGlyph = Glyphs.FirstOrDefault();
             GlyphStatus = string.IsNullOrWhiteSpace(page.EmptyMessage)
-                ? $"当前显示 {Glyphs.Count:N0} / {page.TotalCount:N0} 个 Unicode 映射字形。"
+                ? AppText.CurrentCultureCode == AppText.EnglishCultureCode
+                    ? $"Showing {Glyphs.Count:N0} / {page.TotalCount:N0} Unicode-mapped glyphs."
+                    : $"当前显示 {Glyphs.Count:N0} / {page.TotalCount:N0} 个 Unicode 映射字形。"
                 : page.EmptyMessage;
             OnPropertyChanged(nameof(HasGlyphs));
         }
@@ -2020,7 +2582,7 @@ public sealed partial class ShellViewModel : ObservableObject
             return;
         }
 
-        var selectedTag = NormalizeFilter(preferredFilter ?? SelectedTagFilter, "全部标签");
+        var selectedTag = NormalizeFilter(preferredFilter ?? SelectedTagFilter, AllTagFilter);
         var tags = await _localManagementService.GetTagsAsync(CancellationToken.None);
         AvailableTags.Clear();
         foreach (var tag in tags)
@@ -2030,7 +2592,8 @@ public sealed partial class ShellViewModel : ObservableObject
 
         ReplaceFilterOptions(
             TagFilters,
-            ["全部标签", .. AvailableTags.Select(tag => tag.Name).OrderBy(name => name, StringComparer.CurrentCultureIgnoreCase)]);
+            [AllTagFilter, .. AvailableTags.Select(tag => tag.Name).OrderBy(name => name, StringComparer.CurrentCultureIgnoreCase)]);
+        ReplaceLocalizedOptions(TagFilterOptions, TagFilters);
 
         SelectTagFilter(selectedTag);
     }
@@ -2044,7 +2607,7 @@ public sealed partial class ShellViewModel : ObservableObject
 
         var selectedName = SelectedCollection?.Name;
         var collections = await _localManagementService.GetCollectionsAsync(CancellationToken.None);
-        var selectedFilter = NormalizeFilter(preferredFilter ?? SelectedCollectionFilter, "全部集合");
+        var selectedFilter = NormalizeFilter(preferredFilter ?? SelectedCollectionFilter, AllCollectionFilter);
         AvailableCollections.Clear();
         var collectionNames = collections
             .Select(collection => collection.Name)
@@ -2055,7 +2618,8 @@ public sealed partial class ShellViewModel : ObservableObject
             AvailableCollections.Add(collectionName);
         }
 
-        ReplaceFilterOptions(CollectionFilters, ["全部集合", .. collectionNames]);
+        ReplaceFilterOptions(CollectionFilters, [AllCollectionFilter, .. collectionNames]);
+        ReplaceLocalizedOptions(CollectionFilterOptions, CollectionFilters);
 
         SelectCollectionFilter(selectedFilter);
 
@@ -2133,9 +2697,9 @@ public sealed partial class ShellViewModel : ObservableObject
         MergeRangeBlocks.Clear();
         MergeRangeSegments.Clear();
         SelectedMergeRangeBlock = null;
-        MergeRangeBaseSummary = "未读取基础字体 A。";
-        MergeRangeSupplementalSummary = "未读取补充字体 B。";
-        MergeRangeDialogStatus = "请选择基础字体和补充字体。";
+        MergeRangeBaseSummary = L("未读取基础字体 A。");
+        MergeRangeSupplementalSummary = L("未读取补充字体 B。");
+        MergeRangeDialogStatus = L("请选择基础字体和补充字体。");
         NotifyMergeRangeDialogState();
     }
 
@@ -2224,19 +2788,27 @@ public sealed partial class ShellViewModel : ObservableObject
             return $"{familyName} · {styleName} · {coverage.EmptyMessage}";
         }
 
-        return $"{familyName} · {styleName} · {coverage.TotalCodePointCount:N0} 个 Unicode 映射码位 · {coverage.Ranges.Count:N0} 个连续段";
+        return AppText.CurrentCultureCode == AppText.EnglishCultureCode
+            ? $"{familyName} · {styleName} · {coverage.TotalCodePointCount:N0} Unicode-mapped code points · {coverage.Ranges.Count:N0} continuous segments"
+            : $"{familyName} · {styleName} · {coverage.TotalCodePointCount:N0} 个 Unicode 映射码位 · {coverage.Ranges.Count:N0} 个连续段";
     }
 
     private static string BuildPendingMergeRangeSummary(FontFamilyItemViewModel? font, FontFaceItemViewModel? face, string fallbackLabel)
     {
         if (font is null)
         {
-            return $"未选择{fallbackLabel}。";
+            return AppText.CurrentCultureCode == AppText.EnglishCultureCode
+                ? $"{fallbackLabel} is not selected."
+                : $"未选择{fallbackLabel}。";
         }
 
         return face is null
-            ? $"{font.FamilyName} · 没有可读取的样式"
-            : $"{font.FamilyName} · {face.StyleLabel} · 等待读取";
+            ? AppText.CurrentCultureCode == AppText.EnglishCultureCode
+                ? $"{font.FamilyName} · No readable styles"
+                : $"{font.FamilyName} · 没有可读取的样式"
+            : AppText.CurrentCultureCode == AppText.EnglishCultureCode
+                ? $"{font.FamilyName} · {face.StyleLabel} · Waiting to read"
+                : $"{font.FamilyName} · {face.StyleLabel} · 等待读取";
     }
 
     private static IReadOnlyList<GlyphCoverageSegment> BuildComparisonSegments(
@@ -2444,14 +3016,13 @@ public sealed partial class ShellViewModel : ObservableObject
     private void ApplyMergeReport(FontMergeReport report, string reportPath)
     {
         SelectedMergeModeLabel = FormatMergeMode(report.MergeMode);
-        MergeReportTitle = report.Succeeded ? "合并结果：成功" : "合并结果：失败";
-        MergeReportBadge = report.Succeeded ? "成功" : "失败";
-        MergeReportOutputPath = string.IsNullOrWhiteSpace(report.OutputPath) ? "未生成输出字体" : report.OutputPath;
+        MergeReportTitle = report.Succeeded ? L("合并结果：成功") : L("合并结果：失败");
+        MergeReportBadge = report.Succeeded ? L("成功") : L("失败");
+        MergeReportOutputPath = string.IsNullOrWhiteSpace(report.OutputPath) ? L("未生成输出字体") : report.OutputPath;
         MergeReportInputFonts = $"{report.BaseFontFamily} + {report.SupplementalFontFamily}";
-        MergeReportRangeLabel = report.Ranges.Count == 0 ? "未记录" : string.Join(", ", report.Ranges);
-        MergeReportStatsLabel =
-            $"模式 {FormatMergeMode(report.MergeMode)} · 检查 {report.RequestedCodePointCount:N0} · 合并 {report.MergedCodePointCount:N0} · 跳过 {report.SkippedDuplicateCodePointCount:N0} · 覆盖 {report.OverwrittenCodePointCount:N0} · 缺失 {report.MissingCodePointCount:N0} · 冲突 {report.ConflictCount:N0}";
-        MergeReportLicenseTime = report.LicenseConfirmedAt?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") ?? "未确认";
+        MergeReportRangeLabel = report.Ranges.Count == 0 ? L("未记录") : string.Join(", ", report.Ranges);
+        MergeReportStatsLabel = FormatMergeReportStats(report);
+        MergeReportLicenseTime = report.LicenseConfirmedAt?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") ?? L("未确认");
         MergeReportErrorMessage = report.ErrorMessage;
         MergeReportPath = reportPath;
         MergeIssues.Clear();
@@ -2537,11 +3108,21 @@ public sealed partial class ShellViewModel : ObservableObject
 
     private static string BuildMergeModeStrategy(FontMergeMode mergeMode) =>
         mergeMode == FontMergeMode.Overwrite
-            ? "覆盖模式：指定范围内补充字体存在的码位覆盖基础字体"
-            : "补全模式：基础字体已有码位默认跳过";
+            ? L("覆盖模式：指定范围内补充字体存在的码位覆盖基础字体")
+            : L("补全模式：基础字体已有码位默认跳过");
 
     private static string FormatMergeMode(FontMergeMode mergeMode) =>
-        mergeMode == FontMergeMode.Overwrite ? "覆盖" : "补全（追加）";
+        mergeMode == FontMergeMode.Overwrite ? OverwriteMergeModeLabel : SupplementMergeModeLabel;
+
+    private static string FormatMergeModeLabel(FontMergeMode mergeMode) =>
+        mergeMode == FontMergeMode.Overwrite
+            ? (AppText.CurrentCultureCode == AppText.EnglishCultureCode ? "Overwrite" : OverwriteMergeModeLabel)
+            : (AppText.CurrentCultureCode == AppText.EnglishCultureCode ? "Supplement (append)" : SupplementMergeModeLabel);
+
+    private static string FormatMergeReportStats(FontMergeReport report) =>
+        AppText.CurrentCultureCode == AppText.EnglishCultureCode
+            ? $"Mode {FormatMergeModeLabel(report.MergeMode)} · Checked {report.RequestedCodePointCount:N0} · Merged {report.MergedCodePointCount:N0} · Skipped {report.SkippedDuplicateCodePointCount:N0} · Overwritten {report.OverwrittenCodePointCount:N0} · Missing {report.MissingCodePointCount:N0} · Conflicts {report.ConflictCount:N0}"
+            : $"模式 {FormatMergeModeLabel(report.MergeMode)} · 检查 {report.RequestedCodePointCount:N0} · 合并 {report.MergedCodePointCount:N0} · 跳过 {report.SkippedDuplicateCodePointCount:N0} · 覆盖 {report.OverwrittenCodePointCount:N0} · 缺失 {report.MissingCodePointCount:N0} · 冲突 {report.ConflictCount:N0}";
 
     private void RebuildManagementOptions()
     {
@@ -2710,9 +3291,10 @@ public sealed partial class ShellViewModel : ObservableObject
 
     private void SelectTagFilter(string preferredFilter)
     {
-        var filter = TagFilters.FirstOrDefault(candidate => string.Equals(candidate, preferredFilter, StringComparison.CurrentCultureIgnoreCase)) ?? "全部标签";
+        var filter = TagFilters.FirstOrDefault(candidate => string.Equals(candidate, preferredFilter, StringComparison.CurrentCultureIgnoreCase)) ?? AllTagFilter;
         if (SelectedTagFilter == filter)
         {
+            SelectTagFilterOption(filter);
             OnPropertyChanged(nameof(SelectedTagFilter));
             return;
         }
@@ -2722,9 +3304,10 @@ public sealed partial class ShellViewModel : ObservableObject
 
     private void SelectCollectionFilter(string preferredFilter)
     {
-        var filter = CollectionFilters.FirstOrDefault(candidate => string.Equals(candidate, preferredFilter, StringComparison.CurrentCultureIgnoreCase)) ?? "全部集合";
+        var filter = CollectionFilters.FirstOrDefault(candidate => string.Equals(candidate, preferredFilter, StringComparison.CurrentCultureIgnoreCase)) ?? AllCollectionFilter;
         if (SelectedCollectionFilter == filter)
         {
+            SelectCollectionFilterOption(filter);
             OnPropertyChanged(nameof(SelectedCollectionFilter));
             return;
         }

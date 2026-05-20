@@ -1,3 +1,5 @@
+using GlyphStash.Localization;
+
 namespace GlyphStash.Infrastructure.FontTools;
 
 public sealed record FontToolsWorkerLaunch(
@@ -40,7 +42,7 @@ public sealed class FontToolsWorkerLocator
             }
         }
 
-        throw new InvalidOperationException("未找到内置 fontTools worker，也未找到开发脚本 fallback。");
+        throw new InvalidOperationException(AppText.TranslateLiteral("未找到内置 fontTools worker，也未找到开发脚本 fallback。"));
     }
 
     private static FontToolsWorkerLaunch CreatePythonLaunch(string scriptPath, string description)

@@ -12,12 +12,12 @@
             Padding="24,0">
       <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
         <StackPanel>
-          <TextBlock Text="字体库" Classes="h1" />
+          <TextBlock Text="{DynamicResource L.Text.788523AA1322815D}" Classes="h1" />
           <TextBlock Text="{Binding ScanStatus}" Classes="muted" Margin="0,5,0,0" />
         </StackPanel>
         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
-          <Button Content="重新扫描" Command="{Binding RescanCommand}" />
-          <Button Content="导入字体" Classes="primary" Command="{Binding OpenImportDialogCommand}" />
+          <Button Content="{DynamicResource L.Text.DAF5103F90CC7D3A}" Command="{Binding RescanCommand}" />
+          <Button Content="{DynamicResource L.Text.50751AA95894C7DB}" Classes="primary" Command="{Binding OpenImportDialogCommand}" />
         </StackPanel>
       </Grid>
     </Border>
@@ -27,26 +27,50 @@
         <ScrollViewer>
           <StackPanel Spacing="14">
             <StackPanel Spacing="7">
-              <TextBlock Text="搜索字体或标签" Classes="caption" FontWeight="Bold" />
-              <TextBox Text="{Binding SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="Inter、中文、等宽" />
+              <TextBlock Text="{DynamicResource L.Text.2664F501D6FC3031}" Classes="caption" FontWeight="Bold" />
+              <TextBox Text="{Binding SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="{DynamicResource L.Text.B90B82579B690EEE}" />
             </StackPanel>
             <StackPanel Spacing="7">
-              <TextBlock Text="来源" Classes="caption" FontWeight="Bold" />
-              <ComboBox ItemsSource="{Binding SourceFilters}" SelectedItem="{Binding SelectedSourceFilter}" HorizontalAlignment="Stretch" />
+              <TextBlock Text="{DynamicResource L.Text.A488E93D69CC1296}" Classes="caption" FontWeight="Bold" />
+              <ComboBox ItemsSource="{Binding SourceFilterOptions}" SelectedItem="{Binding SelectedSourceFilterOption, Mode=TwoWay}" HorizontalAlignment="Stretch">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate x:DataType="vm:LocalizedOptionViewModel">
+                    <TextBlock Text="{Binding DisplayName}" />
+                  </DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
             </StackPanel>
             <StackPanel Spacing="7">
-              <TextBlock Text="激活状态" Classes="caption" FontWeight="Bold" />
-              <ComboBox ItemsSource="{Binding StateFilters}" SelectedItem="{Binding SelectedStateFilter}" HorizontalAlignment="Stretch" />
+              <TextBlock Text="{DynamicResource L.Text.83DE9A9A34438B31}" Classes="caption" FontWeight="Bold" />
+              <ComboBox ItemsSource="{Binding StateFilterOptions}" SelectedItem="{Binding SelectedStateFilterOption, Mode=TwoWay}" HorizontalAlignment="Stretch">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate x:DataType="vm:LocalizedOptionViewModel">
+                    <TextBlock Text="{Binding DisplayName}" />
+                  </DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
             </StackPanel>
             <StackPanel Spacing="7">
-              <TextBlock Text="标签" Classes="caption" FontWeight="Bold" />
-              <ComboBox ItemsSource="{Binding TagFilters}" SelectedItem="{Binding SelectedTagFilter}" HorizontalAlignment="Stretch" />
+              <TextBlock Text="{DynamicResource L.Text.1D0FD5F9336D9103}" Classes="caption" FontWeight="Bold" />
+              <ComboBox ItemsSource="{Binding TagFilterOptions}" SelectedItem="{Binding SelectedTagFilterOption, Mode=TwoWay}" HorizontalAlignment="Stretch">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate x:DataType="vm:LocalizedOptionViewModel">
+                    <TextBlock Text="{Binding DisplayName}" />
+                  </DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
             </StackPanel>
             <StackPanel Spacing="7">
-              <TextBlock Text="集合" Classes="caption" FontWeight="Bold" />
-              <ComboBox ItemsSource="{Binding CollectionFilters}" SelectedItem="{Binding SelectedCollectionFilter}" HorizontalAlignment="Stretch" />
+              <TextBlock Text="{DynamicResource L.Text.528E5174C2D4E5C8}" Classes="caption" FontWeight="Bold" />
+              <ComboBox ItemsSource="{Binding CollectionFilterOptions}" SelectedItem="{Binding SelectedCollectionFilterOption, Mode=TwoWay}" HorizontalAlignment="Stretch">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate x:DataType="vm:LocalizedOptionViewModel">
+                    <TextBlock Text="{Binding DisplayName}" />
+                  </DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
             </StackPanel>
-            <Button Content="管理标签" Command="{Binding OpenTagsDialogCommand}" />
+            <Button Content="{DynamicResource L.Text.2FD867CEA5B82DEA}" Command="{Binding OpenTagsDialogCommand}" />
           </StackPanel>
         </ScrollViewer>
       </Border>
@@ -55,18 +79,18 @@
         <Grid RowDefinitions="Auto,*">
           <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,12">
             <StackPanel>
-              <TextBlock Text="本地字体" Classes="h2" />
-              <TextBlock Text="列表区分系统字体、用户级安装、GlyphStash 管理和临时字体。" Classes="muted" Margin="0,5,0,0" />
+              <TextBlock Text="{DynamicResource L.Text.DB96383CD775A45D}" Classes="h2" />
+              <TextBlock Text="{DynamicResource L.Text.6FF5AAFFF2F0F470}" Classes="muted" Margin="0,5,0,0" />
             </StackPanel>
             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
-              <Button Content="单行" Classes="sm" Command="{Binding SetPreviewModeCommand}" CommandParameter="单行" />
-              <Button Content="段落" Classes="sm" Command="{Binding SetPreviewModeCommand}" CommandParameter="段落" />
-              <Button Content="字符集" Classes="sm" Command="{Binding SetPreviewModeCommand}" CommandParameter="字符集" />
+              <Button Content="{DynamicResource L.Text.30714325CFB2B97D}" Classes="sm" Command="{Binding SetPreviewModeCommand}" CommandParameter="单行" />
+              <Button Content="{DynamicResource L.Text.7679497CDE353BCF}" Classes="sm" Command="{Binding SetPreviewModeCommand}" CommandParameter="段落" />
+              <Button Content="{DynamicResource L.Text.1E61CD479C3866E9}" Classes="sm" Command="{Binding SetPreviewModeCommand}" CommandParameter="字符集" />
             </StackPanel>
           </Grid>
 
           <Grid Grid.Row="1">
-            <TextBlock Text="正在加载字体索引..." Classes="muted" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding IsBusy}" />
+            <TextBlock Text="{DynamicResource L.Text.F567A39EB2D7F558}" Classes="muted" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding IsBusy}" />
 
             <Border BorderBrush="{DynamicResource GlyphBorderBrush}"
                     BorderThickness="1"
@@ -77,7 +101,7 @@
                     IsVisible="{Binding IsEmpty}">
               <StackPanel HorizontalAlignment="Center" Spacing="12">
                 <TextBlock Text="{Binding EmptyStateMessage}" FontWeight="SemiBold" HorizontalAlignment="Center" />
-                <Button Content="重新扫描字体" Command="{Binding RescanCommand}" HorizontalAlignment="Center" />
+                <Button Content="{DynamicResource L.Text.0F276D4CFBF1E3BA}" Command="{Binding RescanCommand}" HorizontalAlignment="Center" />
               </StackPanel>
             </Border>
 
@@ -152,11 +176,11 @@
             Padding="24,9">
       <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
         <StackPanel Orientation="Horizontal" Spacing="8">
-          <TextBlock Text="预览文本" VerticalAlignment="Center" Classes="muted" />
+          <TextBlock Text="{DynamicResource L.Text.2897745B51848BD6}" VerticalAlignment="Center" Classes="muted" />
           <TextBox Width="320" MinHeight="30" Text="{Binding PreviewText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
         </StackPanel>
         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-          <TextBlock Text="字号" VerticalAlignment="Center" Classes="muted" />
+          <TextBlock Text="{DynamicResource L.Text.F71561B5AF0ABCED}" VerticalAlignment="Center" Classes="muted" />
           <Slider Width="140" Minimum="18" Maximum="48" Value="{Binding PreviewFontSize, Mode=TwoWay}" />
           <TextBlock Text="{Binding PreviewFontSizeLabel}" FontWeight="SemiBold" VerticalAlignment="Center" />
         </StackPanel>
@@ -166,16 +190,16 @@
     <Grid Grid.RowSpan="3" Background="{DynamicResource GlyphModalScrimBrush}" IsVisible="{Binding IsImportDialogOpen}">
       <Border Width="720" MaxHeight="620" Classes="panel" Padding="18" HorizontalAlignment="Center" VerticalAlignment="Center">
         <StackPanel Spacing="14">
-          <TextBlock Text="导入字体" Classes="h1" />
+          <TextBlock Text="{DynamicResource L.Text.50751AA95894C7DB}" Classes="h1" />
           <TextBlock Text="{Binding ImportStatus}" Classes="muted" TextWrapping="Wrap" />
           <Border Classes="card">
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
               <StackPanel>
-                <TextBlock Text="GlyphStash 管理目录" Classes="caption" />
+                <TextBlock Text="{DynamicResource L.Text.1D19B5731BBA7989}" Classes="caption" />
                 <TextBlock Text="{Binding ManagedFontDirectory}" TextWrapping="Wrap" />
                 <TextBlock Text="{Binding ManagedDirectoryStatus}" Classes="muted" />
               </StackPanel>
-              <Button Grid.Column="1" Content="选择目录" Command="{Binding ChooseManagedDirectoryCommand}" />
+              <Button Grid.Column="1" Content="{DynamicResource L.Text.E5FE24CA742F83D9}" Command="{Binding ChooseManagedDirectoryCommand}" />
             </Grid>
           </Border>
           <Border Classes="card">
@@ -193,18 +217,18 @@
             </ItemsControl>
           </Border>
           <UniformGrid Columns="2">
-            <CheckBox Content="加入 GlyphStash 管理目录" IsChecked="True" />
-            <CheckBox Content="用户级安装" IsChecked="{Binding ImportInstallForCurrentUser, Mode=TwoWay}" />
-            <CheckBox Content="当前会话临时启用"
+            <CheckBox Content="{DynamicResource L.Text.600F9A76B6C980C0}" IsChecked="True" />
+            <CheckBox Content="{DynamicResource L.Text.C05FE82711F59CA0}" IsChecked="{Binding ImportInstallForCurrentUser, Mode=TwoWay}" />
+            <CheckBox Content="{DynamicResource L.Text.BC2D06CAB2823593}"
                       IsChecked="{Binding ImportTemporarilyActivate, Mode=TwoWay}"
                       IsEnabled="{Binding CanImportTemporarilyActivate}"
                       ToolTip.Tip="{Binding ImportTemporaryActivationReason}" />
-            <TextBox PlaceholderText="导入标签：无衬线, UI" Text="{Binding ImportTagsText, Mode=TwoWay}" />
-            <TextBox PlaceholderText="加入集合：官网改版" Text="{Binding ImportCollectionsText, Mode=TwoWay}" />
+            <TextBox PlaceholderText="{DynamicResource L.Text.E42F26CF19B37382}" Text="{Binding ImportTagsText, Mode=TwoWay}" />
+            <TextBox PlaceholderText="{DynamicResource L.Text.730EEF8C85CF25AF}" Text="{Binding ImportCollectionsText, Mode=TwoWay}" />
           </UniformGrid>
           <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
-            <Button Content="取消" Command="{Binding CloseImportDialogCommand}" />
-            <Button Content="开始导入" Classes="primary" Command="{Binding StartImportCommand}" />
+            <Button Content="{DynamicResource L.Text.2CD0F3BE8738A86C}" Command="{Binding CloseImportDialogCommand}" />
+            <Button Content="{DynamicResource L.Text.BB8AA0DDAAF3E6D1}" Classes="primary" Command="{Binding StartImportCommand}" />
           </StackPanel>
         </StackPanel>
       </Border>
@@ -213,11 +237,11 @@
     <Grid Grid.RowSpan="3" Background="{DynamicResource GlyphModalScrimBrush}" IsVisible="{Binding IsTagsDialogOpen}">
       <Border Width="620" Classes="panel" Padding="18" HorizontalAlignment="Center" VerticalAlignment="Center">
         <StackPanel Spacing="14">
-          <TextBlock Text="标签" Classes="h1" />
-          <TextBlock Text="优先勾选已有标签和集合；也可以在输入框中新增。删除标签或集合关系不会删除字体文件。" Classes="muted" TextWrapping="Wrap" />
+          <TextBlock Text="{DynamicResource L.Text.1D0FD5F9336D9103}" Classes="h1" />
+          <TextBlock Text="{DynamicResource L.Text.B693A650B05575B6}" Classes="muted" TextWrapping="Wrap" />
           <Grid ColumnDefinitions="*,*" ColumnSpacing="16">
             <StackPanel Spacing="8">
-              <TextBlock Text="已有标签" Classes="h2" />
+              <TextBlock Text="{DynamicResource L.Text.668500F7CE3CE034}" Classes="h2" />
               <Border Classes="card" Padding="10" MaxHeight="180">
                 <ScrollViewer>
                   <ItemsControl ItemsSource="{Binding TagOptions}">
@@ -232,7 +256,7 @@
                           </CheckBox>
                           <Button Grid.Column="1"
                                   Classes="sm"
-                                  Content="删除"
+                                  Content="{DynamicResource L.Text.2F9DAA828907B93F}"
                                   Command="{Binding $parent[UserControl].((vm:ShellViewModel)DataContext).OpenDeleteTagDialogCommand}"
                                   CommandParameter="{Binding Name}" />
                         </Grid>
@@ -241,10 +265,10 @@
                   </ItemsControl>
                 </ScrollViewer>
               </Border>
-              <TextBox PlaceholderText="新增标签：衬线、中文、项目A" Text="{Binding TagEditorText, Mode=TwoWay}" />
+              <TextBox PlaceholderText="{DynamicResource L.Text.EF55978F6C447E0E}" Text="{Binding TagEditorText, Mode=TwoWay}" />
             </StackPanel>
             <StackPanel Grid.Column="1" Spacing="8">
-              <TextBlock Text="已有集合" Classes="h2" />
+              <TextBlock Text="{DynamicResource L.Text.46FD1A0256739788}" Classes="h2" />
               <Border Classes="card" Padding="10" MaxHeight="180">
                 <ScrollViewer>
                   <ItemsControl ItemsSource="{Binding CollectionOptions}">
@@ -261,13 +285,13 @@
                   </ItemsControl>
                 </ScrollViewer>
               </Border>
-              <TextBox PlaceholderText="新增集合：官网改版、游戏 UI" Text="{Binding CollectionEditorText, Mode=TwoWay}" />
+              <TextBox PlaceholderText="{DynamicResource L.Text.A9846C09D1F7C307}" Text="{Binding CollectionEditorText, Mode=TwoWay}" />
             </StackPanel>
           </Grid>
-          <TextBlock Text="删除标签只移除标签和字体的关联，不删除字体。" Classes="muted" />
+          <TextBlock Text="{DynamicResource L.Text.FDCCE955B1B40E3A}" Classes="muted" />
           <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
-            <Button Content="取消" Command="{Binding CloseTagsDialogCommand}" />
-            <Button Content="保存" Classes="primary" Command="{Binding SaveTagsDialogCommand}" />
+            <Button Content="{DynamicResource L.Text.2CD0F3BE8738A86C}" Command="{Binding CloseTagsDialogCommand}" />
+            <Button Content="{DynamicResource L.Text.A3030BF8F16DC63C}" Classes="primary" Command="{Binding SaveTagsDialogCommand}" />
           </StackPanel>
         </StackPanel>
       </Border>
@@ -278,12 +302,12 @@
                 HorizontalAlignment="Center"
                 VerticalAlignment="Center">
           <StackPanel Spacing="14">
-            <TextBlock Text="删除标签" Classes="h2" />
-            <TextBlock Text="{Binding PendingDeleteTagName, StringFormat='确定删除标签 {0}？'}" TextWrapping="Wrap" />
-            <TextBlock Text="此操作会从所有字体移除该标签，不删除字体文件。" Classes="muted" TextWrapping="Wrap" />
+            <TextBlock Text="{DynamicResource L.Text.2BE218C1EBAC7C05}" Classes="h2" />
+            <TextBlock Text="{Binding PendingDeleteTagConfirmationText}" TextWrapping="Wrap" />
+            <TextBlock Text="{DynamicResource L.Text.22960ABEF797BF83}" Classes="muted" TextWrapping="Wrap" />
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
-              <Button Content="取消" Command="{Binding CloseDeleteTagDialogCommand}" />
-              <Button Content="删除" Classes="primary" Command="{Binding ConfirmDeleteTagCommand}" />
+              <Button Content="{DynamicResource L.Text.2CD0F3BE8738A86C}" Command="{Binding CloseDeleteTagDialogCommand}" />
+              <Button Content="{DynamicResource L.Text.2F9DAA828907B93F}" Classes="primary" Command="{Binding ConfirmDeleteTagCommand}" />
             </StackPanel>
           </StackPanel>
         </Border>

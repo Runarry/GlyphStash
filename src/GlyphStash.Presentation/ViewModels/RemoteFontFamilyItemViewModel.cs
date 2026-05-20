@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using GlyphStash.Domain.Fonts;
+using GlyphStash.Localization;
 
 namespace GlyphStash.Presentation.ViewModels;
 
@@ -21,17 +22,44 @@ public sealed partial class RemoteFontFamilyItemViewModel : ObservableObject
 
     public string CategoryLabel => $"{_record.Category} · {_record.Styles.Count} styles";
 
-    public string SubsetsLabel => _record.Subsets.Count == 0 ? "未声明子集" : string.Join(", ", _record.Subsets.Take(5));
+    public string SubsetsLabel => _record.Subsets.Count == 0 ? L("未声明子集") : string.Join(", ", _record.Subsets.Take(5));
 
-    public string LastModifiedLabel => _record.LastModified?.ToString("yyyy-MM-dd") ?? "未知更新日期";
+    public string LastModifiedLabel => _record.LastModified?.ToString("yyyy-MM-dd") ?? L("未知更新日期");
 
-    public string LicenseLabel => _record.LicenseText;
+    public string LicenseLabel => FormatLicenseLabel(_record.LicenseText);
 
     public string SourceUrl => _record.SourceUrl;
 
-    public string PreviewText => "The quick brown fox 跃过 123";
+    public string PreviewText => AppText.CurrentCultureCode == AppText.EnglishCultureCode ? "The quick brown fox jumps 123" : "The quick brown fox 跃过 123";
 
     public IReadOnlyList<RemoteFontStyle> SelectedStyles => Styles.Where(style => style.IsSelected).Select(style => style.ToRecord()).ToList();
+
+    public void RefreshLocalizedState()
+    {
+        OnPropertyChanged(nameof(SubsetsLabel));
+        OnPropertyChanged(nameof(LastModifiedLabel));
+        OnPropertyChanged(nameof(LicenseLabel));
+        OnPropertyChanged(nameof(PreviewText));
+    }
+
+    private static string L(string text) => AppText.TranslateLiteral(text);
+
+    private static string FormatLicenseLabel(string text)
+    {
+        const string zhSourcePrefix = "请查看来源页面：";
+        const string enSourcePrefix = "See source page: ";
+        if (text.StartsWith(zhSourcePrefix, StringComparison.Ordinal))
+        {
+            return AppText.FormatLiteral("请查看来源页面：{0}", "See source page: {0}", text[zhSourcePrefix.Length..]);
+        }
+
+        if (text.StartsWith(enSourcePrefix, StringComparison.Ordinal))
+        {
+            return AppText.FormatLiteral("请查看来源页面：{0}", "See source page: {0}", text[enSourcePrefix.Length..]);
+        }
+
+        return AppText.TranslateLiteral(text);
+    }
 }
 
 public sealed partial class RemoteFontStyleOptionViewModel : ObservableObject

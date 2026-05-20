@@ -23,6 +23,7 @@
     <ProjectReference Include="..\..\src\GlyphStash.Presentation\GlyphStash.Presentation.csproj" />
     <ProjectReference Include="..\..\src\GlyphStash.Application\GlyphStash.Application.csproj" />
     <ProjectReference Include="..\..\src\GlyphStash.Domain\GlyphStash.Domain.csproj" />
+    <ProjectReference Include="..\..\src\GlyphStash.Localization\GlyphStash.Localization.csproj" />
   </ItemGroup>
 
 </Project>

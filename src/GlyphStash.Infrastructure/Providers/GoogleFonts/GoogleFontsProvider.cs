@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using GlyphStash.Application.Abstractions.Fonts;
 using GlyphStash.Domain.Fonts;
+using GlyphStash.Localization;
 
 namespace GlyphStash.Infrastructure.Providers.GoogleFonts;
 
@@ -22,13 +23,13 @@ public sealed class GoogleFontsProvider : IFontSourceProvider
     {
         if (string.IsNullOrWhiteSpace(query.ApiKey))
         {
-            throw new InvalidOperationException("需要先在设置页配置 Google Fonts API key。");
+            throw new InvalidOperationException(L("需要先在设置页配置 Google Fonts API key。"));
         }
 
         var url = BuildListUrl(query);
 
-        using var response = await SendGoogleFontsRequestAsync(url, "Google Fonts 请求", cancellationToken).ConfigureAwait(false);
-        await EnsureGoogleFontsSuccessAsync(response, "Google Fonts 请求", cancellationToken).ConfigureAwait(false);
+        using var response = await SendGoogleFontsRequestAsync(url, L("Google Fonts 请求"), cancellationToken).ConfigureAwait(false);
+        await EnsureGoogleFontsSuccessAsync(response, L("Google Fonts 请求"), cancellationToken).ConfigureAwait(false);
         await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
         using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false);
         if (!document.RootElement.TryGetProperty("items", out var items) || items.ValueKind != JsonValueKind.Array)
@@ -59,7 +60,7 @@ public sealed class GoogleFontsProvider : IFontSourceProvider
                 GetString(item, "version"),
                 DateOnly.TryParse(GetString(item, "lastModified"), out var modified) ? modified : null,
                 BuildSourceUrl(family),
-                $"请查看来源页面：{BuildSourceUrl(family)}",
+                AppText.FormatLiteral("请查看来源页面：{0}", "See source page: {0}", BuildSourceUrl(family)),
                 ReadStyles(item)));
         }
 
@@ -81,8 +82,8 @@ public sealed class GoogleFontsProvider : IFontSourceProvider
             }
 
             var localPath = Path.Combine(stagingDirectory, $"{SanitizeFileName(request.Family.FamilyName)}-{SanitizeFileName(style.Variant)}{extension}");
-            using var response = await SendGoogleFontsRequestAsync(style.DownloadUrl, "Google Fonts 下载", cancellationToken).ConfigureAwait(false);
-            await EnsureGoogleFontsSuccessAsync(response, "Google Fonts 下载", cancellationToken).ConfigureAwait(false);
+            using var response = await SendGoogleFontsRequestAsync(style.DownloadUrl, L("Google Fonts 下载"), cancellationToken).ConfigureAwait(false);
+            await EnsureGoogleFontsSuccessAsync(response, L("Google Fonts 下载"), cancellationToken).ConfigureAwait(false);
             await using (var input = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false))
             await using (var output = File.Create(localPath))
             {
@@ -97,7 +98,7 @@ public sealed class GoogleFontsProvider : IFontSourceProvider
                 extension.TrimStart('.').ToUpperInvariant()));
         }
 
-        return new RemoteFontDownloadResult(request.Family, files, $"已下载 {files.Count} 个样式。");
+        return new RemoteFontDownloadResult(request.Family, files, AppText.FormatLiteral("已下载 {0} 个样式。", "Downloaded {0} styles.", files.Count));
     }
 
     private static IReadOnlyList<RemoteFontStyle> ReadStyles(JsonElement item)
@@ -168,11 +169,11 @@ public sealed class GoogleFontsProvider : IFontSourceProvider
         }
         catch (HttpRequestException ex)
         {
-            throw new InvalidOperationException($"{operation}网络不可用，请检查网络连接后重试。", ex);
+            throw new InvalidOperationException(AppText.FormatLiteral("{0}网络不可用，请检查网络连接后重试。", "{0} network is unavailable. Check the connection and retry.", operation), ex);
         }
         catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested)
         {
-            throw new InvalidOperationException($"{operation}请求超时，请稍后重试。", ex);
+            throw new InvalidOperationException(AppText.FormatLiteral("{0}请求超时，请稍后重试。", "{0} request timed out. Try again later.", operation), ex);
         }
     }
 
@@ -187,10 +188,10 @@ public sealed class GoogleFontsProvider : IFontSourceProvider
         var summary = SummarizeResponseBody(body);
         var message = response.StatusCode switch
         {
-            HttpStatusCode.BadRequest => $"{operation}无效：{summary}",
-            HttpStatusCode.TooManyRequests => $"{operation}已限流，请稍后重试。",
-            HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden => "Google Fonts API key 无效或没有权限。",
-            _ => $"{operation}失败：{(int)response.StatusCode} {response.ReasonPhrase}. {summary}"
+            HttpStatusCode.BadRequest => AppText.FormatLiteral("{0}无效：{1}", "{0} is invalid: {1}", operation, summary),
+            HttpStatusCode.TooManyRequests => AppText.FormatLiteral("{0}已限流，请稍后重试。", "{0} is rate limited. Try again later.", operation),
+            HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden => L("Google Fonts API key 无效或没有权限。"),
+            _ => AppText.FormatLiteral("{0}失败：{1} {2}. {3}", "{0} failed: {1} {2}. {3}", operation, (int)response.StatusCode, response.ReasonPhrase, summary)
         };
 
         throw new InvalidOperationException(message);
@@ -200,7 +201,7 @@ public sealed class GoogleFontsProvider : IFontSourceProvider
     {
         if (string.IsNullOrWhiteSpace(body))
         {
-            return "响应体为空。";
+            return L("响应体为空。");
         }
 
         var normalized = body.Replace("\r", " ", StringComparison.Ordinal).Replace("\n", " ", StringComparison.Ordinal).Trim();
@@ -216,4 +217,6 @@ public sealed class GoogleFontsProvider : IFontSourceProvider
 
         return value.Replace(' ', '-');
     }
+
+    private static string L(string text) => AppText.TranslateLiteral(text);
 }

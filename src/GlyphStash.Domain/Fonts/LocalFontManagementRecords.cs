@@ -56,4 +56,5 @@ public sealed record OperationLogEntry(
 
 public sealed record UserFontSettings(
     string ManagedFontDirectory,
-    string GoogleFontsApiKey = "");
+    string GoogleFontsApiKey = "",
+    string UiCultureCode = "");

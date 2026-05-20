@@ -6,8 +6,8 @@
   <Grid>
     <Border Padding="18" IsVisible="{Binding HasNoSelectedFont}">
       <StackPanel Spacing="12" VerticalAlignment="Center">
-        <TextBlock Text="请选择字体" Classes="h1" />
-        <TextBlock Text="从字体库列表中选择一个字体族后，这里会显示预览、管理操作、基础信息和样式列表。" Classes="muted" TextWrapping="Wrap" />
+        <TextBlock Text="{DynamicResource L.Text.942396D281D2FC31}" Classes="h1" />
+        <TextBlock Text="{DynamicResource L.Text.9BAC7A3011E93826}" Classes="muted" TextWrapping="Wrap" />
       </StackPanel>
     </Border>
 
@@ -33,34 +33,34 @@
         </StackPanel>
 
         <StackPanel Spacing="10">
-          <TextBlock Text="管理操作" Classes="h2" />
+          <TextBlock Text="{DynamicResource L.Text.6A3219761890E001}" Classes="h2" />
           <WrapPanel>
             <Button Content="{Binding SelectedFont.TemporaryActivationLabel}" Classes="primary sm" Command="{Binding ToggleTemporaryActivationCommand}" CommandParameter="{Binding SelectedFont}" IsEnabled="{Binding SelectedFont.CanTemporarilyActivate}" ToolTip.Tip="{Binding SelectedFont.TemporaryActivationDisabledReason}" Margin="0,0,8,8" />
             <Button Content="{Binding SelectedFont.InstallLabel}" Classes="sm" Command="{Binding InstallSelectedFontCommand}" Margin="0,0,8,8" />
-            <Button Content="卸载管理字体" Classes="danger sm" Command="{Binding OpenUninstallDialogCommand}" Margin="0,0,8,8" />
-            <Button Content="查看字形" Classes="sm" Command="{Binding OpenGlyphBrowserCommand}" Margin="0,0,8,8" />
+            <Button Content="{DynamicResource L.Text.1B1FC8BE9CBCD0D9}" Classes="danger sm" Command="{Binding OpenUninstallDialogCommand}" Margin="0,0,8,8" />
+            <Button Content="{DynamicResource L.Text.F50E59DDA0377D03}" Classes="sm" Command="{Binding OpenGlyphBrowserCommand}" Margin="0,0,8,8" />
           </WrapPanel>
-          <TextBlock Text="临时启用属于当前用户会话，退出应用后会释放；外部应用可见性取决于 Windows 和目标应用刷新行为。" Classes="muted" TextWrapping="Wrap" />
+          <TextBlock Text="{DynamicResource L.Text.26BD3ECBF8795177}" Classes="muted" TextWrapping="Wrap" />
         </StackPanel>
 
         <StackPanel Spacing="10">
           <Grid ColumnDefinitions="*,Auto">
-            <TextBlock Text="基础信息" Classes="h2" />
+            <TextBlock Text="{DynamicResource L.Text.15A81B9294C7CEFE}" Classes="h2" />
             <Border Grid.Column="1" Classes="badge warn">
               <TextBlock Text="{Binding SelectedFont.LicenseLabel}" FontSize="12" />
             </Border>
           </Grid>
           <UniformGrid Columns="2" Rows="3">
-            <Border Classes="card" Margin="0,0,8,8"><StackPanel><TextBlock Text="样式" Classes="caption" /><TextBlock Text="{Binding SelectedFont.StyleCountLabel}" /></StackPanel></Border>
-            <Border Classes="card" Margin="0,0,0,8"><StackPanel><TextBlock Text="格式" Classes="caption" /><TextBlock Text="{Binding SelectedFont.FormatSummary}" /></StackPanel></Border>
-            <Border Classes="card" Margin="0,0,8,8"><StackPanel><TextBlock Text="版本" Classes="caption" /><TextBlock Text="{Binding SelectedFont.VersionLabel}" /></StackPanel></Border>
-            <Border Classes="card" Margin="0,0,0,8"><StackPanel><TextBlock Text="制造商" Classes="caption" /><TextBlock Text="{Binding SelectedFont.ManufacturerLabel}" /></StackPanel></Border>
-            <Border Classes="card" Margin="0,0,8,0"><StackPanel><TextBlock Text="覆盖" Classes="caption" /><TextBlock Text="{Binding SelectedFont.CoverageLabel}" TextWrapping="Wrap" /></StackPanel></Border>
-            <Border Classes="card"><StackPanel><TextBlock Text="文件 Hash" Classes="caption" /><TextBlock Text="{Binding SelectedFont.HashLabel}" TextWrapping="Wrap" /></StackPanel></Border>
+            <Border Classes="card" Margin="0,0,8,8"><StackPanel><TextBlock Text="{DynamicResource L.Text.C8FFBDF15754D1D2}" Classes="caption" /><TextBlock Text="{Binding SelectedFont.StyleCountLabel}" /></StackPanel></Border>
+            <Border Classes="card" Margin="0,0,0,8"><StackPanel><TextBlock Text="{DynamicResource L.Text.0E8B1C78C5F335BA}" Classes="caption" /><TextBlock Text="{Binding SelectedFont.FormatSummary}" /></StackPanel></Border>
+            <Border Classes="card" Margin="0,0,8,8"><StackPanel><TextBlock Text="{DynamicResource L.Text.5F76B2BF82DD2C5D}" Classes="caption" /><TextBlock Text="{Binding SelectedFont.VersionLabel}" /></StackPanel></Border>
+            <Border Classes="card" Margin="0,0,0,8"><StackPanel><TextBlock Text="{DynamicResource L.Text.BA6117467E72C391}" Classes="caption" /><TextBlock Text="{Binding SelectedFont.ManufacturerLabel}" /></StackPanel></Border>
+            <Border Classes="card" Margin="0,0,8,0"><StackPanel><TextBlock Text="{DynamicResource L.Text.4CE4C98EB27E4B65}" Classes="caption" /><TextBlock Text="{Binding SelectedFont.CoverageLabel}" TextWrapping="Wrap" /></StackPanel></Border>
+            <Border Classes="card"><StackPanel><TextBlock Text="{DynamicResource L.Text.79CF2E84EC2FF518}" Classes="caption" /><TextBlock Text="{Binding SelectedFont.HashLabel}" TextWrapping="Wrap" /></StackPanel></Border>
           </UniformGrid>
           <Border Classes="card">
             <StackPanel>
-              <TextBlock Text="文件路径" Classes="caption" />
+              <TextBlock Text="{DynamicResource L.Text.C71200B5952E3781}" Classes="caption" />
               <TextBlock Text="{Binding SelectedFont.FilePath}" TextWrapping="Wrap" />
             </StackPanel>
           </Border>
@@ -68,8 +68,8 @@
 
         <StackPanel Spacing="10">
           <Grid ColumnDefinitions="*,Auto">
-            <TextBlock Text="样式列表" Classes="h2" />
-            <Button Grid.Column="1" Classes="sm" Content="标签/集合" Command="{Binding OpenTagsDialogCommand}" />
+            <TextBlock Text="{DynamicResource L.Text.91A7B81E0C7B7979}" Classes="h2" />
+            <Button Grid.Column="1" Classes="sm" Content="{DynamicResource L.Text.BFFA882506783B57}" Command="{Binding OpenTagsDialogCommand}" />
           </Grid>
           <ListBox ItemsSource="{Binding SelectedFont.Faces}" SelectedItem="{Binding SelectedPreviewFace, Mode=TwoWay}">
             <ListBox.ItemTemplate>
@@ -82,7 +82,7 @@
                       <TextBlock Text="{Binding FilePath}" Classes="muted" TextWrapping="Wrap" />
                     </StackPanel>
                     <Border Grid.Column="1" Classes="badge ok" VerticalAlignment="Center" IsVisible="{Binding IsSelected}">
-                      <TextBlock Text="当前预览/字形样式" FontSize="12" />
+                      <TextBlock Text="{DynamicResource L.Text.86C0EC198215F318}" FontSize="12" />
                     </Border>
                   </Grid>
                 </Border>
@@ -96,11 +96,11 @@
     <Grid Background="{DynamicResource GlyphModalScrimBrush}" IsVisible="{Binding IsUninstallDialogOpen}">
       <Border Width="520" Classes="panel" Padding="18" HorizontalAlignment="Center" VerticalAlignment="Center">
         <StackPanel Spacing="14">
-          <TextBlock Text="卸载字体" Classes="h1" />
-          <TextBlock Text="将卸载 GlyphStash 管理的用户级字体。系统字体不会被删除，非 GlyphStash 管理字体会被阻止或提示失败。" Classes="muted" TextWrapping="Wrap" />
+          <TextBlock Text="{DynamicResource L.Text.B37E13875DF8EBC0}" Classes="h1" />
+          <TextBlock Text="{DynamicResource L.Text.B73A6046290FE0B0}" Classes="muted" TextWrapping="Wrap" />
           <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
-            <Button Content="取消" Command="{Binding CloseUninstallDialogCommand}" />
-            <Button Content="确认卸载" Classes="danger" Command="{Binding ConfirmUninstallCommand}" />
+            <Button Content="{DynamicResource L.Text.2CD0F3BE8738A86C}" Command="{Binding CloseUninstallDialogCommand}" />
+            <Button Content="{DynamicResource L.Text.4FEC200AC3F7FC85}" Classes="danger" Command="{Binding ConfirmUninstallCommand}" />
           </StackPanel>
         </StackPanel>
       </Border>

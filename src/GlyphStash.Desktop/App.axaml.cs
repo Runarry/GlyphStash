@@ -33,6 +33,7 @@ public partial class App : Avalonia.Application
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
+            _serviceProvider.GetRequiredService<IAppLocalizationService>().ApplyAvaloniaResources();
             var shellViewModel = _serviceProvider.GetRequiredService<ShellViewModel>();
             var mainWindow = new MainWindow
             {
@@ -96,6 +97,7 @@ public partial class App : Avalonia.Application
         services.AddSingleton<LocalFontManagementService>();
         services.AddSingleton<OnlineFontService>();
         services.AddSingleton<FontMergeService>();
+        services.AddSingleton<IAppLocalizationService, AppLocalizationService>();
         services.AddSingleton<DesktopStorageDialogService>();
         services.AddSingleton<IUserFileDialogService>(provider => provider.GetRequiredService<DesktopStorageDialogService>());
         services.AddSingleton<IUserClipboardService>(provider => provider.GetRequiredService<DesktopStorageDialogService>());

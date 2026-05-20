@@ -1,3 +1,5 @@
+using GlyphStash.Localization;
+
 namespace GlyphStash.Domain.Fonts;
 
 public static class FontStyleVariantFormatter
@@ -6,7 +8,7 @@ public static class FontStyleVariantFormatter
     {
         if (string.IsNullOrWhiteSpace(variant))
         {
-            return "未知样式";
+            return AppText.TranslateLiteral("未知样式");
         }
 
         var normalized = variant.Trim();
@@ -29,7 +31,7 @@ public static class FontStyleVariantFormatter
         var label = FormatWeightAndSlant(weight, slant);
         if (string.IsNullOrWhiteSpace(label))
         {
-            return string.IsNullOrWhiteSpace(subfamilyName) ? "未知样式" : subfamilyName;
+            return string.IsNullOrWhiteSpace(subfamilyName) ? AppText.TranslateLiteral("未知样式") : subfamilyName;
         }
 
         if (string.IsNullOrWhiteSpace(subfamilyName)

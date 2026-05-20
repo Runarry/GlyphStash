@@ -7,8 +7,8 @@
     <Border Grid.Row="0" Background="{DynamicResource GlyphSurfaceBrush}" BorderBrush="{DynamicResource GlyphBorderBrush}" BorderThickness="0,0,0,1" Padding="24,0">
       <Grid VerticalAlignment="Center">
         <StackPanel>
-          <TextBlock Text="在线字体" Classes="h1" />
-          <TextBlock Text="官方字体源：Google Fonts Developer API。" Classes="muted" Margin="0,5,0,0" />
+          <TextBlock Text="{DynamicResource L.Text.3B3C160E4611CF0F}" Classes="h1" />
+          <TextBlock Text="{DynamicResource L.Text.10165EF9E5FAAA3E}" Classes="muted" Margin="0,5,0,0" />
         </StackPanel>
       </Grid>
     </Border>
@@ -17,34 +17,46 @@
       <Border Grid.Column="0" Classes="panel" Padding="{StaticResource GlyphPanelPadding}">
         <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="14">
           <StackPanel Grid.Row="0" Spacing="7">
-            <TextBlock Text="搜索 family 名称" Classes="caption" FontWeight="Bold" />
+            <TextBlock Text="{DynamicResource L.Text.4DC63E6F57C2CE8F}" Classes="caption" FontWeight="Bold" />
             <TextBox Text="{Binding OnlineSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
           </StackPanel>
           <Grid Grid.Row="1" ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="10">
             <StackPanel Spacing="7">
-              <TextBlock Text="子集" Classes="caption" FontWeight="Bold" />
-              <ComboBox ItemsSource="{Binding OnlineSubsetOptions}" SelectedItem="{Binding SelectedOnlineSubset}" HorizontalAlignment="Stretch" />
+              <TextBlock Text="{DynamicResource L.Text.188C30AF512EDBFC}" Classes="caption" FontWeight="Bold" />
+              <ComboBox ItemsSource="{Binding OnlineSubsetOptionModels}" SelectedItem="{Binding SelectedOnlineSubsetOption, Mode=TwoWay}" HorizontalAlignment="Stretch">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate x:DataType="vm:LocalizedOptionViewModel">
+                    <TextBlock Text="{Binding DisplayName}" />
+                  </DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
             </StackPanel>
             <StackPanel Grid.Column="1" Spacing="7">
-              <TextBlock Text="分类" Classes="caption" FontWeight="Bold" />
-              <ComboBox ItemsSource="{Binding OnlineCategoryOptions}" SelectedItem="{Binding SelectedOnlineCategory}" HorizontalAlignment="Stretch" />
+              <TextBlock Text="{DynamicResource L.Text.515559957FD3ACBD}" Classes="caption" FontWeight="Bold" />
+              <ComboBox ItemsSource="{Binding OnlineCategoryOptionModels}" SelectedItem="{Binding SelectedOnlineCategoryOption, Mode=TwoWay}" HorizontalAlignment="Stretch">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate x:DataType="vm:LocalizedOptionViewModel">
+                    <TextBlock Text="{Binding DisplayName}" />
+                  </DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
             </StackPanel>
             <StackPanel Grid.Row="1" Spacing="7">
-              <TextBlock Text="排序" Classes="caption" FontWeight="Bold" />
+              <TextBlock Text="{DynamicResource L.Text.A96C9A854190874D}" Classes="caption" FontWeight="Bold" />
               <ComboBox ItemsSource="{Binding OnlineSortOptions}" SelectedItem="{Binding SelectedOnlineSort}" HorizontalAlignment="Stretch" />
             </StackPanel>
             <StackPanel Grid.Row="1" Grid.Column="1" Spacing="7">
-              <TextBlock Text="能力" Classes="caption" FontWeight="Bold" />
+              <TextBlock Text="{DynamicResource L.Text.5C5374DD958BCB79}" Classes="caption" FontWeight="Bold" />
               <WrapPanel>
                 <CheckBox Content="VF" IsChecked="{Binding OnlineCapabilityVf, Mode=TwoWay}" Margin="0,0,10,0" />
                 <CheckBox Content="WOFF2" IsChecked="{Binding OnlineCapabilityWoff2, Mode=TwoWay}" />
               </WrapPanel>
             </StackPanel>
-            <Button Grid.Row="2" Grid.ColumnSpan="2" Content="搜索在线字体" Classes="primary" Command="{Binding SearchOnlineFontsCommand}" HorizontalAlignment="Stretch" />
+            <Button Grid.Row="2" Grid.ColumnSpan="2" Content="{DynamicResource L.Text.88DD8589BE0177A2}" Classes="primary" Command="{Binding SearchOnlineFontsCommand}" HorizontalAlignment="Stretch" />
           </Grid>
           <StackPanel Grid.Row="2" Spacing="8">
             <TextBlock Text="{Binding OnlineStatus}" Classes="muted" TextWrapping="Wrap" />
-            <TextBlock Text="正在搜索..." Classes="muted" IsVisible="{Binding IsOnlineSearchBusy}" />
+            <TextBlock Text="{DynamicResource L.Text.47A1FA6F0E1A0D32}" Classes="muted" IsVisible="{Binding IsOnlineSearchBusy}" />
           </StackPanel>
           <ScrollViewer Grid.Row="3">
             <ListBox Classes="font-list" ItemsSource="{Binding RemoteFonts}" SelectedItem="{Binding SelectedRemoteFont, Mode=TwoWay}" IsVisible="{Binding HasRemoteFonts}">
@@ -69,7 +81,7 @@
 
       <Border Grid.Column="1" Classes="panel" Padding="{StaticResource GlyphPanelPadding}">
         <Grid>
-          <TextBlock Text="请选择一个在线字体结果。" Classes="muted" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding !HasSelectedRemoteFont}" />
+          <TextBlock Text="{DynamicResource L.Text.7584B4954722332F}" Classes="muted" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding !HasSelectedRemoteFont}" />
           <ScrollViewer IsVisible="{Binding HasSelectedRemoteFont}">
             <StackPanel Spacing="14">
               <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
@@ -80,23 +92,23 @@
                 <Border Grid.Column="1" Classes="badge ok" VerticalAlignment="Top"><TextBlock Text="Google Fonts" FontSize="12" /></Border>
               </Grid>
               <TextBlock Text="{Binding SelectedRemoteFont.PreviewText}" FontSize="34" TextWrapping="Wrap" />
-              <TextBlock Text="下载不代表可商用，license 信息以来源页面为准，并会随下载记录保存。" Classes="muted" TextWrapping="Wrap" />
+              <TextBlock Text="{DynamicResource L.Text.6E455145643D2A7D}" Classes="muted" TextWrapping="Wrap" />
 
               <UniformGrid Columns="4">
                 <Border Classes="card" Margin="0,0,8,8"><StackPanel><TextBlock Text="Provider" Classes="caption" /><TextBlock Text="Google Fonts" /></StackPanel></Border>
-                <Border Classes="card" Margin="0,0,8,8"><StackPanel><TextBlock Text="支持子集" Classes="caption" /><TextBlock Text="{Binding SelectedRemoteFont.SubsetsLabel}" TextWrapping="Wrap" /></StackPanel></Border>
-                <Border Classes="card" Margin="0,0,8,8"><StackPanel><TextBlock Text="更新日期" Classes="caption" /><TextBlock Text="{Binding SelectedRemoteFont.LastModifiedLabel}" /></StackPanel></Border>
-                <Border Classes="card" Margin="0,0,0,8"><StackPanel><TextBlock Text="本地状态" Classes="caption" /><TextBlock Text="未下载" /></StackPanel></Border>
+                <Border Classes="card" Margin="0,0,8,8"><StackPanel><TextBlock Text="{DynamicResource L.Text.8AFBB424399E6EFE}" Classes="caption" /><TextBlock Text="{Binding SelectedRemoteFont.SubsetsLabel}" TextWrapping="Wrap" /></StackPanel></Border>
+                <Border Classes="card" Margin="0,0,8,8"><StackPanel><TextBlock Text="{DynamicResource L.Text.4BFCAB08E83685FB}" Classes="caption" /><TextBlock Text="{Binding SelectedRemoteFont.LastModifiedLabel}" /></StackPanel></Border>
+                <Border Classes="card" Margin="0,0,0,8"><StackPanel><TextBlock Text="{DynamicResource L.Text.2213B1C2CA53850E}" Classes="caption" /><TextBlock Text="{DynamicResource L.Text.DCCEC95B65E15FF0}" /></StackPanel></Border>
               </UniformGrid>
 
               <Border Classes="card">
                 <StackPanel>
-                  <TextBlock Text="License 来源" Classes="caption" />
+                  <TextBlock Text="{DynamicResource L.Text.8AA6E061038BD5DE}" Classes="caption" />
                   <TextBlock Text="{Binding SelectedRemoteFont.LicenseLabel}" TextWrapping="Wrap" />
                 </StackPanel>
               </Border>
 
-              <TextBlock Text="样式列表" Classes="h2" />
+              <TextBlock Text="{DynamicResource L.Text.91A7B81E0C7B7979}" Classes="h2" />
               <Border Classes="card">
                 <ItemsControl ItemsSource="{Binding SelectedRemoteFont.Styles}">
                   <ItemsControl.ItemTemplate>
@@ -111,19 +123,19 @@
                 </ItemsControl>
               </Border>
 
-              <TextBlock Text="下载后操作" Classes="h2" />
+              <TextBlock Text="{DynamicResource L.Text.CE1C035DE401A838}" Classes="h2" />
               <UniformGrid Columns="2">
-                <CheckBox Content="收藏" IsChecked="{Binding DownloadFavorite, Mode=TwoWay}" />
-                <CheckBox Content="用户级安装" IsChecked="{Binding DownloadInstallForCurrentUser, Mode=TwoWay}" />
-                <CheckBox Content="当前会话临时启用" IsChecked="{Binding DownloadTemporarilyActivate, Mode=TwoWay}" />
-                <TextBox PlaceholderText="标签：开源, UI" Text="{Binding DownloadTagsText, Mode=TwoWay}" />
-                <TextBox PlaceholderText="集合：官网改版" Text="{Binding DownloadCollectionsText, Mode=TwoWay}" />
+                <CheckBox Content="{DynamicResource L.Text.60A53514EB9228A2}" IsChecked="{Binding DownloadFavorite, Mode=TwoWay}" />
+                <CheckBox Content="{DynamicResource L.Text.C05FE82711F59CA0}" IsChecked="{Binding DownloadInstallForCurrentUser, Mode=TwoWay}" />
+                <CheckBox Content="{DynamicResource L.Text.BC2D06CAB2823593}" IsChecked="{Binding DownloadTemporarilyActivate, Mode=TwoWay}" />
+                <TextBox PlaceholderText="{DynamicResource L.Text.7D2324EEFAA7596F}" Text="{Binding DownloadTagsText, Mode=TwoWay}" />
+                <TextBox PlaceholderText="{DynamicResource L.Text.617BC3532A4B626A}" Text="{Binding DownloadCollectionsText, Mode=TwoWay}" />
               </UniformGrid>
-              <Button Content="下载所选样式" Classes="primary" HorizontalAlignment="Left" Command="{Binding DownloadSelectedOnlineFontCommand}" />
+              <Button Content="{DynamicResource L.Text.57F0A323232F919E}" Classes="primary" HorizontalAlignment="Left" Command="{Binding DownloadSelectedOnlineFontCommand}" />
 
               <Border x:Name="OnlineDownloadQueueSection" Classes="card" IsVisible="{Binding HasOnlineDownloadQueue}">
                 <StackPanel Spacing="10">
-                  <TextBlock Text="下载队列" Classes="h2" />
+                  <TextBlock Text="{DynamicResource L.Text.F89E9B7E00628311}" Classes="h2" />
                   <ItemsControl ItemsSource="{Binding OnlineDownloadQueue}">
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="vm:OnlineFontDownloadQueueItemViewModel">
@@ -133,7 +145,7 @@
                             <Border Grid.Column="1" Classes="badge"><TextBlock Text="{Binding StatusLabel}" FontSize="12" /></Border>
                             <TextBlock Grid.Row="1" Text="{Binding StylesLabel}" Classes="muted" TextWrapping="Wrap" />
                             <TextBlock Grid.Row="2" Text="{Binding ErrorMessage}" Classes="muted" TextWrapping="Wrap" IsVisible="{Binding IsFailed}" />
-                            <Button Grid.Row="1" Grid.Column="1" Content="重试" Classes="sm" Command="{Binding $parent[UserControl].((vm:ShellViewModel)DataContext).RetryOnlineDownloadCommand}" CommandParameter="{Binding}" IsVisible="{Binding CanRetry}" />
+                            <Button Grid.Row="1" Grid.Column="1" Content="{DynamicResource L.Text.B8784C8DD5636FF2}" Classes="sm" Command="{Binding $parent[UserControl].((vm:ShellViewModel)DataContext).RetryOnlineDownloadCommand}" CommandParameter="{Binding}" IsVisible="{Binding CanRetry}" />
                           </Grid>
                         </Border>
                       </DataTemplate>
@@ -148,7 +160,7 @@
     </Grid>
 
     <Border Grid.Row="2" Background="{DynamicResource GlyphSurfaceBrush}" BorderBrush="{DynamicResource GlyphBorderBrush}" BorderThickness="0,1,0,0" Padding="24,9">
-      <TextBlock Text="只显示 v1 已接入的官方 API 来源；网络失败、限流和权限错误会保留诊断入口。" Classes="muted" />
+      <TextBlock Text="{DynamicResource L.Text.309C5E6B32708DC5}" Classes="muted" />
     </Border>
   </Grid>
 </UserControl>

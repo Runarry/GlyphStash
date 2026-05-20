@@ -1,8 +1,10 @@
+using CommunityToolkit.Mvvm.ComponentModel;
 using GlyphStash.Domain.Fonts;
+using GlyphStash.Localization;
 
 namespace GlyphStash.Presentation.ViewModels;
 
-public sealed class MergeIssueItemViewModel
+public sealed class MergeIssueItemViewModel : ObservableObject
 {
     private readonly FontMergeIssue _issue;
 
@@ -13,9 +15,9 @@ public sealed class MergeIssueItemViewModel
 
     public string SeverityLabel => _issue.Severity switch
     {
-        FontMergeIssueSeverity.Error => "阻止",
-        FontMergeIssueSeverity.Warning => "提示",
-        _ => "信息"
+        FontMergeIssueSeverity.Error => L("阻止"),
+        FontMergeIssueSeverity.Warning => L("提示"),
+        _ => L("信息")
     };
 
     public string Message => _issue.Message;
@@ -29,4 +31,8 @@ public sealed class MergeIssueItemViewModel
     public bool IsWarning => _issue.Severity == FontMergeIssueSeverity.Warning;
 
     public bool IsInfo => _issue.Severity == FontMergeIssueSeverity.Info;
+
+    public void RefreshLocalizedState() => OnPropertyChanged(nameof(SeverityLabel));
+
+    private static string L(string text) => AppText.TranslateLiteral(text);
 }

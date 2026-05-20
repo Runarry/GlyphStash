@@ -1,8 +1,10 @@
+using CommunityToolkit.Mvvm.ComponentModel;
 using GlyphStash.Domain.Fonts;
+using GlyphStash.Localization;
 
 namespace GlyphStash.Presentation.ViewModels;
 
-public sealed class MergeConflictItemViewModel
+public sealed class MergeConflictItemViewModel : ObservableObject
 {
     private readonly FontMergeConflictItem _item;
 
@@ -21,12 +23,12 @@ public sealed class MergeConflictItemViewModel
 
     public string DecisionLabel => _item.DefaultDecision switch
     {
-        FontMergeDecision.Merge => "合并",
-        FontMergeDecision.SkipDuplicate => "跳过",
-        FontMergeDecision.RecordMissing => "记录缺失",
-        FontMergeDecision.Blocked => "阻止",
-        FontMergeDecision.Overwrite => "覆盖",
-        _ => "未知"
+        FontMergeDecision.Merge => L("合并"),
+        FontMergeDecision.SkipDuplicate => L("跳过"),
+        FontMergeDecision.RecordMissing => L("记录缺失"),
+        FontMergeDecision.Blocked => L("阻止"),
+        FontMergeDecision.Overwrite => AppText.CurrentCultureCode == AppText.EnglishCultureCode ? "Overwrite" : "覆盖",
+        _ => L("未知")
     };
 
     public string Note => _item.Note;
@@ -39,10 +41,19 @@ public sealed class MergeConflictItemViewModel
 
     public bool IsOverwrite => _item.DefaultDecision == FontMergeDecision.Overwrite;
 
+    public void RefreshLocalizedState()
+    {
+        OnPropertyChanged(nameof(BaseStateLabel));
+        OnPropertyChanged(nameof(SupplementalStateLabel));
+        OnPropertyChanged(nameof(DecisionLabel));
+    }
+
     private static string FormatState(FontMergeCodePointState state) => state switch
     {
-        FontMergeCodePointState.Present => "存在",
-        FontMergeCodePointState.Missing => "缺失",
-        _ => "未知"
+        FontMergeCodePointState.Present => L("存在"),
+        FontMergeCodePointState.Missing => L("缺失"),
+        _ => L("未知")
     };
+
+    private static string L(string text) => AppText.TranslateLiteral(text);
 }

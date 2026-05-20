@@ -10,7 +10,7 @@
           <TextBlock Text="{Binding GlyphBrowserTitle}" Classes="h1" />
           <TextBlock Text="{Binding GlyphBrowserDescription}" Classes="muted" Margin="0,5,0,0" />
         </StackPanel>
-        <Button Grid.Column="1" Content="返回字体详情" Command="{Binding BackFromGlyphBrowserCommand}" />
+        <Button Grid.Column="1" Content="{DynamicResource L.Text.03FC34F674A4C5A3}" Command="{Binding BackFromGlyphBrowserCommand}" />
       </Grid>
     </Border>
 
@@ -18,28 +18,28 @@
       <Border Grid.Column="0" Classes="panel" Padding="{StaticResource GlyphPanelPadding}">
         <StackPanel Spacing="14">
           <StackPanel Spacing="7">
-            <TextBlock Text="搜索字符 / Unicode / 输入文本" Classes="caption" FontWeight="Bold" />
-            <TextBox Text="{Binding GlyphSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="你、U+4F60" />
+            <TextBlock Text="{DynamicResource L.Text.53A1A9CD998CC556}" Classes="caption" FontWeight="Bold" />
+            <TextBox Text="{Binding GlyphSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="{DynamicResource L.Text.3EE1A4ADA71C5604}" />
           </StackPanel>
           <StackPanel Spacing="7">
-            <TextBlock Text="Unicode 区块" Classes="caption" FontWeight="Bold" />
+            <TextBlock Text="{DynamicResource L.Text.62EAE7AEBE5756AC}" Classes="caption" FontWeight="Bold" />
             <ComboBox ItemsSource="{Binding UnicodeBlocks}" SelectedItem="{Binding SelectedUnicodeBlock}" HorizontalAlignment="Stretch" />
           </StackPanel>
           <StackPanel Spacing="7">
-            <TextBlock Text="映射状态" Classes="caption" FontWeight="Bold" />
+            <TextBlock Text="{DynamicResource L.Text.9CB5550B9A4D1AD1}" Classes="caption" FontWeight="Bold" />
             <ComboBox SelectedIndex="0" HorizontalAlignment="Stretch">
-              <ComboBoxItem>Unicode 映射字形</ComboBoxItem>
-              <ComboBoxItem IsEnabled="False">未映射字形（后续）</ComboBoxItem>
+              <ComboBoxItem Content="{DynamicResource L.Text.6630CF85D6A25200}" />
+              <ComboBoxItem Content="{DynamicResource L.Text.007609C08F436C5F}" IsEnabled="False" />
             </ComboBox>
           </StackPanel>
           <Border Classes="card">
             <StackPanel Spacing="8">
-              <TextBlock Text="分页" Classes="h2" />
+              <TextBlock Text="{DynamicResource L.Text.41299D9BE86670E7}" Classes="h2" />
               <TextBlock Text="{Binding GlyphPageLabel}" FontWeight="SemiBold" />
-              <TextBlock Text="大型 CJK 字体按页渲染，避免一次性绘制全部字形。" Classes="muted" TextWrapping="Wrap" />
+              <TextBlock Text="{DynamicResource L.Text.CC1781207BA5C4B1}" Classes="muted" TextWrapping="Wrap" />
               <StackPanel Orientation="Horizontal" Spacing="8">
-                <Button Content="上一页" Classes="sm" Command="{Binding PreviousGlyphPageCommand}" />
-                <Button Content="下一页" Classes="sm" Command="{Binding NextGlyphPageCommand}" />
+                <Button Content="{DynamicResource L.Text.C9B9AE7A61444AB7}" Classes="sm" Command="{Binding PreviousGlyphPageCommand}" />
+                <Button Content="{DynamicResource L.Text.8A8542F6964852DC}" Classes="sm" Command="{Binding NextGlyphPageCommand}" />
               </StackPanel>
             </StackPanel>
           </Border>
@@ -50,8 +50,8 @@
       <Border Grid.Column="1" Classes="panel" Padding="{StaticResource GlyphPanelPadding}">
         <Grid RowDefinitions="Auto,*">
           <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,12">
-            <TextBlock Text="字形网格" Classes="h2" />
-            <Border Grid.Column="1" Classes="badge"><TextBlock Text="固定单元 78px" FontSize="12" /></Border>
+            <TextBlock Text="{DynamicResource L.Text.D184B34237E85A19}" Classes="h2" />
+            <Border Grid.Column="1" Classes="badge"><TextBlock Text="{DynamicResource L.Text.BEB41A62F4538C8C}" FontSize="12" /></Border>
           </Grid>
           <TextBlock Grid.Row="1" Text="{Binding GlyphStatus}" Classes="muted" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding !HasGlyphs}" />
           <ListBox Grid.Row="1" Classes="font-list" ItemsSource="{Binding Glyphs}" SelectedItem="{Binding SelectedGlyph, Mode=TwoWay}" IsVisible="{Binding HasGlyphs}">
@@ -76,24 +76,24 @@
 
       <Border Grid.Column="2" Classes="panel" Padding="18">
         <StackPanel Spacing="14">
-          <TextBlock Text="选中字形" Classes="h1" />
+          <TextBlock Text="{DynamicResource L.Text.F9CEFC6B46BE14BB}" Classes="h1" />
           <TextBlock Text="{Binding SelectedGlyph.Character}" FontSize="76" HorizontalAlignment="Center" />
           <UniformGrid Columns="2">
             <Border Classes="card" Margin="0,0,8,8"><StackPanel><TextBlock Text="Unicode" Classes="caption" /><TextBlock Text="{Binding SelectedGlyph.UnicodeLabel}" /></StackPanel></Border>
             <Border Classes="card" Margin="0,0,0,8"><StackPanel><TextBlock Text="Glyph name" Classes="caption" /><TextBlock Text="{Binding SelectedGlyph.GlyphName}" TextWrapping="Wrap" /></StackPanel></Border>
             <Border Classes="card" Margin="0,0,8,0"><StackPanel><TextBlock Text="Glyph ID" Classes="caption" /><TextBlock Text="{Binding SelectedGlyph.GlyphIdLabel}" /></StackPanel></Border>
-            <Border Classes="card"><StackPanel><TextBlock Text="所属样式" Classes="caption" /><TextBlock Text="{Binding SelectedGlyph.FaceName}" /></StackPanel></Border>
+            <Border Classes="card"><StackPanel><TextBlock Text="{DynamicResource L.Text.7F70788BAED78C9E}" Classes="caption" /><TextBlock Text="{Binding SelectedGlyph.FaceName}" /></StackPanel></Border>
           </UniformGrid>
           <StackPanel Orientation="Horizontal" Spacing="10">
-            <Button Content="复制字符" Classes="primary" Command="{Binding CopySelectedGlyphCharacterCommand}" />
-            <Button Content="复制 Unicode" Command="{Binding CopySelectedGlyphUnicodeCommand}" />
+            <Button Content="{DynamicResource L.Text.035C96C316D0211B}" Classes="primary" Command="{Binding CopySelectedGlyphCharacterCommand}" />
+            <Button Content="{DynamicResource L.Text.7535A31A55ED4248}" Command="{Binding CopySelectedGlyphUnicodeCommand}" />
           </StackPanel>
         </StackPanel>
       </Border>
     </Grid>
 
     <Border Grid.Row="2" Background="{DynamicResource GlyphSurfaceBrush}" BorderBrush="{DynamicResource GlyphBorderBrush}" BorderThickness="0,1,0,0" Padding="24,9">
-      <TextBlock Text="缺字搜索会显示当前字体不包含该字符/码位；未映射 glyph 入口已预留。" Classes="muted" />
+      <TextBlock Text="{DynamicResource L.Text.CA107E8EA2098299}" Classes="muted" />
     </Border>
   </Grid>
 </UserControl>

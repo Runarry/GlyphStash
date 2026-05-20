@@ -2,6 +2,7 @@ using System.Runtime.Versioning;
 using GlyphStash.Application.Abstractions.Fonts;
 using GlyphStash.Application.Fonts;
 using GlyphStash.Domain.Fonts;
+using GlyphStash.Localization;
 using Microsoft.Win32;
 
 namespace GlyphStash.Platform.Windows.Fonts;
@@ -24,7 +25,7 @@ public sealed class WindowsFontInstallService : IFontInstallService
         cancellationToken.ThrowIfCancellationRequested();
         if (!fontFile.HasPhysicalPath || !File.Exists(fontFile.Path))
         {
-            return Task.FromResult(new FontInstallResult(false, fontFile.Path, null, "字体文件不存在或不是本地物理路径。"));
+            return Task.FromResult(new FontInstallResult(false, fontFile.Path, null, L("字体文件不存在或不是本地物理路径。")));
         }
 
         var userFontsDirectory = GetUserFontsDirectory();
@@ -36,15 +37,15 @@ public sealed class WindowsFontInstallService : IFontInstallService
         }
 
         using var key = Registry.CurrentUser.CreateSubKey(FontsRegistryPath, writable: true)
-            ?? throw new InvalidOperationException("无法打开当前用户字体注册表。");
+            ?? throw new InvalidOperationException(L("无法打开当前用户字体注册表。"));
         var valueName = BuildRegistryValueName(destination, fontFile.Format);
         key.SetValue(valueName, destination, RegistryValueKind.String);
 
         var loaded = _fontApi.AddFontResourceEx(destination, PublicSessionFlags);
         _fontApi.BroadcastFontChange();
         return Task.FromResult(loaded > 0
-            ? new FontInstallResult(true, fontFile.Path, destination, "字体已安装到当前用户。")
-            : new FontInstallResult(false, fontFile.Path, destination, "字体文件已复制并写入注册表，但 Windows 未立即加载该字体。"));
+            ? new FontInstallResult(true, fontFile.Path, destination, L("字体已安装到当前用户。"))
+            : new FontInstallResult(false, fontFile.Path, destination, L("字体文件已复制并写入注册表，但 Windows 未立即加载该字体。")));
     }
 
     public Task<FontUninstallResult> UninstallManagedFontAsync(ManagedFontRecord managedFont, CancellationToken cancellationToken)
@@ -53,7 +54,7 @@ public sealed class WindowsFontInstallService : IFontInstallService
         var installedPath = managedFont.InstalledFilePath ?? managedFont.ManagedFilePath;
         if (string.IsNullOrWhiteSpace(installedPath))
         {
-            return Task.FromResult(new FontUninstallResult(false, managedFont.ManagedFilePath, "未找到已安装字体路径。"));
+            return Task.FromResult(new FontUninstallResult(false, managedFont.ManagedFilePath, L("未找到已安装字体路径。")));
         }
 
         RemoveRegistryValues(installedPath);
@@ -67,7 +68,7 @@ public sealed class WindowsFontInstallService : IFontInstallService
             deleted = true;
         }
 
-        return Task.FromResult(new FontUninstallResult(true, installedPath, deleted ? "字体已从当前用户安装位置卸载并删除 GlyphStash 副本。" : "字体已从当前用户字体注册表卸载。"));
+        return Task.FromResult(new FontUninstallResult(true, installedPath, deleted ? L("字体已从当前用户安装位置卸载并删除 GlyphStash 副本。") : L("字体已从当前用户字体注册表卸载。")));
     }
 
     private static string GetUserFontsDirectory() =>
@@ -111,4 +112,6 @@ public sealed class WindowsFontInstallService : IFontInstallService
         return installedPath.StartsWith(userFonts, StringComparison.OrdinalIgnoreCase)
             && Path.GetFileName(installedPath).StartsWith("GlyphStash-", StringComparison.OrdinalIgnoreCase);
     }
+
+    private static string L(string text) => AppText.TranslateLiteral(text);
 }

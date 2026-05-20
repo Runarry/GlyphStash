@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="Settings.Language" xml:space="preserve"><value>Language</value></data>
+  <data name="Settings.LanguageDescription" xml:space="preserve"><value>Changing the UI language refreshes the current window immediately and saves the setting locally.</value></data>
+  <data name="Common.Configured" xml:space="preserve"><value>Configured</value></data>
+  <data name="Common.NotConfigured" xml:space="preserve"><value>Not configured</value></data>
+  <data name="Label.ManagedDirectoryReady" xml:space="preserve"><value>Selected; writability will be checked during import</value></data>
+  <data name="Label.ManagedDirectoryRequired" xml:space="preserve"><value>Required before import</value></data>
+  <data name="Log.ManagedDirectoryUpdatedFormat" xml:space="preserve"><value>Managed directory updated: {0}</value></data>
+  <data name="Log.GoogleFontsApiKeyUpdated" xml:space="preserve"><value>Google Fonts API key updated.</value></data>
+  <data name="Log.UiCultureUpdatedFormat" xml:space="preserve"><value>UI language updated: {0}</value></data>
+  <data name="Toast.LanguageChangedFormat" xml:space="preserve"><value>UI language changed to: {0}</value></data>
+  <data name="Common.FontFiles" xml:space="preserve"><value>Font files</value></data>
+  <data name="Dialog.PickFontFilesTitle" xml:space="preserve"><value>Select font files</value></data>
+  <data name="Dialog.PickManagedDirectoryTitle" xml:space="preserve"><value>Select GlyphStash managed directory</value></data>
+  <data name="Dialog.PickMergeOutputTitle" xml:space="preserve"><value>Select merge output font file</value></data>
+  <data name="Dialog.PickMergeReportTitle" xml:space="preserve"><value>Select GlyphStash merge report</value></data>
+  <data name="Dialog.MergeReportFileType" xml:space="preserve"><value>GlyphStash merge report</value></data>
+</root>

@@ -12,10 +12,10 @@
             Padding="24,0">
       <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
         <StackPanel>
-          <TextBlock Text="设置" Classes="h1" />
-          <TextBlock Text="管理目录、在线字体源、临时字体兼容性矩阵和诊断日志。" Classes="muted" Margin="0,5,0,0" />
+          <TextBlock Text="{DynamicResource L.Text.DF3D58C7D84B85F2}" Classes="h1" />
+          <TextBlock Text="{DynamicResource L.Text.5935AECA04C45D7B}" Classes="muted" Margin="0,5,0,0" />
         </StackPanel>
-        <Button Grid.Column="1" Content="选择管理目录" Classes="primary" Command="{Binding ChooseManagedDirectoryCommand}" />
+        <Button Grid.Column="1" Content="{DynamicResource L.Text.58FBE43DC5FA02FE}" Classes="primary" Command="{Binding ChooseManagedDirectoryCommand}" />
       </Grid>
     </Border>
 
@@ -25,25 +25,25 @@
           <Border Grid.Column="0" Classes="panel" Padding="{StaticResource GlyphPanelPadding}">
             <StackPanel Spacing="12">
               <Grid ColumnDefinitions="*,Auto">
-                <TextBlock Text="本地管理目录" Classes="h2" />
+                <TextBlock Text="{DynamicResource L.Text.0AF5B0C22604E63B}" Classes="h2" />
                 <Border Grid.Column="1" Classes="badge ok"><TextBlock Text="{Binding ManagedDirectoryStatus}" FontSize="12" /></Border>
               </Grid>
               <TextBlock Text="{Binding ManagedFontDirectory}" TextWrapping="Wrap" />
-              <TextBlock Text="所有导入文件默认限制在 GlyphStash 管理目录；用户级安装会再复制到 Windows 当前用户字体目录。" Classes="muted" TextWrapping="Wrap" />
+              <TextBlock Text="{DynamicResource L.Text.0FDD3B634A219DC5}" Classes="muted" TextWrapping="Wrap" />
             </StackPanel>
           </Border>
 
           <Border Grid.Column="1" Classes="panel" Padding="{StaticResource GlyphPanelPadding}">
             <StackPanel Spacing="12">
-              <TextBlock Text="M2 支持格式" Classes="h2" />
+              <TextBlock Text="{DynamicResource L.Text.EE42D5CDB0340DAF}" Classes="h2" />
               <WrapPanel>
                 <Border Classes="badge ok" Margin="0,0,7,7"><TextBlock Text="TTF" /></Border>
                 <Border Classes="badge ok" Margin="0,0,7,7"><TextBlock Text="OTF" /></Border>
                 <Border Classes="badge ok" Margin="0,0,7,7"><TextBlock Text="TTC" /></Border>
                 <Border Classes="badge ok" Margin="0,0,7,7"><TextBlock Text="OTC" /></Border>
-                <Border Classes="badge warn" Margin="0,0,7,7"><TextBlock Text="WOFF/WOFF2 仅识别" /></Border>
+                <Border Classes="badge warn" Margin="0,0,7,7"><TextBlock Text="{DynamicResource L.Text.212BF7E284C07D5B}" /></Border>
               </WrapPanel>
-              <TextBlock Text="WOFF/WOFF2 不执行 Windows 本地安装或会话级临时启用。" Classes="muted" TextWrapping="Wrap" />
+              <TextBlock Text="{DynamicResource L.Text.28944036E53ECC33}" Classes="muted" TextWrapping="Wrap" />
             </StackPanel>
           </Border>
         </Grid>
@@ -52,19 +52,39 @@
           <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
             <StackPanel Spacing="10">
               <Grid ColumnDefinitions="*,Auto">
-                <TextBlock Text="在线字体源" Classes="h2" />
+                <TextBlock Text="{DynamicResource L.Text.AAADBE1072940984}" Classes="h2" />
                 <Border Grid.Column="1" Classes="badge warn"><TextBlock Text="{Binding GoogleFontsApiKeyStatus}" FontSize="12" /></Border>
               </Grid>
-              <TextBlock Text="v1 只接入 Google Fonts Developer API；license 以字体来源页面链接为准。" Classes="muted" TextWrapping="Wrap" />
+              <TextBlock Text="{DynamicResource L.Text.6C0E01EED4D4DFB3}" Classes="muted" TextWrapping="Wrap" />
               <TextBox PasswordChar="*" PlaceholderText="Google Fonts API key" Text="{Binding GoogleFontsApiKeyText, Mode=TwoWay}" />
             </StackPanel>
-            <Button Grid.Column="1" Content="保存 API key" Classes="primary" Command="{Binding SaveGoogleFontsApiKeyCommand}" VerticalAlignment="Bottom" />
+            <Button Grid.Column="1" Content="{DynamicResource L.Text.53BC5404459457AB}" Classes="primary" Command="{Binding SaveGoogleFontsApiKeyCommand}" VerticalAlignment="Bottom" />
+          </Grid>
+        </Border>
+
+        <Border Classes="panel" Padding="{StaticResource GlyphPanelPadding}">
+          <Grid ColumnDefinitions="*,240" ColumnSpacing="16">
+            <StackPanel Spacing="10">
+              <TextBlock Text="{DynamicResource L.Settings.Language}" Classes="h2" />
+              <TextBlock Text="{DynamicResource L.Settings.LanguageDescription}" Classes="muted" TextWrapping="Wrap" />
+            </StackPanel>
+            <ComboBox Grid.Column="1"
+                      ItemsSource="{Binding LanguageOptions}"
+                      SelectedItem="{Binding SelectedLanguage, Mode=TwoWay}"
+                      HorizontalAlignment="Stretch"
+                      VerticalAlignment="Center">
+              <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:LanguageOptionViewModel">
+                  <TextBlock Text="{Binding DisplayName}" />
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
           </Grid>
         </Border>
 
         <Border Classes="panel" Padding="{StaticResource GlyphPanelPadding}">
           <StackPanel Spacing="12">
-            <TextBlock Text="临时字体外部应用兼容性矩阵" Classes="h2" />
+            <TextBlock Text="{DynamicResource L.Text.A653344F063233CE}" Classes="h2" />
             <ItemsControl ItemsSource="{Binding CompatibilityMatrix}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="sys:String">
@@ -79,7 +99,7 @@
 
         <Border Classes="panel" Padding="{StaticResource GlyphPanelPadding}">
           <StackPanel Spacing="12">
-            <TextBlock Text="诊断日志" Classes="h2" />
+            <TextBlock Text="{DynamicResource L.Text.BB1D19B85634606E}" Classes="h2" />
             <ItemsControl ItemsSource="{Binding OperationLogs}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:OperationLogItemViewModel">
@@ -102,7 +122,7 @@
             BorderBrush="{DynamicResource GlyphBorderBrush}"
             BorderThickness="0,1,0,0"
             Padding="24,9">
-      <TextBlock Text="当前路径：Windows 用户级字体管理；临时启用不会写成永久安装。" Classes="muted" />
+      <TextBlock Text="{DynamicResource L.Text.6BB0F905838DFE4F}" Classes="muted" />
     </Border>
   </Grid>
 </UserControl>

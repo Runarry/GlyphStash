@@ -1,6 +1,7 @@
 using GlyphStash.Application.Abstractions.Fonts;
 using GlyphStash.Application.Abstractions.Storage;
 using GlyphStash.Domain.Fonts;
+using GlyphStash.Localization;
 
 namespace GlyphStash.Application.Fonts;
 
@@ -46,7 +47,7 @@ public sealed class OnlineFontService
         var settings = await RequireSettingsAsync(cancellationToken).ConfigureAwait(false);
         if (string.IsNullOrWhiteSpace(settings.GoogleFontsApiKey))
         {
-            throw new InvalidOperationException("需要先在设置页配置 Google Fonts API key。");
+            throw new InvalidOperationException(L("需要先在设置页配置 Google Fonts API key。"));
         }
 
         return await _provider.SearchAsync(new RemoteFontSearchQuery(searchText, settings.GoogleFontsApiKey, subset, category, capabilities, sort), cancellationToken).ConfigureAwait(false);
@@ -64,18 +65,18 @@ public sealed class OnlineFontService
         var settings = await RequireSettingsAsync(cancellationToken).ConfigureAwait(false);
         if (string.IsNullOrWhiteSpace(settings.GoogleFontsApiKey))
         {
-            throw new InvalidOperationException("需要先在设置页配置 Google Fonts API key。");
+            throw new InvalidOperationException(L("需要先在设置页配置 Google Fonts API key。"));
         }
 
         if (string.IsNullOrWhiteSpace(settings.ManagedFontDirectory))
         {
-            throw new InvalidOperationException("需要先选择 GlyphStash 管理目录。");
+            throw new InvalidOperationException(L("需要先选择 GlyphStash 管理目录。"));
         }
 
         var selectedStyles = styles.Where(style => !string.IsNullOrWhiteSpace(style.DownloadUrl)).ToList();
         if (selectedStyles.Count == 0)
         {
-            throw new InvalidOperationException("请选择至少一个可下载样式。");
+            throw new InvalidOperationException(L("请选择至少一个可下载样式。"));
         }
 
         var result = await _provider.DownloadAsync(
@@ -104,7 +105,7 @@ public sealed class OnlineFontService
                 fontFile);
             var installResult = options.InstallForCurrentUser
                 ? await _installService.InstallForCurrentUserAsync(new FontFileRef(finalFile.LocalPath, finalFile.Format, finalFile.Sha256), cancellationToken).ConfigureAwait(false)
-                : new FontInstallResult(true, finalFile.LocalPath, null, "未选择用户级安装。");
+                : new FontInstallResult(true, finalFile.LocalPath, null, L("未选择用户级安装。"));
             var shouldActivate = !options.InstallForCurrentUser && options.TemporarilyActivate;
             if (shouldActivate)
             {
@@ -160,9 +161,9 @@ public sealed class OnlineFontService
                 cancellationToken).ConfigureAwait(false);
         }
 
-        await LogAsync("online-fonts", "download", $"已下载在线字体：{family.FamilyName} ({finalFiles.Count} 个样式)", family.FamilyName, true, cancellationToken)
+        await LogAsync("online-fonts", "download", AppText.FormatLiteral("已下载在线字体：{0} ({1} 个样式)", "Downloaded online font: {0} ({1} styles)", family.FamilyName, finalFiles.Count), family.FamilyName, true, cancellationToken)
             .ConfigureAwait(false);
-        return result with { Files = finalFiles, Message = $"已下载 {finalFiles.Count} 个样式。" };
+        return result with { Files = finalFiles, Message = AppText.FormatLiteral("已下载 {0} 个样式。", "Downloaded {0} styles.", finalFiles.Count) };
     }
 
     private async Task<UserFontSettings> RequireSettingsAsync(CancellationToken cancellationToken) =>
@@ -171,6 +172,7 @@ public sealed class OnlineFontService
     private Task LogAsync(string category, string action, string message, string? target, bool succeeded, CancellationToken cancellationToken) =>
         _operationLogStore.AppendOperationAsync(new OperationLogEntry(DateTimeOffset.UtcNow, category, action, message, target, succeeded), cancellationToken);
 
+    private static string L(string text) => AppText.TranslateLiteral(text);
 }
 
 public sealed record OnlineFontImportOptions(

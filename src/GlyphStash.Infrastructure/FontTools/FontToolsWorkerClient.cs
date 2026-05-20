@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using GlyphStash.Application.Abstractions.Fonts;
 using GlyphStash.Application.Fonts;
 using GlyphStash.Domain.Fonts;
+using GlyphStash.Localization;
 
 namespace GlyphStash.Infrastructure.FontTools;
 
@@ -46,7 +47,7 @@ public sealed class FontToolsWorkerClient : IFontMergeWorker
         CancellationToken cancellationToken)
     {
         var response = await RunAsync("preview", request, progress, cancellationToken).ConfigureAwait(false);
-        return response.Preview ?? throw new InvalidOperationException("fontTools worker 未返回预览结果。");
+        return response.Preview ?? throw new InvalidOperationException(L("fontTools worker 未返回预览结果。"));
     }
 
     public async Task<FontMergeWorkerMergeResult> MergeAsync(
@@ -55,7 +56,7 @@ public sealed class FontToolsWorkerClient : IFontMergeWorker
         CancellationToken cancellationToken)
     {
         var response = await RunAsync("merge", request, progress, cancellationToken).ConfigureAwait(false);
-        var preview = response.Preview ?? throw new InvalidOperationException("fontTools worker 未返回合并结果。");
+        var preview = response.Preview ?? throw new InvalidOperationException(L("fontTools worker 未返回合并结果。"));
         return new FontMergeWorkerMergeResult(preview, response.OutputPath ?? request.OutputPath);
     }
 
@@ -111,18 +112,18 @@ public sealed class FontToolsWorkerClient : IFontMergeWorker
             if (process.ExitCode != 0)
             {
                 throw new InvalidOperationException(string.IsNullOrWhiteSpace(stderr)
-                    ? $"fontTools worker 退出码：{process.ExitCode}"
+                    ? AppText.FormatLiteral("fontTools worker 退出码：{0}", "fontTools worker exit code: {0}", process.ExitCode)
                     : stderr.Trim());
             }
 
             if (!File.Exists(responsePath))
             {
-                throw new InvalidOperationException("fontTools worker 未写入响应文件。");
+                throw new InvalidOperationException(L("fontTools worker 未写入响应文件。"));
             }
 
             await using var stream = File.OpenRead(responsePath);
             var response = await JsonSerializer.DeserializeAsync(stream, JsonContext.FontToolsWorkerResponseMessage, cancellationToken).ConfigureAwait(false)
-                ?? throw new InvalidOperationException("fontTools worker 响应格式无效。");
+                ?? throw new InvalidOperationException(L("fontTools worker 响应格式无效。"));
             if (!string.IsNullOrWhiteSpace(response.ErrorMessage))
             {
                 throw new InvalidOperationException(response.ErrorMessage);
@@ -199,6 +200,7 @@ public sealed class FontToolsWorkerClient : IFontMergeWorker
         }
     }
 
+    private static string L(string text) => AppText.TranslateLiteral(text);
 }
 
 internal sealed record FontToolsWorkerRequestMessage(

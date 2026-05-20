@@ -411,7 +411,7 @@ public sealed class SqliteFontMetadataStoreTests
 
         await store.InitializeAsync(CancellationToken.None);
         await store.SaveFontIndexAsync([CreateInstalledFamily("Inter")], CancellationToken.None);
-        await settingsStore.SaveSettingsAsync(new UserFontSettings("C:/GlyphStash/fonts"), CancellationToken.None);
+        await settingsStore.SaveSettingsAsync(new UserFontSettings("C:/GlyphStash/fonts", UiCultureCode: "en-US"), CancellationToken.None);
         await collectionStore.CreateCollectionAsync("官网改版", CancellationToken.None);
         await collectionStore.AddFontToCollectionAsync("官网改版", "Inter", CancellationToken.None);
         await activationStore.UpsertActivationAsync(new ActivationRecord("C:/GlyphStash/fonts/Inter.otf", "collection:官网改版", 1, 0, DateTimeOffset.UtcNow, "Active", ""), CancellationToken.None);
@@ -423,6 +423,7 @@ public sealed class SqliteFontMetadataStoreTests
         var logs = await logStore.GetRecentOperationsAsync(5, CancellationToken.None);
 
         Assert.Equal("C:/GlyphStash/fonts", settings?.ManagedFontDirectory);
+        Assert.Equal("en-US", settings?.UiCultureCode);
         Assert.Single(collections);
         Assert.Contains("Inter", collections[0].FamilyNames);
         Assert.Single(activations);
@@ -441,7 +442,7 @@ public sealed class SqliteFontMetadataStoreTests
         var downloadStore = (IDownloadRecordStore)store;
 
         await store.InitializeAsync(CancellationToken.None);
-        await settingsStore.SaveSettingsAsync(new UserFontSettings("C:/GlyphStash/fonts", "fixture-key"), CancellationToken.None);
+        await settingsStore.SaveSettingsAsync(new UserFontSettings("C:/GlyphStash/fonts", "fixture-key", "zh-CN"), CancellationToken.None);
         await downloadStore.AddDownloadRecordAsync(
             new DownloadRecord(
                 "google-fonts",
@@ -459,6 +460,7 @@ public sealed class SqliteFontMetadataStoreTests
         var downloads = await downloadStore.GetRecentDownloadRecordsAsync(5, CancellationToken.None);
 
         Assert.Equal("fixture-key", settings?.GoogleFontsApiKey);
+        Assert.Equal("zh-CN", settings?.UiCultureCode);
         Assert.Single(downloads);
         Assert.Equal("Noto Sans", downloads[0].FamilyName);
         Assert.Contains("fonts.google.com", downloads[0].LicenseText, StringComparison.Ordinal);

@@ -1,6 +1,7 @@
 using System.Buffers.Binary;
 using GlyphStash.Application.Abstractions.Fonts;
 using GlyphStash.Domain.Fonts;
+using GlyphStash.Localization;
 
 namespace GlyphStash.Infrastructure.Glyphs;
 
@@ -16,7 +17,7 @@ public sealed class OpenTypeGlyphCatalogService : IGlyphCatalogService
     {
         if (string.IsNullOrWhiteSpace(query.FontFilePath) || !File.Exists(query.FontFilePath))
         {
-            return Empty(query, "当前字体没有可读取的本地文件路径。");
+            return Empty(query, L("当前字体没有可读取的本地文件路径。"));
         }
 
         var bytes = await File.ReadAllBytesAsync(query.FontFilePath, cancellationToken).ConfigureAwait(false);
@@ -24,7 +25,7 @@ public sealed class OpenTypeGlyphCatalogService : IGlyphCatalogService
         var tables = ReadTableDirectory(bytes, fontOffset);
         if (!tables.TryGetValue("cmap", out var cmap))
         {
-            return Empty(query, "当前字体缺少 Unicode cmap 表。");
+            return Empty(query, L("当前字体缺少 Unicode cmap 表。"));
         }
 
         var names = tables.TryGetValue("post", out var post) ? ReadPostNames(bytes, post.Offset, post.Length) : [];
@@ -39,7 +40,7 @@ public sealed class OpenTypeGlyphCatalogService : IGlyphCatalogService
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
             .ToList();
-        var emptyMessage = glyphs.Count == 0 ? "当前字体不包含该字符/码位。" : "";
+        var emptyMessage = glyphs.Count == 0 ? L("当前字体不包含该字符/码位。") : "";
         return new GlyphPage(page, blocks, pageNumber, pageSize, glyphs.Count, emptyMessage);
     }
 
@@ -47,7 +48,7 @@ public sealed class OpenTypeGlyphCatalogService : IGlyphCatalogService
     {
         if (string.IsNullOrWhiteSpace(query.FontFilePath) || !File.Exists(query.FontFilePath))
         {
-            return EmptyCoverage("当前字体没有可读取的本地文件路径。");
+            return EmptyCoverage(L("当前字体没有可读取的本地文件路径。"));
         }
 
         var bytes = await File.ReadAllBytesAsync(query.FontFilePath, cancellationToken).ConfigureAwait(false);
@@ -55,14 +56,14 @@ public sealed class OpenTypeGlyphCatalogService : IGlyphCatalogService
         var tables = ReadTableDirectory(bytes, fontOffset);
         if (!tables.TryGetValue("cmap", out var cmap))
         {
-            return EmptyCoverage("当前字体缺少 Unicode cmap 表。");
+            return EmptyCoverage(L("当前字体缺少 Unicode cmap 表。"));
         }
 
         var glyphs = ReadUnicodeMappings(bytes, cmap.Offset, cmap.Length, new Dictionary<int, string>(), query.FaceName);
         var ranges = BuildCoverageRanges(glyphs.Select(glyph => glyph.CodePoint));
         var segments = BuildCoverageSegments(ranges);
         var blocks = BuildCoverageBlocks(glyphs);
-        var emptyMessage = glyphs.Count == 0 ? "当前字体没有 Unicode 映射覆盖。" : "";
+        var emptyMessage = glyphs.Count == 0 ? L("当前字体没有 Unicode 映射覆盖。") : "";
         return new GlyphCoverage(ranges, blocks, segments, glyphs.Count, emptyMessage);
     }
 
@@ -220,7 +221,7 @@ public sealed class OpenTypeGlyphCatalogService : IGlyphCatalogService
     {
         if (cmapOffset < 0 || cmapOffset + cmapLength > bytes.Length || cmapLength < 4)
         {
-            throw new InvalidOperationException("字体 cmap 表不完整。");
+            throw new InvalidOperationException(L("字体 cmap 表不完整。"));
         }
 
         var subtableOffset = FindBestCmapSubtable(bytes, cmapOffset, cmapLength);
@@ -457,4 +458,6 @@ public sealed class OpenTypeGlyphCatalogService : IGlyphCatalogService
     private static uint ReadUInt32(ReadOnlySpan<byte> bytes, int offset) => BinaryPrimitives.ReadUInt32BigEndian(bytes.Slice(offset, 4));
 
     private sealed record TableRecord(int Offset, int Length);
+
+    private static string L(string text) => AppText.TranslateLiteral(text);
 }
