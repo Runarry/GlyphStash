@@ -6,6 +6,7 @@ using GlyphStash.Application.Abstractions.Fonts;
 using GlyphStash.Application.Fonts;
 using GlyphStash.Domain.Fonts;
 using GlyphStash.Presentation.Services;
+using DomainUnicodeRange = GlyphStash.Domain.Fonts.UnicodeRange;
 
 namespace GlyphStash.Presentation.ViewModels;
 
@@ -25,6 +26,7 @@ public sealed partial class ShellViewModel : ObservableObject
     private FontFaceItemViewModel? _currentGlyphFace;
     private FontMergePreview? _currentMergePreview;
     private CancellationTokenSource? _mergeCancellation;
+    private readonly List<MergeRangeSegmentItemViewModel> _allMergeRangeSegments = [];
 
     [ObservableProperty]
     private NavigationItemViewModel? _selectedNavigationItem;
@@ -210,6 +212,24 @@ public sealed partial class ShellViewModel : ObservableObject
     private string _mergeUnicodeRanges = "U+4E00-U+9FFF";
 
     [ObservableProperty]
+    private bool _isMergeRangeDialogOpen;
+
+    [ObservableProperty]
+    private bool _isMergeRangeDialogBusy;
+
+    [ObservableProperty]
+    private string _mergeRangeDialogStatus = "请选择基础字体和补充字体。";
+
+    [ObservableProperty]
+    private string _mergeRangeBaseSummary = "未读取基础字体 A。";
+
+    [ObservableProperty]
+    private string _mergeRangeSupplementalSummary = "未读取补充字体 B。";
+
+    [ObservableProperty]
+    private MergeRangeBlockItemViewModel? _selectedMergeRangeBlock;
+
+    [ObservableProperty]
     private string _selectedMergeModeLabel = "补全（追加）";
 
     [ObservableProperty]
@@ -322,6 +342,10 @@ public sealed partial class ShellViewModel : ObservableObject
     public ObservableCollection<FontFamilyItemViewModel> MergeBaseFonts { get; } = [];
 
     public ObservableCollection<FontFamilyItemViewModel> MergeSupplementalFonts { get; } = [];
+
+    public ObservableCollection<MergeRangeBlockItemViewModel> MergeRangeBlocks { get; } = [];
+
+    public ObservableCollection<MergeRangeSegmentItemViewModel> MergeRangeSegments { get; } = [];
 
     public ObservableCollection<MergeStepItemViewModel> MergeSteps { get; } =
     [
@@ -540,6 +564,23 @@ public sealed partial class ShellViewModel : ObservableObject
 
     public bool HasMergeIssues => MergeIssues.Count > 0;
 
+    public bool HasMergeRangeBlocks => MergeRangeBlocks.Count > 0;
+
+    public bool HasMergeRangeSegments => MergeRangeSegments.Count > 0;
+
+    public bool HasLoadedMergeRangeSegments => _allMergeRangeSegments.Count > 0;
+
+    public bool IsMergeRangeEmptyVisible => !IsMergeRangeDialogBusy && !HasLoadedMergeRangeSegments;
+
+    public bool IsMergeRangeBlockEmptyVisible => !IsMergeRangeDialogBusy && HasLoadedMergeRangeSegments && !HasMergeRangeSegments;
+
+    public bool HasSelectedMergeRangeSegments => _allMergeRangeSegments.Any(segment => segment.IsSelected);
+
+    public bool CanApplyMergeRangeSelection => !IsMergeRangeDialogBusy && HasSelectedMergeRangeSegments;
+
+    public string MergeRangeSelectedCountLabel =>
+        $"{_allMergeRangeSegments.Count(segment => segment.IsSelected):N0} 段已选择";
+
     public bool HasMergeReport => !string.IsNullOrWhiteSpace(MergeReportOutputPath) || !string.IsNullOrWhiteSpace(MergeReportErrorMessage);
 
     public bool CanGoPreviousMergeStep => MergeStepIndex > 0 && !IsMergeBusy;
@@ -741,6 +782,103 @@ public sealed partial class ShellViewModel : ObservableObject
 
         MergeUnicodeRanges = block;
         MergeStatus = $"已选择 Unicode 范围：{block}";
+    }
+
+    [RelayCommand]
+    private async Task OpenMergeRangeDialogAsync()
+    {
+        IsMergeRangeDialogOpen = true;
+        ClearMergeRangeDialog();
+
+        if (_glyphCatalogService is null)
+        {
+            MergeRangeDialogStatus = "字形覆盖服务未装配。";
+            return;
+        }
+
+        var baseFace = SelectMergeFace(SelectedMergeBaseFont);
+        var supplementalFace = SelectMergeFace(SelectedMergeSupplementalFont);
+        MergeRangeBaseSummary = BuildPendingMergeRangeSummary(SelectedMergeBaseFont, baseFace, "基础字体 A");
+        MergeRangeSupplementalSummary = BuildPendingMergeRangeSummary(SelectedMergeSupplementalFont, supplementalFace, "补充字体 B");
+        if (SelectedMergeBaseFont is null || SelectedMergeSupplementalFont is null || baseFace is null || supplementalFace is null)
+        {
+            MergeRangeDialogStatus = "请先选择基础字体 A 和补充字体 B。";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(baseFace.FilePath) || !File.Exists(baseFace.FilePath))
+        {
+            MergeRangeDialogStatus = $"基础字体 A 的样式 {baseFace.StyleLabel} 没有可读取的本地文件路径。";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(supplementalFace.FilePath) || !File.Exists(supplementalFace.FilePath))
+        {
+            MergeRangeDialogStatus = $"补充字体 B 的样式 {supplementalFace.StyleLabel} 没有可读取的本地文件路径。";
+            return;
+        }
+
+        IsMergeRangeDialogBusy = true;
+        MergeRangeDialogStatus = "正在读取两个字体的 Unicode cmap 覆盖...";
+        try
+        {
+            var baseCoverage = await _glyphCatalogService.GetCoverageAsync(
+                new GlyphCoverageQuery(baseFace.FilePath, baseFace.StyleLabel),
+                CancellationToken.None);
+            var supplementalCoverage = await _glyphCatalogService.GetCoverageAsync(
+                new GlyphCoverageQuery(supplementalFace.FilePath, supplementalFace.StyleLabel),
+                CancellationToken.None);
+
+            MergeRangeBaseSummary = BuildCoverageSummary(SelectedMergeBaseFont.FamilyName, baseFace.StyleLabel, baseCoverage);
+            MergeRangeSupplementalSummary = BuildCoverageSummary(SelectedMergeSupplementalFont.FamilyName, supplementalFace.StyleLabel, supplementalCoverage);
+            BuildMergeRangeComparison(baseCoverage, supplementalCoverage);
+            MergeRangeDialogStatus = _allMergeRangeSegments.Count == 0
+                ? "两个字体都没有可选择的 Unicode 映射覆盖。"
+                : $"已读取 {_allMergeRangeSegments.Count:N0} 个实际连续覆盖段；选择后会替换当前 Unicode 范围输入。";
+        }
+        catch (Exception ex)
+        {
+            MergeRangeDialogStatus = BuildErrorMessage(ex);
+        }
+        finally
+        {
+            IsMergeRangeDialogBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    private void CloseMergeRangeDialog()
+    {
+        IsMergeRangeDialogOpen = false;
+    }
+
+    [RelayCommand]
+    private void SelectMergeRangeBlock(MergeRangeBlockItemViewModel? block)
+    {
+        SelectedMergeRangeBlock = block;
+    }
+
+    [RelayCommand]
+    private void ApplyMergeRangeSelection()
+    {
+        var ranges = _allMergeRangeSegments
+            .Where(segment => segment.IsSelected)
+            .Select(segment => segment.Range)
+            .ToList();
+        if (ranges.Count == 0)
+        {
+            if (HasLoadedMergeRangeSegments)
+            {
+                MergeRangeDialogStatus = "请至少选择一个实际覆盖段。";
+            }
+
+            return;
+        }
+
+        var normalized = NormalizeRanges(ranges);
+        MergeUnicodeRanges = string.Join(", ", normalized.Select(range => range.Label));
+        MergeStatus = $"已从实际覆盖弹窗选择 {normalized.Count:N0} 段 Unicode 范围。";
+        IsMergeRangeDialogOpen = false;
     }
 
     [RelayCommand]
@@ -1716,6 +1854,11 @@ public sealed partial class ShellViewModel : ObservableObject
         NotifyMergePreviewState();
     }
 
+    partial void OnSelectedMergeRangeBlockChanged(MergeRangeBlockItemViewModel? value)
+    {
+        RefreshVisibleMergeRangeSegments();
+    }
+
     partial void OnSelectedMergeModeLabelChanged(string value)
     {
         _currentMergePreview = null;
@@ -1737,6 +1880,13 @@ public sealed partial class ShellViewModel : ObservableObject
         OnPropertyChanged(nameof(CanGoPreviousMergeStep));
         OnPropertyChanged(nameof(CanCancelMerge));
         OnPropertyChanged(nameof(MergeProgressLabel));
+    }
+
+    partial void OnIsMergeRangeDialogBusyChanged(bool value)
+    {
+        OnPropertyChanged(nameof(IsMergeRangeEmptyVisible));
+        OnPropertyChanged(nameof(IsMergeRangeBlockEmptyVisible));
+        OnPropertyChanged(nameof(CanApplyMergeRangeSelection));
     }
 
     partial void OnMergeStatusChanged(string value) => OnPropertyChanged(nameof(MergeProgressLabel));
@@ -1975,6 +2125,241 @@ public sealed partial class ShellViewModel : ObservableObject
             SelectedMergeSupplementalFont = MergeSupplementalFonts.FirstOrDefault(font => !string.Equals(font.FamilyName, SelectedMergeBaseFont.FamilyName, StringComparison.CurrentCultureIgnoreCase))
                                             ?? SelectedMergeSupplementalFont;
         }
+    }
+
+    private void ClearMergeRangeDialog()
+    {
+        _allMergeRangeSegments.Clear();
+        MergeRangeBlocks.Clear();
+        MergeRangeSegments.Clear();
+        SelectedMergeRangeBlock = null;
+        MergeRangeBaseSummary = "未读取基础字体 A。";
+        MergeRangeSupplementalSummary = "未读取补充字体 B。";
+        MergeRangeDialogStatus = "请选择基础字体和补充字体。";
+        NotifyMergeRangeDialogState();
+    }
+
+    private void BuildMergeRangeComparison(GlyphCoverage baseCoverage, GlyphCoverage supplementalCoverage)
+    {
+        _allMergeRangeSegments.Clear();
+        MergeRangeBlocks.Clear();
+        MergeRangeSegments.Clear();
+
+        foreach (var segment in BuildComparisonSegments(baseCoverage.Ranges, supplementalCoverage.Ranges))
+        {
+            var item = new MergeRangeSegmentItemViewModel(segment);
+            item.PropertyChanged += (_, args) =>
+            {
+                if (args.PropertyName == nameof(MergeRangeSegmentItemViewModel.IsSelected))
+                {
+                    OnPropertyChanged(nameof(MergeRangeSelectedCountLabel));
+                    OnPropertyChanged(nameof(HasSelectedMergeRangeSegments));
+                    OnPropertyChanged(nameof(CanApplyMergeRangeSelection));
+                }
+            };
+            _allMergeRangeSegments.Add(item);
+        }
+
+        if (_allMergeRangeSegments.Count > 0)
+        {
+            AddMergeRangeBlock(UnicodeCoverageBlocks.AllBlocks, 0, 0);
+            foreach (var block in UnicodeCoverageBlocks.KnownBlocks)
+            {
+                AddMergeRangeBlock(block.Name, block.Start, block.End);
+            }
+
+            AddMergeRangeBlock(UnicodeCoverageBlocks.OtherCoverage, 0, 0, isOther: true);
+        }
+
+        SelectedMergeRangeBlock = MergeRangeBlocks.FirstOrDefault();
+        NotifyMergeRangeDialogState();
+    }
+
+    private void AddMergeRangeBlock(string name, int start, int end, bool isOther = false)
+    {
+        var segments = _allMergeRangeSegments.Where(segment =>
+            string.Equals(name, UnicodeCoverageBlocks.AllBlocks, StringComparison.Ordinal)
+            || string.Equals(segment.BlockName, name, StringComparison.Ordinal)).ToList();
+        if (segments.Count == 0)
+        {
+            return;
+        }
+
+        var baseCount = CountByPresence(segments, GlyphCoveragePresence.BaseOnly)
+                        + CountByPresence(segments, GlyphCoveragePresence.Both);
+        var supplementalCount = CountByPresence(segments, GlyphCoveragePresence.SupplementalOnly)
+                                + CountByPresence(segments, GlyphCoveragePresence.Both);
+        var sharedCount = CountByPresence(segments, GlyphCoveragePresence.Both);
+        MergeRangeBlocks.Add(new MergeRangeBlockItemViewModel(name, start, end, baseCount, supplementalCount, sharedCount, isOther));
+    }
+
+    private static int CountByPresence(IReadOnlyList<MergeRangeSegmentItemViewModel> segments, GlyphCoveragePresence presence) =>
+        segments
+            .Where(segment => segment.Segment.Presence == presence)
+            .Sum(segment => segment.Range.Count);
+
+    private void RefreshVisibleMergeRangeSegments()
+    {
+        MergeRangeSegments.Clear();
+        if (SelectedMergeRangeBlock is null)
+        {
+            NotifyMergeRangeDialogState();
+            return;
+        }
+
+        foreach (var segment in _allMergeRangeSegments.Where(segment =>
+                     SelectedMergeRangeBlock.IsAll
+                     || string.Equals(segment.BlockName, SelectedMergeRangeBlock.Name, StringComparison.Ordinal)))
+        {
+            MergeRangeSegments.Add(segment);
+        }
+
+        NotifyMergeRangeDialogState();
+    }
+
+    private static string BuildCoverageSummary(string familyName, string styleName, GlyphCoverage coverage)
+    {
+        if (!coverage.HasCoverage)
+        {
+            return $"{familyName} · {styleName} · {coverage.EmptyMessage}";
+        }
+
+        return $"{familyName} · {styleName} · {coverage.TotalCodePointCount:N0} 个 Unicode 映射码位 · {coverage.Ranges.Count:N0} 个连续段";
+    }
+
+    private static string BuildPendingMergeRangeSummary(FontFamilyItemViewModel? font, FontFaceItemViewModel? face, string fallbackLabel)
+    {
+        if (font is null)
+        {
+            return $"未选择{fallbackLabel}。";
+        }
+
+        return face is null
+            ? $"{font.FamilyName} · 没有可读取的样式"
+            : $"{font.FamilyName} · {face.StyleLabel} · 等待读取";
+    }
+
+    private static IReadOnlyList<GlyphCoverageSegment> BuildComparisonSegments(
+        IReadOnlyList<DomainUnicodeRange> baseRanges,
+        IReadOnlyList<DomainUnicodeRange> supplementalRanges)
+    {
+        if (baseRanges.Count == 0 && supplementalRanges.Count == 0)
+        {
+            return [];
+        }
+
+        var boundaries = new SortedSet<int>();
+        AddRangeBoundaries(boundaries, baseRanges);
+        AddRangeBoundaries(boundaries, supplementalRanges);
+        foreach (var block in UnicodeCoverageBlocks.KnownBlocks)
+        {
+            AddBoundary(boundaries, block.Start);
+            AddBoundary(boundaries, block.End + 1);
+        }
+
+        AddBoundary(boundaries, 0x110000);
+        var ordered = boundaries.ToList();
+        var result = new List<GlyphCoverageSegment>();
+        var baseIndex = 0;
+        var supplementalIndex = 0;
+        for (var index = 0; index < ordered.Count - 1; index++)
+        {
+            var start = ordered[index];
+            var end = Math.Min(0x10FFFF, ordered[index + 1] - 1);
+            if (start > end || start > 0x10FFFF)
+            {
+                continue;
+            }
+
+            while (baseIndex < baseRanges.Count && baseRanges[baseIndex].End < start)
+            {
+                baseIndex++;
+            }
+
+            while (supplementalIndex < supplementalRanges.Count && supplementalRanges[supplementalIndex].End < start)
+            {
+                supplementalIndex++;
+            }
+
+            var hasBase = baseIndex < baseRanges.Count
+                          && baseRanges[baseIndex].Start <= start
+                          && baseRanges[baseIndex].End >= end;
+            var hasSupplemental = supplementalIndex < supplementalRanges.Count
+                                  && supplementalRanges[supplementalIndex].Start <= start
+                                  && supplementalRanges[supplementalIndex].End >= end;
+            if (!hasBase && !hasSupplemental)
+            {
+                continue;
+            }
+
+            var presence = (hasBase, hasSupplemental) switch
+            {
+                (true, true) => GlyphCoveragePresence.Both,
+                (true, false) => GlyphCoveragePresence.BaseOnly,
+                _ => GlyphCoveragePresence.SupplementalOnly
+            };
+            var blockName = UnicodeCoverageBlocks.FindKnownBlock(start)?.Name ?? UnicodeCoverageBlocks.OtherCoverage;
+            result.Add(new GlyphCoverageSegment(new DomainUnicodeRange(start, end), blockName, presence));
+        }
+
+        return result;
+    }
+
+    private static void AddRangeBoundaries(SortedSet<int> boundaries, IReadOnlyList<DomainUnicodeRange> ranges)
+    {
+        foreach (var range in ranges)
+        {
+            AddBoundary(boundaries, range.Start);
+            AddBoundary(boundaries, range.End + 1);
+        }
+    }
+
+    private static void AddBoundary(SortedSet<int> boundaries, int value)
+    {
+        if (value is >= 0 and <= 0x110000)
+        {
+            boundaries.Add(value);
+        }
+    }
+
+    private static IReadOnlyList<DomainUnicodeRange> NormalizeRanges(IReadOnlyList<DomainUnicodeRange> ranges)
+    {
+        var ordered = ranges
+            .OrderBy(range => range.Start)
+            .ThenBy(range => range.End)
+            .ToList();
+        var normalized = new List<DomainUnicodeRange>();
+        foreach (var range in ordered)
+        {
+            if (normalized.Count == 0)
+            {
+                normalized.Add(range);
+                continue;
+            }
+
+            var current = normalized[^1];
+            if (range.Start <= current.End + 1)
+            {
+                normalized[^1] = current with { End = Math.Max(current.End, range.End) };
+                continue;
+            }
+
+            normalized.Add(range);
+        }
+
+        return normalized;
+    }
+
+    private void NotifyMergeRangeDialogState()
+    {
+        OnPropertyChanged(nameof(HasMergeRangeBlocks));
+        OnPropertyChanged(nameof(HasMergeRangeSegments));
+        OnPropertyChanged(nameof(HasLoadedMergeRangeSegments));
+        OnPropertyChanged(nameof(IsMergeRangeEmptyVisible));
+        OnPropertyChanged(nameof(IsMergeRangeBlockEmptyVisible));
+        OnPropertyChanged(nameof(HasSelectedMergeRangeSegments));
+        OnPropertyChanged(nameof(CanApplyMergeRangeSelection));
+        OnPropertyChanged(nameof(MergeRangeSelectedCountLabel));
     }
 
     private void ReplaceMergeFontList(
@@ -2259,6 +2644,8 @@ public sealed partial class ShellViewModel : ObservableObject
             ?? font.Faces.FirstOrDefault(face => face.StyleLabel.Contains("Regular 400", StringComparison.OrdinalIgnoreCase))
             ?? font.Faces.FirstOrDefault();
     }
+
+    private static FontFaceItemViewModel? SelectMergeFace(FontFamilyItemViewModel? font) => SelectDefaultPreviewFace(font);
 
     private static string NormalizeOnlineFilter(string value, string allValue) =>
         string.Equals(value, allValue, StringComparison.CurrentCultureIgnoreCase) ? "" : value;

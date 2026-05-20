@@ -6,6 +6,7 @@ using GlyphStash.Application.Fonts;
 using GlyphStash.Domain.Fonts;
 using GlyphStash.Presentation.Services;
 using GlyphStash.Presentation.ViewModels;
+using DomainUnicodeRange = GlyphStash.Domain.Fonts.UnicodeRange;
 
 namespace GlyphStash.Presentation.Tests;
 
@@ -127,6 +128,74 @@ public sealed class ShellViewModelTests
         Assert.True(vm.IsMergeStepReport);
         Assert.Contains("未完成授权确认", vm.MergeStatus, StringComparison.Ordinal);
         Assert.False(File.Exists(outputPath));
+    }
+
+    [Fact]
+    public async Task MergeRangeDialog_ComparesActualCoverageAndReplacesInput()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "GlyphStash.Tests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        var basePath = Path.Combine(directory, "Base.ttf");
+        var baseBoldPath = Path.Combine(directory, "Base-Bold.ttf");
+        var supplementalPath = Path.Combine(directory, "Patch.ttf");
+        await File.WriteAllBytesAsync(basePath, [1], CancellationToken.None);
+        await File.WriteAllBytesAsync(baseBoldPath, [1], CancellationToken.None);
+        await File.WriteAllBytesAsync(supplementalPath, [1], CancellationToken.None);
+        var glyphService = new CapturingGlyphCatalogService();
+        glyphService.Coverages[basePath] = CreateCoverage(new DomainUnicodeRange(0x0041, 0x0043), new DomainUnicodeRange(0x0100, 0x0100));
+        glyphService.Coverages[supplementalPath] = CreateCoverage(new DomainUnicodeRange(0x0042, 0x0044), new DomainUnicodeRange(0x4E00, 0x4E00));
+        var fonts =
+            new[]
+            {
+                CreateFontWithFaces("Base", ("Regular", 400, "Normal", basePath), ("Bold", 700, "Normal", baseBoldPath)),
+                CreateFontWithFaces("Patch", ("Regular", 400, "Normal", supplementalPath))
+            };
+        var vm = new ShellViewModel(
+            new FontLibraryService(new FakeInventory([]), new FakeStore(fonts)),
+            null,
+            NullUserFileDialogService.Instance,
+            glyphCatalogService: glyphService);
+
+        await vm.InitializeAsync();
+        vm.SelectedNavigationItem = vm.NavigationItems.Single(item => item.Key == "merge-tool");
+        await vm.OpenMergeRangeDialogCommand.ExecuteAsync(null);
+
+        Assert.True(vm.IsMergeRangeDialogOpen);
+        Assert.False(vm.IsMergeRangeDialogBusy);
+        Assert.False(vm.HasSelectedMergeRangeSegments);
+        Assert.False(vm.CanApplyMergeRangeSelection);
+        Assert.Equal(2, glyphService.CoverageQueries.Count);
+        Assert.All(glyphService.CoverageQueries, query => Assert.Equal("Regular 400", query.FaceName));
+        Assert.Contains(vm.MergeRangeSegments, segment => segment.RangeLabel == "U+0041" && segment.IsBaseOnly);
+        Assert.Contains(vm.MergeRangeSegments, segment => segment.RangeLabel == "U+0042-U+0043" && segment.IsBoth);
+        Assert.Contains(vm.MergeRangeSegments, segment => segment.RangeLabel == "U+0044" && segment.IsSupplementalOnly);
+
+        vm.MergeRangeSegments.Single(segment => segment.RangeLabel == "U+0041").IsSelected = true;
+        vm.MergeRangeSegments.Single(segment => segment.RangeLabel == "U+0042-U+0043").IsSelected = true;
+        Assert.True(vm.CanApplyMergeRangeSelection);
+        vm.ApplyMergeRangeSelectionCommand.Execute(null);
+
+        Assert.False(vm.IsMergeRangeDialogOpen);
+        Assert.Equal("U+0041-U+0043", vm.MergeUnicodeRanges);
+    }
+
+    [Fact]
+    public async Task MergeRangeDialog_ShowsStatusWhenCoverageServiceUnavailable()
+    {
+        var vm = new ShellViewModel(
+            new FontLibraryService(new FakeInventory([]), new FakeStore([])),
+            null,
+            NullUserFileDialogService.Instance);
+
+        await vm.OpenMergeRangeDialogCommand.ExecuteAsync(null);
+
+        Assert.True(vm.IsMergeRangeDialogOpen);
+        Assert.Contains("未装配", vm.MergeRangeDialogStatus, StringComparison.Ordinal);
+        Assert.False(vm.CanApplyMergeRangeSelection);
+
+        vm.ApplyMergeRangeSelectionCommand.Execute(null);
+
+        Assert.Contains("未装配", vm.MergeRangeDialogStatus, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -742,6 +811,19 @@ public sealed class ShellViewModelTests
             [],
             false);
 
+    private static GlyphCoverage CreateCoverage(params DomainUnicodeRange[] ranges)
+    {
+        var total = ranges.Sum(range => range.Count);
+        return new GlyphCoverage(
+            ranges,
+            [new GlyphCoverageBlock(UnicodeCoverageBlocks.AllBlocks, 0, 0, total)],
+            ranges.Select(range => new GlyphCoverageSegment(
+                    range,
+                    UnicodeCoverageBlocks.FindKnownBlock(range.Start)?.Name ?? UnicodeCoverageBlocks.OtherCoverage))
+                .ToList(),
+            total);
+    }
+
     private static RemoteFontFamily CreateRemoteFont(string family) =>
         new(
             "google-fonts",
@@ -925,10 +1007,22 @@ public sealed class ShellViewModelTests
     {
         public GlyphQuery? LastQuery { get; private set; }
 
+        public List<GlyphCoverageQuery> CoverageQueries { get; } = [];
+
+        public Dictionary<string, GlyphCoverage> Coverages { get; } = new(StringComparer.OrdinalIgnoreCase);
+
         public Task<GlyphPage> GetGlyphsAsync(GlyphQuery query, CancellationToken cancellationToken)
         {
             LastQuery = query;
             return Task.FromResult(new GlyphPage([], [new UnicodeBlockOption("全部区块", 0, 0)], query.PageNumber, 120, 240, "empty"));
+        }
+
+        public Task<GlyphCoverage> GetCoverageAsync(GlyphCoverageQuery query, CancellationToken cancellationToken)
+        {
+            CoverageQueries.Add(query);
+            return Task.FromResult(Coverages.TryGetValue(query.FontFilePath, out var coverage)
+                ? coverage
+                : new GlyphCoverage([], [new GlyphCoverageBlock(UnicodeCoverageBlocks.AllBlocks, 0, 0, 0)], [], 0, "empty"));
         }
     }
 

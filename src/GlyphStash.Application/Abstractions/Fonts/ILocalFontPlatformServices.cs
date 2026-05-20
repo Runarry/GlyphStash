@@ -34,6 +34,8 @@ public interface IManagedFontFileStore
 public interface IGlyphCatalogService
 {
     Task<GlyphPage> GetGlyphsAsync(GlyphQuery query, CancellationToken cancellationToken);
+
+    Task<GlyphCoverage> GetCoverageAsync(GlyphCoverageQuery query, CancellationToken cancellationToken);
 }
 
 public interface IFontSourceProvider

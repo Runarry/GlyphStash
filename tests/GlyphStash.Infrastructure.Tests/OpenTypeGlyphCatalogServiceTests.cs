@@ -81,6 +81,39 @@ public sealed class OpenTypeGlyphCatalogServiceTests
         Assert.Equal(0x10000 + 120, page.Glyphs[0].CodePoint);
     }
 
+    [Fact]
+    public async Task GetCoverageAsync_ReturnsContinuousRangesAndBlockCounts()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "GlyphStash.Tests", $"{Guid.NewGuid():N}.ttf");
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        await File.WriteAllBytesAsync(path, CreateFormat4Font(), CancellationToken.None);
+        var service = new OpenTypeGlyphCatalogService();
+
+        var coverage = await service.GetCoverageAsync(new GlyphCoverageQuery(path, "Regular"), CancellationToken.None);
+
+        Assert.Equal(2, coverage.TotalCodePointCount);
+        Assert.Contains(coverage.Ranges, range => range.Label == "U+0041");
+        Assert.Contains(coverage.Ranges, range => range.Label == "U+4F60");
+        Assert.Contains(coverage.Blocks, block => block.Name == "Basic Latin" && block.Count == 1);
+        Assert.Contains(coverage.Blocks, block => block.Name == "CJK Unified Ideographs" && block.Count == 1);
+    }
+
+    [Fact]
+    public async Task GetCoverageAsync_DoesNotHideOtherCoverage()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "GlyphStash.Tests", $"{Guid.NewGuid():N}.ttf");
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        await File.WriteAllBytesAsync(path, CreateFormat12Font(0x1F600, 3, 9), CancellationToken.None);
+        var service = new OpenTypeGlyphCatalogService();
+
+        var coverage = await service.GetCoverageAsync(new GlyphCoverageQuery(path, "Regular"), CancellationToken.None);
+
+        Assert.Single(coverage.Ranges);
+        Assert.Equal("U+1F600-U+1F602", coverage.Ranges[0].Label);
+        Assert.Contains(coverage.Blocks, block => block.Name == UnicodeCoverageBlocks.OtherCoverage && block.Count == 3 && block.IsOther);
+        Assert.Contains(coverage.Segments, segment => segment.BlockName == UnicodeCoverageBlocks.OtherCoverage && segment.Range.Label == "U+1F600-U+1F602");
+    }
+
     private static byte[] CreateFormat4Font()
     {
         return CreateFont(("cmap", CreateFormat4Cmap()));

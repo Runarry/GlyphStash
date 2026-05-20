@@ -6,32 +6,11 @@ namespace GlyphStash.Infrastructure.Glyphs;
 
 public sealed class OpenTypeGlyphCatalogService : IGlyphCatalogService
 {
-    private const string AllBlocks = "全部区块";
+    private const string AllBlocks = UnicodeCoverageBlocks.AllBlocks;
 
     private static readonly string[] MacintoshStandardGlyphNames = ("""
 .notdef .null nonmarkingreturn space exclam quotedbl numbersign dollar percent ampersand quotesingle parenleft parenright asterisk plus comma hyphen period slash zero one two three four five six seven eight nine colon semicolon less equal greater question at A B C D E F G H I J K L M N O P Q R S T U V W X Y Z bracketleft backslash bracketright asciicircum underscore grave a b c d e f g h i j k l m n o p q r s t u v w x y z braceleft bar braceright asciitilde Adieresis Aring Ccedilla Eacute Ntilde Odieresis Udieresis aacute agrave acircumflex adieresis atilde aring ccedilla eacute egrave ecircumflex edieresis iacute igrave icircumflex idieresis ntilde oacute ograve ocircumflex odieresis otilde uacute ugrave ucircumflex udieresis dagger degree cent sterling section bullet paragraph germandbls registered copyright trademark acute dieresis notequal AE Oslash infinity plusminus lessequal greaterequal yen mu partialdiff summation product pi integral ordfeminine ordmasculine Omega ae oslash questiondown exclamdown logicalnot radical florin approxequal Delta guillemotleft guillemotright ellipsis nonbreakingspace Agrave Atilde Otilde OE oe endash emdash quotedblleft quotedblright quoteleft quoteright divide lozenge ydieresis Ydieresis fraction currency guilsinglleft guilsinglright fi fl daggerdbl periodcentered quotesinglbase quotedblbase perthousand Acircumflex Ecircumflex Aacute Edieresis Egrave Iacute Icircumflex Idieresis Igrave Oacute Ocircumflex apple Ograve Uacute Ucircumflex Ugrave dotlessi circumflex tilde macron breve dotaccent ring cedilla hungarumlaut ogonek caron Lslash lslash Scaron scaron Zcaron zcaron brokenbar Eth eth Yacute yacute Thorn thorn minus multiply onesuperior twosuperior threesuperior onehalf onequarter threequarters franc Gbreve gbreve Idotaccent Scedilla scedilla Cacute cacute Ccaron ccaron dcroat
 """).Split(' ', StringSplitOptions.RemoveEmptyEntries);
-
-    private static readonly UnicodeBlockOption[] KnownBlocks =
-    [
-        new("Basic Latin", 0x0000, 0x007F),
-        new("Latin-1 Supplement", 0x0080, 0x00FF),
-        new("Latin Extended", 0x0100, 0x024F),
-        new("Greek and Coptic", 0x0370, 0x03FF),
-        new("Cyrillic", 0x0400, 0x04FF),
-        new("General Punctuation", 0x2000, 0x206F),
-        new("Currency Symbols", 0x20A0, 0x20CF),
-        new("Letterlike Symbols", 0x2100, 0x214F),
-        new("Number Forms", 0x2150, 0x218F),
-        new("Arrows", 0x2190, 0x21FF),
-        new("Mathematical Operators", 0x2200, 0x22FF),
-        new("CJK Symbols and Punctuation", 0x3000, 0x303F),
-        new("Hiragana", 0x3040, 0x309F),
-        new("Katakana", 0x30A0, 0x30FF),
-        new("CJK Unified Ideographs", 0x4E00, 0x9FFF),
-        new("Private Use Area", 0xE000, 0xF8FF),
-        new("CJK Compatibility Ideographs", 0xF900, 0xFAFF)
-    ];
 
     public async Task<GlyphPage> GetGlyphsAsync(GlyphQuery query, CancellationToken cancellationToken)
     {
@@ -64,8 +43,34 @@ public sealed class OpenTypeGlyphCatalogService : IGlyphCatalogService
         return new GlyphPage(page, blocks, pageNumber, pageSize, glyphs.Count, emptyMessage);
     }
 
+    public async Task<GlyphCoverage> GetCoverageAsync(GlyphCoverageQuery query, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(query.FontFilePath) || !File.Exists(query.FontFilePath))
+        {
+            return EmptyCoverage("当前字体没有可读取的本地文件路径。");
+        }
+
+        var bytes = await File.ReadAllBytesAsync(query.FontFilePath, cancellationToken).ConfigureAwait(false);
+        var fontOffset = GetFirstFontOffset(bytes);
+        var tables = ReadTableDirectory(bytes, fontOffset);
+        if (!tables.TryGetValue("cmap", out var cmap))
+        {
+            return EmptyCoverage("当前字体缺少 Unicode cmap 表。");
+        }
+
+        var glyphs = ReadUnicodeMappings(bytes, cmap.Offset, cmap.Length, new Dictionary<int, string>(), query.FaceName);
+        var ranges = BuildCoverageRanges(glyphs.Select(glyph => glyph.CodePoint));
+        var segments = BuildCoverageSegments(ranges);
+        var blocks = BuildCoverageBlocks(glyphs);
+        var emptyMessage = glyphs.Count == 0 ? "当前字体没有 Unicode 映射覆盖。" : "";
+        return new GlyphCoverage(ranges, blocks, segments, glyphs.Count, emptyMessage);
+    }
+
     private static GlyphPage Empty(GlyphQuery query, string message) =>
         new([], [new UnicodeBlockOption(AllBlocks, 0, 0)], Math.Max(1, query.PageNumber), Math.Clamp(query.PageSize, 24, 240), 0, message);
+
+    private static GlyphCoverage EmptyCoverage(string message) =>
+        new([], [new GlyphCoverageBlock(AllBlocks, 0, 0, 0)], [], 0, message);
 
     private static List<GlyphRecord> ApplyBlock(List<GlyphRecord> glyphs, string blockName)
     {
@@ -74,7 +79,7 @@ public sealed class OpenTypeGlyphCatalogService : IGlyphCatalogService
             return glyphs;
         }
 
-        var block = KnownBlocks.FirstOrDefault(candidate => string.Equals(candidate.Name, blockName, StringComparison.CurrentCultureIgnoreCase));
+        var block = UnicodeCoverageBlocks.KnownBlocks.FirstOrDefault(candidate => string.Equals(candidate.Name, blockName, StringComparison.CurrentCultureIgnoreCase));
         return block is null
             ? glyphs
             : glyphs.Where(glyph => glyph.CodePoint >= block.Start && glyph.CodePoint <= block.End).ToList();
@@ -125,10 +130,90 @@ public sealed class OpenTypeGlyphCatalogService : IGlyphCatalogService
     private static IReadOnlyList<UnicodeBlockOption> BuildBlockOptions(IReadOnlyList<GlyphRecord> glyphs)
     {
         var options = new List<UnicodeBlockOption> { new(AllBlocks, 0, 0, glyphs.Count) };
-        options.AddRange(KnownBlocks
+        options.AddRange(UnicodeCoverageBlocks.KnownBlocks
             .Select(block => block with { Count = glyphs.Count(glyph => glyph.CodePoint >= block.Start && glyph.CodePoint <= block.End) })
             .Where(block => block.Count > 0));
         return options;
+    }
+
+    private static IReadOnlyList<GlyphCoverageBlock> BuildCoverageBlocks(IReadOnlyList<GlyphRecord> glyphs)
+    {
+        var blocks = new List<GlyphCoverageBlock> { new(AllBlocks, 0, 0, glyphs.Count) };
+        blocks.AddRange(UnicodeCoverageBlocks.KnownBlocks
+            .Select(block => new GlyphCoverageBlock(
+                block.Name,
+                block.Start,
+                block.End,
+                glyphs.Count(glyph => glyph.CodePoint >= block.Start && glyph.CodePoint <= block.End)))
+            .Where(block => block.Count > 0));
+
+        var otherCount = glyphs.Count(glyph => !UnicodeCoverageBlocks.IsKnownBlockCodePoint(glyph.CodePoint));
+        if (otherCount > 0)
+        {
+            blocks.Add(new GlyphCoverageBlock(UnicodeCoverageBlocks.OtherCoverage, 0, 0, otherCount, IsOther: true));
+        }
+
+        return blocks;
+    }
+
+    private static IReadOnlyList<UnicodeRange> BuildCoverageRanges(IEnumerable<int> codePoints)
+    {
+        var ordered = codePoints.Distinct().Order().ToList();
+        if (ordered.Count == 0)
+        {
+            return [];
+        }
+
+        var ranges = new List<UnicodeRange>();
+        var start = ordered[0];
+        var end = ordered[0];
+        foreach (var codePoint in ordered.Skip(1))
+        {
+            if (codePoint == end + 1)
+            {
+                end = codePoint;
+                continue;
+            }
+
+            ranges.Add(new UnicodeRange(start, end));
+            start = codePoint;
+            end = codePoint;
+        }
+
+        ranges.Add(new UnicodeRange(start, end));
+        return ranges;
+    }
+
+    private static IReadOnlyList<GlyphCoverageSegment> BuildCoverageSegments(IReadOnlyList<UnicodeRange> ranges)
+    {
+        var segments = new List<GlyphCoverageSegment>();
+        foreach (var range in ranges)
+        {
+            var start = range.Start;
+            while (start <= range.End)
+            {
+                var block = UnicodeCoverageBlocks.FindKnownBlock(start);
+                var end = block is null
+                    ? Math.Min(range.End, FindNextKnownBlockStart(start) - 1)
+                    : Math.Min(range.End, block.End);
+                segments.Add(new GlyphCoverageSegment(
+                    new UnicodeRange(start, end),
+                    block?.Name ?? UnicodeCoverageBlocks.OtherCoverage));
+                start = end + 1;
+            }
+        }
+
+        return segments;
+    }
+
+    private static int FindNextKnownBlockStart(int codePoint)
+    {
+        var next = UnicodeCoverageBlocks.KnownBlocks
+            .Where(block => block.Start > codePoint)
+            .Select(block => block.Start)
+            .DefaultIfEmpty(0x110000)
+            .Min();
+        return next;
     }
 
     private static List<GlyphRecord> ReadUnicodeMappings(ReadOnlySpan<byte> bytes, int cmapOffset, int cmapLength, IReadOnlyDictionary<int, string> names, string faceName)
