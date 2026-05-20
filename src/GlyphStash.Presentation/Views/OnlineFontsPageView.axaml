@@ -1,7 +1,8 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:GlyphStash.Presentation.ViewModels"
              x:Class="GlyphStash.Presentation.Views.OnlineFontsPageView"
-             x:CompileBindings="False">
+             x:DataType="vm:ShellViewModel">
   <Grid RowDefinitions="76,*,Auto">
     <Border Grid.Row="0" Background="{DynamicResource GlyphSurfaceBrush}" BorderBrush="{DynamicResource GlyphBorderBrush}" BorderThickness="0,0,0,1" Padding="24,0">
       <Grid VerticalAlignment="Center">
@@ -48,7 +49,7 @@
           <ScrollViewer Grid.Row="3">
             <ListBox Classes="font-list" ItemsSource="{Binding RemoteFonts}" SelectedItem="{Binding SelectedRemoteFont, Mode=TwoWay}" IsVisible="{Binding HasRemoteFonts}">
               <ListBox.ItemTemplate>
-                <DataTemplate>
+                <DataTemplate x:DataType="vm:RemoteFontFamilyItemViewModel">
                   <Border Classes="card" Margin="0,0,0,10">
                     <StackPanel Spacing="7">
                       <TextBlock Text="{Binding FamilyName}" Classes="h2" />
@@ -99,7 +100,7 @@
               <Border Classes="card">
                 <ItemsControl ItemsSource="{Binding SelectedRemoteFont.Styles}">
                   <ItemsControl.ItemTemplate>
-                    <DataTemplate>
+                    <DataTemplate x:DataType="vm:RemoteFontStyleOptionViewModel">
                       <Grid ColumnDefinitions="Auto,*,1.4*" ColumnSpacing="10" Margin="0,0,0,8">
                         <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}" />
                         <TextBlock Grid.Column="1" Text="{Binding DisplayLabel}" />
@@ -125,14 +126,14 @@
                   <TextBlock Text="下载队列" Classes="h2" />
                   <ItemsControl ItemsSource="{Binding OnlineDownloadQueue}">
                     <ItemsControl.ItemTemplate>
-                      <DataTemplate>
+                      <DataTemplate x:DataType="vm:OnlineFontDownloadQueueItemViewModel">
                         <Border BorderBrush="{DynamicResource GlyphBorderBrush}" BorderThickness="0,0,0,1" Padding="0,0,0,10" Margin="0,0,0,10">
                           <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="5">
                             <TextBlock Text="{Binding FamilyName}" FontWeight="SemiBold" />
                             <Border Grid.Column="1" Classes="badge"><TextBlock Text="{Binding StatusLabel}" FontSize="12" /></Border>
                             <TextBlock Grid.Row="1" Text="{Binding StylesLabel}" Classes="muted" TextWrapping="Wrap" />
                             <TextBlock Grid.Row="2" Text="{Binding ErrorMessage}" Classes="muted" TextWrapping="Wrap" IsVisible="{Binding IsFailed}" />
-                            <Button Grid.Row="1" Grid.Column="1" Content="重试" Classes="sm" Command="{Binding DataContext.RetryOnlineDownloadCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" IsVisible="{Binding CanRetry}" />
+                            <Button Grid.Row="1" Grid.Column="1" Content="重试" Classes="sm" Command="{Binding $parent[UserControl].((vm:ShellViewModel)DataContext).RetryOnlineDownloadCommand}" CommandParameter="{Binding}" IsVisible="{Binding CanRetry}" />
                           </Grid>
                         </Border>
                       </DataTemplate>

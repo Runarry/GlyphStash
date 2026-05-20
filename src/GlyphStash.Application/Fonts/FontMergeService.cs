@@ -14,6 +14,7 @@ public sealed class FontMergeService
     {
         WriteIndented = true
     };
+    private static readonly FontMergeReportJsonContext ReportJsonContext = new(ReportJsonOptions);
 
     private readonly IFontMergeWorker _worker;
     private readonly IOperationLogStore? _operationLogStore;
@@ -126,7 +127,7 @@ public sealed class FontMergeService
         }
 
         await using var stream = File.OpenRead(reportPath);
-        return await JsonSerializer.DeserializeAsync<FontMergeReport>(stream, ReportJsonOptions, cancellationToken).ConfigureAwait(false)
+        return await JsonSerializer.DeserializeAsync(stream, ReportJsonContext.FontMergeReport, cancellationToken).ConfigureAwait(false)
             ?? throw new InvalidOperationException("合并报告文件格式无效。");
     }
 
@@ -337,7 +338,7 @@ public sealed class FontMergeService
     {
         var reportPath = BuildReportPath(outputPath);
         await using var stream = File.Create(reportPath);
-        await JsonSerializer.SerializeAsync(stream, report, ReportJsonOptions, cancellationToken).ConfigureAwait(false);
+        await JsonSerializer.SerializeAsync(stream, report, ReportJsonContext.FontMergeReport, cancellationToken).ConfigureAwait(false);
         return reportPath;
     }
 

@@ -1,7 +1,8 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:GlyphStash.Presentation.ViewModels"
              x:Class="GlyphStash.Presentation.Views.FontDetailsPanelView"
-             x:CompileBindings="False">
+             x:DataType="vm:ShellViewModel">
   <Grid>
     <Border Padding="18" IsVisible="{Binding HasNoSelectedFont}">
       <StackPanel Spacing="12" VerticalAlignment="Center">
@@ -72,7 +73,7 @@
           </Grid>
           <ListBox ItemsSource="{Binding SelectedFont.Faces}" SelectedItem="{Binding SelectedPreviewFace, Mode=TwoWay}">
             <ListBox.ItemTemplate>
-              <DataTemplate>
+              <DataTemplate x:DataType="vm:FontFaceItemViewModel">
                 <Border Classes="card" Margin="0,0,0,8">
                   <Grid ColumnDefinitions="*,Auto">
                     <StackPanel>

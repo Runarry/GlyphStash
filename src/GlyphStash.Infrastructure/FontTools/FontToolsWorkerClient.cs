@@ -12,8 +12,16 @@ public sealed class FontToolsWorkerClient : IFontMergeWorker
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
         PropertyNameCaseInsensitive = true,
-        Converters = { new JsonStringEnumConverter() }
+        Converters =
+        {
+            new JsonStringEnumConverter<FontMergeMode>(),
+            new JsonStringEnumConverter<FontMergeIssueKind>(),
+            new JsonStringEnumConverter<FontMergeIssueSeverity>(),
+            new JsonStringEnumConverter<FontMergeCodePointState>(),
+            new JsonStringEnumConverter<FontMergeDecision>()
+        }
     };
+    private static readonly FontToolsWorkerJsonContext JsonContext = new(JsonOptions);
 
     private readonly Func<FontToolsWorkerLaunch> _locateWorker;
 
@@ -51,7 +59,7 @@ public sealed class FontToolsWorkerClient : IFontMergeWorker
         return new FontMergeWorkerMergeResult(preview, response.OutputPath ?? request.OutputPath);
     }
 
-    private async Task<WorkerResponse> RunAsync(
+    private async Task<FontToolsWorkerResponseMessage> RunAsync(
         string operation,
         FontMergeWorkerRequest request,
         IProgress<FontMergeProgress>? progress,
@@ -65,7 +73,7 @@ public sealed class FontToolsWorkerClient : IFontMergeWorker
 
         try
         {
-            var payload = new WorkerRequest(
+            var payload = new FontToolsWorkerRequestMessage(
                 operation,
                 request.BaseFontPath,
                 request.SupplementalFontPath,
@@ -74,7 +82,8 @@ public sealed class FontToolsWorkerClient : IFontMergeWorker
                 request.OutputFamilyName,
                 request.MergeMode,
                 responsePath);
-            await File.WriteAllTextAsync(requestPath, JsonSerializer.Serialize(payload, JsonOptions), cancellationToken).ConfigureAwait(false);
+            var requestJson = JsonSerializer.Serialize(payload, JsonContext.FontToolsWorkerRequestMessage);
+            await File.WriteAllTextAsync(requestPath, requestJson, cancellationToken).ConfigureAwait(false);
 
             using var process = CreateProcess(launch, requestPath);
             process.Start();
@@ -112,7 +121,7 @@ public sealed class FontToolsWorkerClient : IFontMergeWorker
             }
 
             await using var stream = File.OpenRead(responsePath);
-            var response = await JsonSerializer.DeserializeAsync<WorkerResponse>(stream, JsonOptions, cancellationToken).ConfigureAwait(false)
+            var response = await JsonSerializer.DeserializeAsync(stream, JsonContext.FontToolsWorkerResponseMessage, cancellationToken).ConfigureAwait(false)
                 ?? throw new InvalidOperationException("fontTools worker 响应格式无效。");
             if (!string.IsNullOrWhiteSpace(response.ErrorMessage))
             {
@@ -154,10 +163,9 @@ public sealed class FontToolsWorkerClient : IFontMergeWorker
         IProgress<FontMergeProgress>? progress,
         CancellationToken cancellationToken)
     {
-        while (!process.StandardOutput.EndOfStream)
+        while (await process.StandardOutput.ReadLineAsync(cancellationToken).ConfigureAwait(false) is { } line)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var line = await process.StandardOutput.ReadLineAsync(cancellationToken).ConfigureAwait(false);
             if (string.IsNullOrWhiteSpace(line))
             {
                 continue;
@@ -165,7 +173,7 @@ public sealed class FontToolsWorkerClient : IFontMergeWorker
 
             try
             {
-                var item = JsonSerializer.Deserialize<FontMergeProgress>(line, JsonOptions);
+                var item = JsonSerializer.Deserialize(line, JsonContext.FontMergeProgress);
                 if (item is not null)
                 {
                     progress?.Report(item);
@@ -191,18 +199,19 @@ public sealed class FontToolsWorkerClient : IFontMergeWorker
         }
     }
 
-    private sealed record WorkerRequest(
-        string Operation,
-        string BaseFontPath,
-        string SupplementalFontPath,
-        IReadOnlyList<UnicodeRange> Ranges,
-        string OutputPath,
-        string OutputFamilyName,
-        FontMergeMode MergeMode,
-        string ResponsePath);
-
-    private sealed record WorkerResponse(
-        FontMergeWorkerPreviewResult? Preview,
-        string? OutputPath,
-        string? ErrorMessage);
 }
+
+internal sealed record FontToolsWorkerRequestMessage(
+    string Operation,
+    string BaseFontPath,
+    string SupplementalFontPath,
+    IReadOnlyList<UnicodeRange> Ranges,
+    string OutputPath,
+    string OutputFamilyName,
+    FontMergeMode MergeMode,
+    string ResponsePath);
+
+internal sealed record FontToolsWorkerResponseMessage(
+    FontMergeWorkerPreviewResult? Preview,
+    string? OutputPath,
+    string? ErrorMessage);

@@ -1,7 +1,8 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:GlyphStash.Presentation.ViewModels"
              x:Class="GlyphStash.Presentation.Views.GlyphBrowserPageView"
-             x:CompileBindings="False">
+             x:DataType="vm:ShellViewModel">
   <Grid RowDefinitions="76,*,Auto">
     <Border Grid.Row="0" Background="{DynamicResource GlyphSurfaceBrush}" BorderBrush="{DynamicResource GlyphBorderBrush}" BorderThickness="0,0,0,1" Padding="24,0">
       <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
@@ -60,7 +61,7 @@
               </ItemsPanelTemplate>
             </ListBox.ItemsPanel>
             <ListBox.ItemTemplate>
-              <DataTemplate>
+              <DataTemplate x:DataType="vm:GlyphItemViewModel">
                 <Border Width="78" Height="82" Classes="card" Margin="0,0,8,8" Padding="5">
                   <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
                     <TextBlock Text="{Binding Character}" FontSize="28" HorizontalAlignment="Center" />

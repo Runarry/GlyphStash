@@ -1,7 +1,8 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:GlyphStash.Presentation.ViewModels"
              x:Class="GlyphStash.Presentation.Views.PlaceholderPageView"
-             x:CompileBindings="False">
+             x:DataType="vm:ShellViewModel">
   <Grid RowDefinitions="76,*">
     <Border Grid.Row="0"
             Background="{DynamicResource GlyphSurfaceBrush}"

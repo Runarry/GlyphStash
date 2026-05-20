@@ -12,8 +12,26 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
+    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+    <EnableAotAnalyzer>true</EnableAotAnalyzer>
   </PropertyGroup>
+
+  <PropertyGroup>
+    <GlyphStashFontToolsWorkerPath>$(MSBuildProjectDirectory)\..\..\tools\fonttools-worker\dist\glyphstash-fonttools-worker.exe</GlyphStashFontToolsWorkerPath>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(PublishAot)' == 'true'">
+    <Content Include="$(GlyphStashFontToolsWorkerPath)" Condition="Exists('$(GlyphStashFontToolsWorkerPath)')">
+      <TargetPath>glyphstash-fonttools-worker.exe</TargetPath>
+      <CopyToPublishDirectory>Always</CopyToPublishDirectory>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <Target Name="ValidateFontToolsWorkerForNativeAot" BeforeTargets="ComputeFilesToPublish" Condition="'$(PublishAot)' == 'true'">
+    <Error Condition="!Exists('$(GlyphStashFontToolsWorkerPath)')"
+           Text="NativeAOT publish requires tools\fonttools-worker\dist\glyphstash-fonttools-worker.exe. Run tools\fonttools-worker\build.ps1 before publishing." />
+  </Target>
 
   <ItemGroup>
     <PackageReference Include="Avalonia.Desktop" Version="12.0.2" />

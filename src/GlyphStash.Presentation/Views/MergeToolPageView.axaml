@@ -1,7 +1,8 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:GlyphStash.Presentation.ViewModels"
              x:Class="GlyphStash.Presentation.Views.MergeToolPageView"
-             x:CompileBindings="False">
+             x:DataType="vm:ShellViewModel">
   <Grid x:Name="MergeToolRoot" RowDefinitions="76,*,Auto">
     <Border Grid.Row="0" Background="{DynamicResource GlyphSurfaceBrush}" BorderBrush="{DynamicResource GlyphBorderBrush}" BorderThickness="0,0,0,1" Padding="24,0">
       <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
@@ -21,8 +22,8 @@
           </ItemsPanelTemplate>
         </ItemsControl.ItemsPanel>
         <ItemsControl.ItemTemplate>
-          <DataTemplate>
-            <Button Command="{Binding $parent[UserControl].DataContext.SetMergeStepCommand}"
+          <DataTemplate x:DataType="vm:MergeStepItemViewModel">
+            <Button Command="{Binding $parent[UserControl].((vm:ShellViewModel)DataContext).SetMergeStepCommand}"
                     CommandParameter="{Binding .}"
                     Background="Transparent"
                     BorderThickness="0"
@@ -53,7 +54,7 @@
                              ItemsSource="{Binding MergeBaseFonts}"
                              SelectedItem="{Binding SelectedMergeBaseFont, Mode=TwoWay}">
                       <ListBox.ItemTemplate>
-                        <DataTemplate>
+                        <DataTemplate x:DataType="vm:FontFamilyItemViewModel">
                           <Border Classes="card" Margin="0,0,0,8">
                             <StackPanel Spacing="6">
                               <TextBlock Text="{Binding FamilyName}" Classes="h2" />
@@ -83,7 +84,7 @@
                              ItemsSource="{Binding MergeSupplementalFonts}"
                              SelectedItem="{Binding SelectedMergeSupplementalFont, Mode=TwoWay}">
                       <ListBox.ItemTemplate>
-                        <DataTemplate>
+                        <DataTemplate x:DataType="vm:FontFamilyItemViewModel">
                           <Border Classes="card" Margin="0,0,0,8">
                             <StackPanel Spacing="6">
                               <TextBlock Text="{Binding FamilyName}" Classes="h2" />
@@ -146,7 +147,7 @@
 
                 <ItemsControl ItemsSource="{Binding MergeIssues}" IsVisible="{Binding HasMergeIssues}">
                   <ItemsControl.ItemTemplate>
-                    <DataTemplate>
+                    <DataTemplate x:DataType="vm:MergeIssueItemViewModel">
                       <Border Classes="card" Margin="0,0,0,8">
                         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
                           <Border Classes="badge" Classes.danger="{Binding IsError}" Classes.warn="{Binding IsWarning}" Classes.ok="{Binding IsInfo}" VerticalAlignment="Top">
@@ -172,7 +173,7 @@
                   </Grid>
                   <ItemsControl Grid.Row="1" ItemsSource="{Binding MergeConflicts}" IsVisible="{Binding HasMergeConflicts}">
                     <ItemsControl.ItemTemplate>
-                      <DataTemplate>
+                      <DataTemplate x:DataType="vm:MergeConflictItemViewModel">
                         <Border Classes="card" Margin="0,0,0,8">
                           <Grid ColumnDefinitions="1.1*,0.5*,1*,1*,1*" ColumnSpacing="10">
                             <TextBlock Text="{Binding UnicodeLabel}" FontFamily="{StaticResource GlyphFontMono}" />
@@ -249,7 +250,7 @@
                         <TextBlock Text="{Binding MergeReportErrorMessage}" Classes="muted" TextWrapping="Wrap" />
                         <ItemsControl ItemsSource="{Binding MergeIssues}">
                           <ItemsControl.ItemTemplate>
-                            <DataTemplate>
+                            <DataTemplate x:DataType="vm:MergeIssueItemViewModel">
                               <TextBlock Text="{Binding Message}" Classes="muted" TextWrapping="Wrap" Margin="0,0,0,5" />
                             </DataTemplate>
                           </ItemsControl.ItemTemplate>
@@ -319,7 +320,7 @@
                          SelectedItem="{Binding SelectedMergeRangeBlock, Mode=TwoWay}"
                          IsVisible="{Binding HasMergeRangeBlocks}">
                   <ListBox.ItemTemplate>
-                    <DataTemplate>
+                    <DataTemplate x:DataType="vm:MergeRangeBlockItemViewModel">
                       <Border Classes="card" Margin="0,0,0,8" Padding="10">
                         <StackPanel Spacing="4">
                           <TextBlock Text="{Binding DisplayLabel}" FontWeight="SemiBold" TextWrapping="Wrap" />
@@ -349,7 +350,7 @@
                          ItemsSource="{Binding MergeRangeSegments}"
                          IsVisible="{Binding HasMergeRangeSegments}">
                   <ListBox.ItemTemplate>
-                    <DataTemplate>
+                    <DataTemplate x:DataType="vm:MergeRangeSegmentItemViewModel">
                       <Border Classes="card" Margin="0,0,0,8" Padding="10">
                         <Grid ColumnDefinitions="Auto,1.4*,Auto,Auto,Auto" ColumnSpacing="10">
                           <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}" VerticalAlignment="Center" />

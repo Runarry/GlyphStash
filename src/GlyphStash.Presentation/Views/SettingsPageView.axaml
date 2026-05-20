@@ -1,7 +1,9 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sys="clr-namespace:System;assembly=System.Runtime"
+             xmlns:vm="using:GlyphStash.Presentation.ViewModels"
              x:Class="GlyphStash.Presentation.Views.SettingsPageView"
-             x:CompileBindings="False">
+             x:DataType="vm:ShellViewModel">
   <Grid RowDefinitions="76,*,Auto">
     <Border Grid.Row="0"
             Background="{DynamicResource GlyphSurfaceBrush}"
@@ -65,7 +67,7 @@
             <TextBlock Text="临时字体外部应用兼容性矩阵" Classes="h2" />
             <ItemsControl ItemsSource="{Binding CompatibilityMatrix}">
               <ItemsControl.ItemTemplate>
-                <DataTemplate>
+                <DataTemplate x:DataType="sys:String">
                   <Border Classes="card" Margin="0,0,0,8">
                     <TextBlock Text="{Binding .}" TextWrapping="Wrap" />
                   </Border>
@@ -80,7 +82,7 @@
             <TextBlock Text="诊断日志" Classes="h2" />
             <ItemsControl ItemsSource="{Binding OperationLogs}">
               <ItemsControl.ItemTemplate>
-                <DataTemplate>
+                <DataTemplate x:DataType="vm:OperationLogItemViewModel">
                   <Grid ColumnDefinitions="60,90,*,70" Margin="0,0,0,8" ColumnSpacing="10">
                     <TextBlock Text="{Binding TimeLabel}" Classes="caption" />
                     <TextBlock Grid.Column="1" Text="{Binding Category}" />

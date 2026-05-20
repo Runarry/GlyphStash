@@ -1,7 +1,8 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:GlyphStash.Presentation.ViewModels"
              x:Class="GlyphStash.Presentation.Views.CollectionsPageView"
-             x:CompileBindings="False">
+             x:DataType="vm:ShellViewModel">
   <Grid RowDefinitions="76,*,Auto">
     <Border Grid.Row="0"
             Background="{DynamicResource GlyphSurfaceBrush}"
@@ -32,7 +33,7 @@
                    Background="Transparent"
                    BorderThickness="0">
             <ListBox.ItemTemplate>
-              <DataTemplate>
+              <DataTemplate x:DataType="vm:CollectionItemViewModel">
                 <Border Classes="card" Margin="0,0,0,8">
                   <StackPanel Spacing="6">
                     <TextBlock Text="{Binding Name}" Classes="h2" />
@@ -70,7 +71,7 @@
           <ScrollViewer Grid.Row="2">
             <ItemsControl ItemsSource="{Binding CollectionFonts}">
               <ItemsControl.ItemTemplate>
-                <DataTemplate>
+                <DataTemplate x:DataType="vm:FontFamilyItemViewModel">
                   <Border Classes="card" Margin="0,0,0,8">
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
                       <StackPanel>
@@ -84,7 +85,7 @@
                       <Button Grid.Column="1"
                               Content="移除"
                               Classes="sm"
-                              Command="{Binding $parent[UserControl].DataContext.RemoveFontFromCollectionCommand}"
+                              Command="{Binding $parent[UserControl].((vm:ShellViewModel)DataContext).RemoveFontFromCollectionCommand}"
                               CommandParameter="{Binding .}" />
                     </Grid>
                   </Border>

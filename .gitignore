@@ -11,3 +11,4 @@ TestResults/
 tools/fonttools-worker/build/
 tools/fonttools-worker/dist/
 tools/fonttools-worker/*.spec
+artifacts/

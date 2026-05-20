@@ -1,8 +1,9 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:views="using:GlyphStash.Presentation.Views"
+             xmlns:vm="using:GlyphStash.Presentation.ViewModels"
              x:Class="GlyphStash.Presentation.Views.ShellView"
-             x:CompileBindings="False"
+             x:DataType="vm:ShellViewModel"
              Background="{DynamicResource GlyphBackgroundBrush}">
   <Grid ColumnDefinitions="244,*,360">
     <Border Grid.Column="0"
@@ -27,7 +28,7 @@
                    ItemsSource="{Binding NavigationItems}"
                    SelectedItem="{Binding SelectedNavigationItem, Mode=TwoWay}">
             <ListBox.ItemTemplate>
-              <DataTemplate>
+              <DataTemplate x:DataType="vm:NavigationItemViewModel">
                 <StackPanel Orientation="Horizontal" Spacing="10">
                   <Ellipse Width="9" Height="9" Fill="{DynamicResource GlyphAccentBrush}" VerticalAlignment="Center" />
                   <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
