@@ -72,6 +72,7 @@ public sealed class FontToolsWorkerClient : IFontMergeWorker
                 request.Ranges,
                 request.OutputPath,
                 request.OutputFamilyName,
+                request.MergeMode,
                 responsePath);
             await File.WriteAllTextAsync(requestPath, JsonSerializer.Serialize(payload, JsonOptions), cancellationToken).ConfigureAwait(false);
 
@@ -197,6 +198,7 @@ public sealed class FontToolsWorkerClient : IFontMergeWorker
         IReadOnlyList<UnicodeRange> Ranges,
         string OutputPath,
         string OutputFamilyName,
+        FontMergeMode MergeMode,
         string ResponsePath);
 
     private sealed record WorkerResponse(

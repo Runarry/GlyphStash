@@ -111,11 +111,14 @@ public sealed class ShellViewModelTests
         await vm.InitializeAsync();
         vm.SelectedNavigationItem = vm.NavigationItems.Single(item => item.Key == "merge-tool");
         vm.MergeUnicodeRanges = "U+0041";
+        vm.SelectedMergeModeLabel = "覆盖";
         await vm.NextMergeStepCommand.ExecuteAsync(null);
         await vm.NextMergeStepCommand.ExecuteAsync(null);
 
         Assert.True(vm.IsMergeStepPreview);
         Assert.True(vm.HasMergeConflicts);
+        Assert.Contains("覆盖", vm.MergeDefaultStrategy, StringComparison.Ordinal);
+        Assert.Contains("覆盖", vm.MergeConflicts[0].DecisionLabel, StringComparison.Ordinal);
 
         vm.MergeOutputPath = outputPath;
         vm.MergeStepIndex = 3;
@@ -935,7 +938,7 @@ public sealed class ShellViewModelTests
             FontMergeWorkerRequest request,
             IProgress<FontMergeProgress>? progress,
             CancellationToken cancellationToken) =>
-            Task.FromResult(CreatePreview());
+            Task.FromResult(CreatePreview(request.MergeMode));
 
         public async Task<FontMergeWorkerMergeResult> MergeAsync(
             FontMergeWorkerRequest request,
@@ -943,18 +946,28 @@ public sealed class ShellViewModelTests
             CancellationToken cancellationToken)
         {
             await File.WriteAllBytesAsync(request.OutputPath, [1, 2, 3], cancellationToken);
-            return new FontMergeWorkerMergeResult(CreatePreview(), request.OutputPath);
+            return new FontMergeWorkerMergeResult(CreatePreview(request.MergeMode), request.OutputPath);
         }
 
-        private static FontMergeWorkerPreviewResult CreatePreview() =>
-            new(
+        private static FontMergeWorkerPreviewResult CreatePreview(FontMergeMode mergeMode)
+        {
+            var decision = mergeMode == FontMergeMode.Overwrite
+                ? FontMergeDecision.Overwrite
+                : FontMergeDecision.SkipDuplicate;
+            var note = mergeMode == FontMergeMode.Overwrite
+                ? "覆盖基础字体"
+                : "基础字体已存在";
+
+            return new FontMergeWorkerPreviewResult(
                 [],
-                [new FontMergeConflictItem(0x0041, "A", FontMergeCodePointState.Present, FontMergeCodePointState.Present, FontMergeDecision.SkipDuplicate, "基础字体已存在")],
+                [new FontMergeConflictItem(0x0041, "A", FontMergeCodePointState.Present, FontMergeCodePointState.Present, decision, note)],
                 1,
                 1,
                 0,
                 1,
-                0);
+                0,
+                mergeMode == FontMergeMode.Overwrite ? 1 : 0);
+        }
     }
 
     private sealed class QueueingFontSourceProvider : IFontSourceProvider

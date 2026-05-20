@@ -7,7 +7,8 @@ public sealed record FontMergeWorkerRequest(
     string SupplementalFontPath,
     IReadOnlyList<UnicodeRange> Ranges,
     string OutputPath,
-    string OutputFamilyName);
+    string OutputFamilyName,
+    FontMergeMode MergeMode = FontMergeMode.Supplement);
 
 public sealed record FontMergeWorkerPreviewResult(
     IReadOnlyList<FontMergeIssue> Issues,
@@ -16,7 +17,8 @@ public sealed record FontMergeWorkerPreviewResult(
     int SupplementalCoverageCount,
     int MergeCodePointCount,
     int DuplicateCodePointCount,
-    int MissingCodePointCount);
+    int MissingCodePointCount,
+    int OverwrittenCodePointCount = 0);
 
 public sealed record FontMergeWorkerMergeResult(
     FontMergeWorkerPreviewResult Preview,

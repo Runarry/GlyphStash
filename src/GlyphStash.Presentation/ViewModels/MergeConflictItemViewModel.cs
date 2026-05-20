@@ -25,6 +25,7 @@ public sealed class MergeConflictItemViewModel
         FontMergeDecision.SkipDuplicate => "跳过",
         FontMergeDecision.RecordMissing => "记录缺失",
         FontMergeDecision.Blocked => "阻止",
+        FontMergeDecision.Overwrite => "覆盖",
         _ => "未知"
     };
 
@@ -35,6 +36,8 @@ public sealed class MergeConflictItemViewModel
     public bool IsSkip => _item.DefaultDecision == FontMergeDecision.SkipDuplicate;
 
     public bool IsMissing => _item.DefaultDecision == FontMergeDecision.RecordMissing;
+
+    public bool IsOverwrite => _item.DefaultDecision == FontMergeDecision.Overwrite;
 
     private static string FormatState(FontMergeCodePointState state) => state switch
     {

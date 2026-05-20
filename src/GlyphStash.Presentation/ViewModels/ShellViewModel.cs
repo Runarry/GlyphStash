@@ -210,6 +210,9 @@ public sealed partial class ShellViewModel : ObservableObject
     private string _mergeUnicodeRanges = "U+4E00-U+9FFF";
 
     [ObservableProperty]
+    private string _selectedMergeModeLabel = "补全（追加）";
+
+    [ObservableProperty]
     private bool _mergeLicenseConfirmed;
 
     [ObservableProperty]
@@ -506,6 +509,17 @@ public sealed partial class ShellViewModel : ObservableObject
         "U+2000-U+206F"
     ];
 
+    public IReadOnlyList<string> MergeModeOptions { get; } = ["补全（追加）", "覆盖"];
+
+    public FontMergeMode SelectedMergeMode =>
+        string.Equals(SelectedMergeModeLabel, "覆盖", StringComparison.CurrentCultureIgnoreCase)
+            ? FontMergeMode.Overwrite
+            : FontMergeMode.Supplement;
+
+    public string MergeModeDescription => SelectedMergeMode == FontMergeMode.Overwrite
+        ? "覆盖模式会用补充字体替换指定范围内基础字体已存在的码位，同时补齐基础字体缺失的码位。"
+        : "补全（追加）模式只合并基础字体缺失、补充字体存在的码位，基础字体已存在的码位会跳过。";
+
     public bool IsMergeStepSelectFonts => MergeStepIndex == 0;
 
     public bool IsMergeStepRanges => MergeStepIndex == 1;
@@ -539,11 +553,23 @@ public sealed partial class ShellViewModel : ObservableObject
         _ => "下一步"
     };
 
-    public string MergePreviewSummary => _currentMergePreview is null
-        ? "尚未执行冲突预览。"
-        : $"范围 {string.Join(", ", _currentMergePreview.Ranges.Select(range => range.Label))} · 预计检查 {_currentMergePreview.RequestedCodePointCount:N0} 个码位 · 补充字体覆盖 {_currentMergePreview.SupplementalCoverageCount:N0} 个 · 默认合并 {_currentMergePreview.MergeCodePointCount:N0} 个";
+    public string MergePreviewSummary
+    {
+        get
+        {
+            if (_currentMergePreview is null)
+            {
+                return "尚未执行冲突预览。";
+            }
 
-    public string MergeDefaultStrategy => _currentMergePreview?.DefaultConflictStrategy ?? "基础字体已有码位默认跳过";
+            var overwriteText = SelectedMergeMode == FontMergeMode.Overwrite || _currentMergePreview.OverwrittenCodePointCount > 0
+                ? $" · 覆盖 {_currentMergePreview.OverwrittenCodePointCount:N0} 个"
+                : "";
+            return $"范围 {string.Join(", ", _currentMergePreview.Ranges.Select(range => range.Label))} · 预计检查 {_currentMergePreview.RequestedCodePointCount:N0} 个码位 · 补充字体覆盖 {_currentMergePreview.SupplementalCoverageCount:N0} 个 · 默认合并 {_currentMergePreview.MergeCodePointCount:N0} 个{overwriteText}";
+        }
+    }
+
+    public string MergeDefaultStrategy => _currentMergePreview?.DefaultConflictStrategy ?? BuildMergeModeStrategy(SelectedMergeMode);
 
     public string MergeProgressLabel => IsMergeBusy
         ? $"{MergeProgressStage} {MergeProgressPercent}% · {MergeProgressMessage}"
@@ -794,10 +820,12 @@ public sealed partial class ShellViewModel : ObservableObject
                 result.Issues,
                 _currentMergePreview?.Conflicts ?? [],
                 result.Report.RequestedCodePointCount,
-                result.Report.MergedCodePointCount + result.Report.SkippedDuplicateCodePointCount,
+                result.Report.MergedCodePointCount + result.Report.SkippedDuplicateCodePointCount + result.Report.OverwrittenCodePointCount,
                 result.Report.MergedCodePointCount,
                 result.Report.SkippedDuplicateCodePointCount,
-                result.Report.MissingCodePointCount));
+                result.Report.MissingCodePointCount,
+                result.Report.OverwrittenCodePointCount,
+                BuildMergeModeStrategy(result.Report.MergeMode)));
             ApplyMergeReport(result.Report, result.ReportPath);
             MergeStepIndex = 4;
             MergeStatus = result.Summary;
@@ -1688,6 +1716,16 @@ public sealed partial class ShellViewModel : ObservableObject
         NotifyMergePreviewState();
     }
 
+    partial void OnSelectedMergeModeLabelChanged(string value)
+    {
+        _currentMergePreview = null;
+        MergeConflicts.Clear();
+        MergeIssues.Clear();
+        OnPropertyChanged(nameof(SelectedMergeMode));
+        OnPropertyChanged(nameof(MergeModeDescription));
+        NotifyMergePreviewState();
+    }
+
     partial void OnMergeOutputFontNameChanged(string value) => NotifyMergeExportState();
 
     partial void OnMergeOutputPathChanged(string value) => NotifyMergeExportState();
@@ -1975,7 +2013,8 @@ public sealed partial class ShellViewModel : ObservableObject
             MergeUnicodeRanges,
             includeOutput ? MergeOutputPath : "",
             MergeOutputFontName,
-            MergeLicenseConfirmed);
+            MergeLicenseConfirmed,
+            MergeMode: SelectedMergeMode);
     }
 
     private static FontMergeFontSelection? CreateMergeSelection(FontFamilyItemViewModel? font)
@@ -2019,13 +2058,14 @@ public sealed partial class ShellViewModel : ObservableObject
 
     private void ApplyMergeReport(FontMergeReport report, string reportPath)
     {
+        SelectedMergeModeLabel = FormatMergeMode(report.MergeMode);
         MergeReportTitle = report.Succeeded ? "合并结果：成功" : "合并结果：失败";
         MergeReportBadge = report.Succeeded ? "成功" : "失败";
         MergeReportOutputPath = string.IsNullOrWhiteSpace(report.OutputPath) ? "未生成输出字体" : report.OutputPath;
         MergeReportInputFonts = $"{report.BaseFontFamily} + {report.SupplementalFontFamily}";
         MergeReportRangeLabel = report.Ranges.Count == 0 ? "未记录" : string.Join(", ", report.Ranges);
         MergeReportStatsLabel =
-            $"检查 {report.RequestedCodePointCount:N0} · 合并 {report.MergedCodePointCount:N0} · 跳过 {report.SkippedDuplicateCodePointCount:N0} · 缺失 {report.MissingCodePointCount:N0} · 冲突 {report.ConflictCount:N0}";
+            $"模式 {FormatMergeMode(report.MergeMode)} · 检查 {report.RequestedCodePointCount:N0} · 合并 {report.MergedCodePointCount:N0} · 跳过 {report.SkippedDuplicateCodePointCount:N0} · 覆盖 {report.OverwrittenCodePointCount:N0} · 缺失 {report.MissingCodePointCount:N0} · 冲突 {report.ConflictCount:N0}";
         MergeReportLicenseTime = report.LicenseConfirmedAt?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") ?? "未确认";
         MergeReportErrorMessage = report.ErrorMessage;
         MergeReportPath = reportPath;
@@ -2109,6 +2149,14 @@ public sealed partial class ShellViewModel : ObservableObject
             return new GlyphStash.Domain.Fonts.UnicodeRange(0, 0);
         }
     }
+
+    private static string BuildMergeModeStrategy(FontMergeMode mergeMode) =>
+        mergeMode == FontMergeMode.Overwrite
+            ? "覆盖模式：指定范围内补充字体存在的码位覆盖基础字体"
+            : "补全模式：基础字体已有码位默认跳过";
+
+    private static string FormatMergeMode(FontMergeMode mergeMode) =>
+        mergeMode == FontMergeMode.Overwrite ? "覆盖" : "补全（追加）";
 
     private void RebuildManagementOptions()
     {

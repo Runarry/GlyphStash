@@ -163,7 +163,14 @@ public sealed record FontMergeRequest(
     string OutputPath,
     string OutputFamilyName,
     bool LicenseConfirmed,
-    DateTimeOffset? LicenseConfirmedAt = null);
+    DateTimeOffset? LicenseConfirmedAt = null,
+    FontMergeMode MergeMode = FontMergeMode.Supplement);
+
+public enum FontMergeMode
+{
+    Supplement = 0,
+    Overwrite = 1
+}
 
 public sealed record FontMergePreview(
     IReadOnlyList<UnicodeRange> Ranges,
@@ -174,6 +181,7 @@ public sealed record FontMergePreview(
     int MergeCodePointCount,
     int DuplicateCodePointCount,
     int MissingCodePointCount,
+    int OverwrittenCodePointCount = 0,
     string DefaultConflictStrategy = "基础字体已有码位默认跳过")
 {
     public bool HasBlockingIssues => Issues.Any(issue => issue.Severity == FontMergeIssueSeverity.Error);
@@ -233,7 +241,8 @@ public enum FontMergeDecision
     Merge = 0,
     SkipDuplicate = 1,
     RecordMissing = 2,
-    Blocked = 3
+    Blocked = 3,
+    Overwrite = 4
 }
 
 public sealed record FontMergeProgress(
@@ -250,12 +259,14 @@ public sealed record FontMergeReport(
     int RequestedCodePointCount,
     int MergedCodePointCount,
     int SkippedDuplicateCodePointCount,
+    int OverwrittenCodePointCount,
     int MissingCodePointCount,
     int ConflictCount,
     DateTimeOffset? LicenseConfirmedAt,
     DateTimeOffset FinishedAt,
     string ErrorMessage,
-    IReadOnlyList<FontMergeIssue> Issues);
+    IReadOnlyList<FontMergeIssue> Issues,
+    FontMergeMode MergeMode = FontMergeMode.Supplement);
 
 public sealed record FontMergeResult(
     bool Succeeded,
@@ -265,6 +276,6 @@ public sealed record FontMergeResult(
     IReadOnlyList<FontMergeIssue> Issues)
 {
     public string Summary => Succeeded
-        ? $"导出成功：跳过重复码位 {Report.SkippedDuplicateCodePointCount:N0} 个，合并 {Report.MergedCodePointCount:N0} 个字形。"
+        ? $"导出成功：跳过重复码位 {Report.SkippedDuplicateCodePointCount:N0} 个，覆盖 {Report.OverwrittenCodePointCount:N0} 个，合并 {Report.MergedCodePointCount:N0} 个字形。"
         : $"导出失败：{Report.ErrorMessage}";
 }

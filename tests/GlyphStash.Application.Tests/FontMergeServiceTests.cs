@@ -85,6 +85,37 @@ public sealed class FontMergeServiceTests
         Assert.True(report.Succeeded);
         Assert.Equal(1, report.MergedCodePointCount);
         Assert.Equal(1, report.SkippedDuplicateCodePointCount);
+        Assert.Equal(0, report.OverwrittenCodePointCount);
+        Assert.Equal(FontMergeMode.Supplement, report.MergeMode);
+    }
+
+    [Fact]
+    public async Task Merge_ForwardsOverwriteModeAndReportsOverwriteCount()
+    {
+        var directory = CreateTempDirectory();
+        var basePath = Path.Combine(directory, "Base.ttf");
+        var supplementalPath = Path.Combine(directory, "Patch.ttf");
+        var outputPath = Path.Combine(directory, "Merged.ttf");
+        await File.WriteAllBytesAsync(basePath, [1], CancellationToken.None);
+        await File.WriteAllBytesAsync(supplementalPath, [1], CancellationToken.None);
+        var worker = new FakeMergeWorker();
+        var service = new FontMergeService(worker);
+
+        var result = await service.MergeAsync(
+            CreateRequest(basePath, supplementalPath) with
+            {
+                OutputPath = outputPath,
+                MergeMode = FontMergeMode.Overwrite
+            },
+            null,
+            CancellationToken.None);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(FontMergeMode.Overwrite, worker.LastRequest?.MergeMode);
+        Assert.Equal(FontMergeMode.Overwrite, result.Report.MergeMode);
+        Assert.Equal(0, result.Report.SkippedDuplicateCodePointCount);
+        Assert.Equal(1, result.Report.OverwrittenCodePointCount);
+        Assert.Contains("覆盖 1", result.Summary, StringComparison.Ordinal);
     }
 
     private static FontMergeRequest CreateRequest(string basePath, string supplementalPath) =>
@@ -115,24 +146,36 @@ public sealed class FontMergeServiceTests
     {
         public bool WasCalled { get; private set; }
 
+        public FontMergeWorkerRequest? LastRequest { get; private set; }
+
         public Task<FontMergeWorkerPreviewResult> PreviewAsync(FontMergeWorkerRequest request, IProgress<FontMergeProgress>? progress, CancellationToken cancellationToken)
         {
             WasCalled = true;
-            return Task.FromResult(CreatePreview());
+            LastRequest = request;
+            return Task.FromResult(CreatePreview(request.MergeMode));
         }
 
         public async Task<FontMergeWorkerMergeResult> MergeAsync(FontMergeWorkerRequest request, IProgress<FontMergeProgress>? progress, CancellationToken cancellationToken)
         {
             WasCalled = true;
+            LastRequest = request;
             await File.WriteAllBytesAsync(request.OutputPath, [7, 8, 9], cancellationToken);
-            return new FontMergeWorkerMergeResult(CreatePreview(), request.OutputPath);
+            return new FontMergeWorkerMergeResult(CreatePreview(request.MergeMode), request.OutputPath);
         }
 
-        private static FontMergeWorkerPreviewResult CreatePreview() =>
-            new(
+        private static FontMergeWorkerPreviewResult CreatePreview(FontMergeMode mergeMode)
+        {
+            var duplicateDecision = mergeMode == FontMergeMode.Overwrite
+                ? FontMergeDecision.Overwrite
+                : FontMergeDecision.SkipDuplicate;
+            var duplicateNote = mergeMode == FontMergeMode.Overwrite
+                ? "覆盖基础字体"
+                : "基础字体已存在";
+
+            return new FontMergeWorkerPreviewResult(
                 [],
                 [
-                    new FontMergeConflictItem(0x0041, "A", FontMergeCodePointState.Present, FontMergeCodePointState.Present, FontMergeDecision.SkipDuplicate, "基础字体已存在"),
+                    new FontMergeConflictItem(0x0041, "A", FontMergeCodePointState.Present, FontMergeCodePointState.Present, duplicateDecision, duplicateNote),
                     new FontMergeConflictItem(0x0042, "B", FontMergeCodePointState.Missing, FontMergeCodePointState.Present, FontMergeDecision.Merge, "将合并"),
                     new FontMergeConflictItem(0x0043, "C", FontMergeCodePointState.Missing, FontMergeCodePointState.Missing, FontMergeDecision.RecordMissing, "补充字体缺失")
                 ],
@@ -140,6 +183,8 @@ public sealed class FontMergeServiceTests
                 2,
                 1,
                 1,
-                1);
+                1,
+                mergeMode == FontMergeMode.Overwrite ? 1 : 0);
+        }
     }
 }

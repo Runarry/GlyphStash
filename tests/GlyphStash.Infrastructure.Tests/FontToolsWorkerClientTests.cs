@@ -36,7 +36,7 @@ response = {
         "character": "A",
         "baseState": "Present",
         "supplementalState": "Present",
-        "defaultDecision": "SkipDuplicate",
+        "defaultDecision": request["mergeMode"],
         "note": request["operation"]
       }
     ],
@@ -44,7 +44,8 @@ response = {
     "supplementalCoverageCount": 1,
     "mergeCodePointCount": 0,
     "duplicateCodePointCount": 1,
-    "missingCodePointCount": 0
+    "missingCodePointCount": 0,
+    "overwrittenCodePointCount": 1
   },
   "outputPath": request["outputPath"],
   "errorMessage": ""
@@ -56,13 +57,14 @@ with open(request["responsePath"], "w", encoding="utf-8") as handle:
         var progressItems = new List<FontMergeProgress>();
 
         var result = await client.PreviewAsync(
-            new FontMergeWorkerRequest("base.ttf", "patch.ttf", [new UnicodeRange(0x41, 0x41)], "", "Merged"),
+            new FontMergeWorkerRequest("base.ttf", "patch.ttf", [new UnicodeRange(0x41, 0x41)], "", "Merged", FontMergeMode.Overwrite),
             new Progress<FontMergeProgress>(progressItems.Add),
             CancellationToken.None);
 
         Assert.Equal(1, result.DuplicateCodePointCount);
+        Assert.Equal(1, result.OverwrittenCodePointCount);
         Assert.Single(result.Conflicts);
-        Assert.Equal(FontMergeDecision.SkipDuplicate, result.Conflicts[0].DefaultDecision);
+        Assert.Equal(FontMergeDecision.Overwrite, result.Conflicts[0].DefaultDecision);
         Assert.Contains(progressItems, item => item.Percent == 42);
     }
 

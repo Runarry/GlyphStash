@@ -39,7 +39,7 @@ public sealed class FontMergeService
                 null,
                 cancellationToken).ConfigureAwait(false);
 
-            return CreatePreview(validation.Ranges, validation.Issues.Concat(workerResult.Issues).ToList(), workerResult);
+            return CreatePreview(validation.Ranges, validation.Issues.Concat(workerResult.Issues).ToList(), workerResult, request.MergeMode);
         }
         catch (OperationCanceledException)
         {
@@ -270,12 +270,14 @@ public sealed class FontMergeService
             request.SupplementalFont!.File.Path,
             ranges,
             request.OutputPath,
-            request.OutputFamilyName);
+            request.OutputFamilyName,
+            request.MergeMode);
 
     private static FontMergePreview CreatePreview(
         IReadOnlyList<UnicodeRange> ranges,
         IReadOnlyList<FontMergeIssue> issues,
-        FontMergeWorkerPreviewResult workerResult) =>
+        FontMergeWorkerPreviewResult workerResult,
+        FontMergeMode mergeMode) =>
         new(
             ranges,
             issues,
@@ -284,7 +286,9 @@ public sealed class FontMergeService
             workerResult.SupplementalCoverageCount,
             workerResult.MergeCodePointCount,
             workerResult.DuplicateCodePointCount,
-            workerResult.MissingCodePointCount);
+            workerResult.MissingCodePointCount,
+            workerResult.OverwrittenCodePointCount,
+            BuildConflictStrategy(mergeMode));
 
     private static FontMergePreview EmptyPreview(IReadOnlyList<UnicodeRange> ranges, IReadOnlyList<FontMergeIssue> issues) =>
         new(ranges, issues, [], UnicodeRangeParser.CountCodePoints(ranges), 0, 0, 0, 0);
@@ -299,6 +303,12 @@ public sealed class FontMergeService
         string outputPath)
     {
         var rangeLabels = ranges.Select(range => range.Label).ToList();
+        var skippedDuplicates = request.MergeMode == FontMergeMode.Supplement
+            ? preview?.DuplicateCodePointCount ?? 0
+            : 0;
+        var overwrittenCodePoints = request.MergeMode == FontMergeMode.Overwrite
+            ? preview?.OverwrittenCodePointCount ?? preview?.DuplicateCodePointCount ?? 0
+            : 0;
         return new FontMergeReport(
             succeeded,
             outputPath,
@@ -307,14 +317,21 @@ public sealed class FontMergeService
             rangeLabels,
             preview?.RequestedCodePointCount ?? UnicodeRangeParser.CountCodePoints(ranges),
             preview?.MergeCodePointCount ?? 0,
-            preview?.DuplicateCodePointCount ?? 0,
+            skippedDuplicates,
+            overwrittenCodePoints,
             preview?.MissingCodePointCount ?? 0,
             preview?.DuplicateCodePointCount ?? 0,
             request.LicenseConfirmedAt,
             DateTimeOffset.UtcNow,
             errorMessage,
-            issues);
+            issues,
+            request.MergeMode);
     }
+
+    private static string BuildConflictStrategy(FontMergeMode mergeMode) =>
+        mergeMode == FontMergeMode.Overwrite
+            ? "覆盖模式：指定范围内补充字体存在的码位覆盖基础字体"
+            : "补全模式：基础字体已有码位默认跳过";
 
     private static async Task<string> WriteReportAsync(string outputPath, FontMergeReport report, CancellationToken cancellationToken)
     {

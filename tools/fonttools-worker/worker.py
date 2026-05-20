@@ -30,6 +30,13 @@ def codepoint_label(codepoint):
     return f"U+{codepoint:04X}"
 
 
+def normalize_merge_mode(value):
+    normalized = str(value or "Supplement").strip().lower()
+    if normalized in {"overwrite", "1", "覆盖"}:
+        return "Overwrite"
+    return "Supplement"
+
+
 def expand_ranges(ranges):
     codepoints = []
     seen = set()
@@ -76,12 +83,13 @@ def get_cmap(font):
     return font.getBestCmap() or {}
 
 
-def create_conflicts(requested, base_cmap, supplemental_cmap):
+def create_conflicts(requested, base_cmap, supplemental_cmap, merge_mode):
     conflicts = []
     duplicate_count = 0
     missing_count = 0
     merge_count = 0
     coverage_count = 0
+    overwritten_count = 0
     for codepoint in requested:
         base_present = codepoint in base_cmap
         supplemental_present = codepoint in supplemental_cmap
@@ -89,8 +97,13 @@ def create_conflicts(requested, base_cmap, supplemental_cmap):
             coverage_count += 1
         if base_present and supplemental_present:
             duplicate_count += 1
-            decision = "SkipDuplicate"
-            note = "基础字体已存在，默认跳过"
+            if merge_mode == "Overwrite":
+                overwritten_count += 1
+                decision = "Overwrite"
+                note = "基础字体已存在，覆盖模式将使用补充字体替换"
+            else:
+                decision = "SkipDuplicate"
+                note = "基础字体已存在，补全模式默认跳过"
         elif not supplemental_present:
             missing_count += 1
             decision = "RecordMissing"
@@ -112,7 +125,7 @@ def create_conflicts(requested, base_cmap, supplemental_cmap):
                 }
             )
 
-    return conflicts, coverage_count, merge_count, duplicate_count, missing_count
+    return conflicts, coverage_count, merge_count, duplicate_count, missing_count, overwritten_count
 
 
 def rename_font(font, family_name):
@@ -133,30 +146,46 @@ def set_name_string(record, value):
         record.string = value.encode("utf-16-be", errors="replace")
 
 
-def subset_supplemental(supplemental_path, merge_codepoints, base_units, temp_dir):
-    font = TTFont(supplemental_path, recalcBBoxes=False, recalcTimestamp=False, lazy=False)
+def subset_font(input_path, codepoints, output_path, target_units=None):
+    font = TTFont(input_path, recalcBBoxes=False, recalcTimestamp=False, lazy=False)
     options = Options()
     options.ignore_missing_glyphs = True
     options.retain_gids = False
     subsetter = Subsetter(options=options)
-    subsetter.populate(unicodes=merge_codepoints)
+    subsetter.populate(unicodes=codepoints)
     subsetter.subset(font)
-    if scale_upem is not None and "head" in font and int(font["head"].unitsPerEm) != base_units:
-        scale_upem(font, base_units)
-    subset_path = os.path.join(temp_dir, "supplemental-subset.ttf")
-    font.save(subset_path)
+    if target_units is not None and scale_upem is not None and "head" in font and int(font["head"].unitsPerEm) != target_units:
+        scale_upem(font, target_units)
+    font.save(output_path)
     font.close()
-    return subset_path
+    return output_path
 
 
-def perform_merge(base_path, supplemental_path, output_path, output_family_name, merge_codepoints):
+def subset_supplemental(supplemental_path, merge_codepoints, base_units, temp_dir):
+    subset_path = os.path.join(temp_dir, "supplemental-subset.ttf")
+    return subset_font(supplemental_path, merge_codepoints, subset_path, base_units)
+
+
+def subset_base_for_overwrite(base_path, overwritten_codepoints, temp_dir):
+    font = TTFont(base_path, recalcBBoxes=False, recalcTimestamp=False, lazy=False)
+    base_cmap = get_cmap(font)
+    font.close()
+    keep_codepoints = sorted(codepoint for codepoint in base_cmap if codepoint not in set(overwritten_codepoints))
+    subset_path = os.path.join(temp_dir, "base-without-overwrites.ttf")
+    return subset_font(base_path, keep_codepoints, subset_path)
+
+
+def perform_merge(base_path, supplemental_path, output_path, output_family_name, merge_codepoints, merge_mode):
     with tempfile.TemporaryDirectory(prefix="glyphstash-fonttools-") as temp_dir:
         base_font = TTFont(base_path, recalcBBoxes=False, recalcTimestamp=False, lazy=False)
         base_units = font_units_per_em(base_font)
         if merge_codepoints:
             subset_path = subset_supplemental(supplemental_path, merge_codepoints, base_units, temp_dir)
+            base_input_path = base_path
+            if merge_mode == "Overwrite":
+                base_input_path = subset_base_for_overwrite(base_path, merge_codepoints, temp_dir)
             base_font.close()
-            merged = Merger().merge([base_path, subset_path])
+            merged = Merger().merge([base_input_path, subset_path])
         else:
             merged = base_font
         rename_font(merged, output_family_name)
@@ -169,19 +198,28 @@ def perform_merge(base_path, supplemental_path, output_path, output_family_name,
 
 def analyze(request, dry_run):
     issues = []
+    merge_mode = normalize_merge_mode(request.get("mergeMode"))
     emit_progress(10, "读取", "正在读取输入字体...")
     base_font = load_font(request["baseFontPath"], "基础字体 A", issues)
     supplemental_font = load_font(request["supplementalFontPath"], "补充字体 B", issues)
     requested = expand_ranges(request["ranges"])
 
     if base_font is None or supplemental_font is None:
-        return create_preview(issues, [], len(requested), 0, 0, 0, 0), []
+        return create_preview(issues, [], len(requested), 0, 0, 0, 0, 0), []
 
     emit_progress(28, "预检查", "正在读取 Unicode cmap...")
     base_cmap = get_cmap(base_font)
     supplemental_cmap = get_cmap(supplemental_font)
-    conflicts, coverage_count, merge_count, duplicate_count, missing_count = create_conflicts(requested, base_cmap, supplemental_cmap)
-    merge_codepoints = sorted(codepoint for codepoint in requested if codepoint in supplemental_cmap and codepoint not in base_cmap)
+    conflicts, coverage_count, merge_count, duplicate_count, missing_count, overwritten_count = create_conflicts(
+        requested,
+        base_cmap,
+        supplemental_cmap,
+        merge_mode,
+    )
+    if merge_mode == "Overwrite":
+        merge_codepoints = sorted(codepoint for codepoint in requested if codepoint in supplemental_cmap)
+    else:
+        merge_codepoints = sorted(codepoint for codepoint in requested if codepoint in supplemental_cmap and codepoint not in base_cmap)
 
     base_units = font_units_per_em(base_font)
     supplemental_units = font_units_per_em(supplemental_font)
@@ -203,6 +241,7 @@ def analyze(request, dry_run):
                     preview_output,
                     request.get("outputFamilyName") or "GlyphStash Preview",
                     merge_codepoints,
+                    merge_mode,
                 )
             except Exception as exc:
                 issues.append(issue("OpenTypeLayoutConflict", "Error", f"fontTools dry-run 失败：{exc}", "fontTools merge"))
@@ -210,10 +249,19 @@ def analyze(request, dry_run):
     if len(requested) > DETAIL_LIMIT:
         issues.append(issue("InvalidInput", "Info", f"冲突明细仅显示前 {DETAIL_LIMIT} 个码位，报告保留完整统计。", "冲突明细"))
 
-    return create_preview(issues, conflicts, len(requested), coverage_count, merge_count, duplicate_count, missing_count), merge_codepoints
+    return create_preview(
+        issues,
+        conflicts,
+        len(requested),
+        coverage_count,
+        merge_count,
+        duplicate_count,
+        missing_count,
+        overwritten_count,
+    ), merge_codepoints
 
 
-def create_preview(issues, conflicts, requested_count, coverage_count, merge_count, duplicate_count, missing_count):
+def create_preview(issues, conflicts, requested_count, coverage_count, merge_count, duplicate_count, missing_count, overwritten_count):
     return {
         "issues": issues,
         "conflicts": conflicts,
@@ -222,6 +270,7 @@ def create_preview(issues, conflicts, requested_count, coverage_count, merge_cou
         "mergeCodePointCount": merge_count,
         "duplicateCodePointCount": duplicate_count,
         "missingCodePointCount": missing_count,
+        "overwrittenCodePointCount": overwritten_count,
     }
 
 
@@ -249,6 +298,7 @@ def run(request):
         request["outputPath"],
         request.get("outputFamilyName") or "GlyphStash Merged",
         merge_codepoints,
+        normalize_merge_mode(request.get("mergeMode")),
     )
     emit_progress(100, "完成", "输出字体已生成。")
     write_response(request["responsePath"], preview, request["outputPath"])
@@ -269,7 +319,7 @@ def main():
         except Exception:
             response_path = None
         if response_path:
-            write_response(response_path, create_preview([issue("WorkerFailed", "Error", str(exc), "fontTools worker")], [], 0, 0, 0, 0, 0), error_message=str(exc))
+            write_response(response_path, create_preview([issue("WorkerFailed", "Error", str(exc), "fontTools worker")], [], 0, 0, 0, 0, 0, 0), error_message=str(exc))
         print(str(exc), file=sys.stderr)
         sys.exit(1)
 

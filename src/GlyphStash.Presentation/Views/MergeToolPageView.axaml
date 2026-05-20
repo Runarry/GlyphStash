@@ -107,6 +107,13 @@
                   <TextBlock Text="Unicode 范围输入" Classes="caption" FontWeight="Bold" />
                   <TextBox Text="{Binding MergeUnicodeRanges, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="U+4E00-U+9FFF, U+3000" />
                 </StackPanel>
+                <StackPanel Spacing="7">
+                  <TextBlock Text="合并模式" Classes="caption" FontWeight="Bold" />
+                  <ComboBox ItemsSource="{Binding MergeModeOptions}"
+                            SelectedItem="{Binding SelectedMergeModeLabel, Mode=TwoWay}"
+                            HorizontalAlignment="Stretch" />
+                  <TextBlock Text="{Binding MergeModeDescription}" Classes="muted" TextWrapping="Wrap" />
+                </StackPanel>
                 <WrapPanel>
                   <Button Content="CJK Unified Ideographs" Classes="sm" Margin="0,0,8,8" Command="{Binding ApplyMergeUnicodeBlockCommand}" CommandParameter="U+4E00-U+9FFF" />
                   <Button Content="Basic Latin" Classes="sm" Margin="0,0,8,8" Command="{Binding ApplyMergeUnicodeBlockCommand}" CommandParameter="U+0000-U+007F" />
@@ -169,7 +176,7 @@
                             <TextBlock Grid.Column="1" Text="{Binding Character}" FontSize="22" />
                             <TextBlock Grid.Column="2" Text="{Binding BaseStateLabel}" />
                             <TextBlock Grid.Column="3" Text="{Binding SupplementalStateLabel}" />
-                            <Border Grid.Column="4" Classes="badge" Classes.ok="{Binding IsMerge}" Classes.warn="{Binding IsSkip}" Classes.danger="{Binding IsMissing}">
+                            <Border Grid.Column="4" Classes="badge" Classes.ok="{Binding IsMerge}" Classes.warn="{Binding IsSkip}" Classes.danger="{Binding IsMissing}" Classes.blue="{Binding IsOverwrite}">
                               <TextBlock Text="{Binding DecisionLabel}" FontSize="12" />
                             </Border>
                           </Grid>
