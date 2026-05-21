@@ -15,6 +15,7 @@
     <Nullable>enable</Nullable>
     <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
     <EnableAotAnalyzer>true</EnableAotAnalyzer>
+    <ApplicationIcon>Assets\glyphstash.ico</ApplicationIcon>
   </PropertyGroup>
 
   <PropertyGroup>

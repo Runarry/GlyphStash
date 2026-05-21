@@ -2,15 +2,12 @@ using System.Runtime.Versioning;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Platform;
 
 namespace GlyphStash.Desktop;
 
 [SupportedOSPlatform("windows")]
 internal sealed class DesktopTrayController : IDisposable
 {
-    private static readonly Uri TrayIconUri = new("avares://GlyphStash.Desktop/Assets/glyphstash-tray.ico");
-
     private readonly Avalonia.Application _application;
     private readonly TrayWindowLifecycle _lifecycle;
     private readonly TrayIcon _trayIcon;
@@ -73,17 +70,11 @@ internal sealed class DesktopTrayController : IDisposable
 
         return new TrayIcon
         {
-            Icon = LoadTrayIcon(),
+            Icon = AppIcon.Load(),
             ToolTipText = "GlyphStash 正在运行",
             Menu = menu,
             IsVisible = true
         };
-    }
-
-    private static WindowIcon LoadTrayIcon()
-    {
-        using var stream = AssetLoader.Open(TrayIconUri);
-        return new WindowIcon(stream);
     }
 
     private void OnTrayIconClicked(object? sender, EventArgs e) => _lifecycle.ShowFromTray();
