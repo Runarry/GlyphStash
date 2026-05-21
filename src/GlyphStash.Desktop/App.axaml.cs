@@ -21,6 +21,7 @@ namespace GlyphStash.Desktop;
 public partial class App : Avalonia.Application
 {
     private ServiceProvider? _serviceProvider;
+    private DesktopTrayController? _trayController;
 
     public override void Initialize()
     {
@@ -41,9 +42,17 @@ public partial class App : Avalonia.Application
             };
             _serviceProvider.GetRequiredService<DesktopStorageDialogService>().TopLevel = mainWindow;
             desktop.MainWindow = mainWindow;
+            _trayController = new DesktopTrayController(this, mainWindow, desktop);
 
+            var initialized = false;
             desktop.MainWindow.Opened += async (_, _) =>
             {
+                if (initialized)
+                {
+                    return;
+                }
+
+                initialized = true;
                 await _serviceProvider.GetRequiredService<FontActivationCoordinator>().MarkRestartedActivationsStaleAsync(CancellationToken.None);
                 await shellViewModel.InitializeAsync();
             };
@@ -51,6 +60,15 @@ public partial class App : Avalonia.Application
             {
                 try
                 {
+                    try
+                    {
+                        _trayController?.Dispose();
+                    }
+                    catch
+                    {
+                        // Tray teardown must not block temporary font cleanup.
+                    }
+
                     _serviceProvider.GetRequiredService<FontActivationCoordinator>()
                         .DeactivateAllOwnedActivationsAsync(CancellationToken.None)
                         .GetAwaiter()

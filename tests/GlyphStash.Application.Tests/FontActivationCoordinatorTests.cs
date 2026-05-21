@@ -27,6 +27,20 @@ public sealed class FontActivationCoordinatorTests
         Assert.Equal(1, platform.DeactivateCalls);
     }
 
+    [Fact]
+    public async Task Activate_DoesNotReleasePlatformUntilExplicitDeactivateOrCleanup()
+    {
+        var platform = new FakePlatformActivation();
+        var store = new FakeActivationStore();
+        var coordinator = new FontActivationCoordinator(platform, store, new FakeOperationLogStore());
+        var font = new FontFileRef("C:/Project/BrandSans.otf", "OTF", "hash");
+
+        await coordinator.ActivateAsync("font:BrandSans", [font], CancellationToken.None);
+
+        Assert.Equal(1, platform.ActivateCalls);
+        Assert.Equal(0, platform.DeactivateCalls);
+    }
+
     private sealed class FakePlatformActivation : ITemporaryFontActivationService
     {
         public int ActivateCalls { get; private set; }

@@ -10,6 +10,7 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/GlyphStash.Application.Tests/GlyphStash.Application.Tests.csproj" />
+    <Project Path="tests/GlyphStash.Desktop.Tests/GlyphStash.Desktop.Tests.csproj" />
     <Project Path="tests/GlyphStash.Domain.Tests/GlyphStash.Domain.Tests.csproj" />
     <Project Path="tests/GlyphStash.Infrastructure.Tests/GlyphStash.Infrastructure.Tests.csproj" />
     <Project Path="tests/GlyphStash.Platform.Windows.Tests/GlyphStash.Platform.Windows.Tests.csproj" />
