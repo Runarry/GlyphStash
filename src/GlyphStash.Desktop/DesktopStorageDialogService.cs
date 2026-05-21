@@ -6,9 +6,14 @@ using GlyphStash.Presentation.Services;
 
 namespace GlyphStash.Desktop;
 
-public sealed class DesktopStorageDialogService : IUserFileDialogService, IUserClipboardService
+public sealed class DesktopStorageDialogService : IUserFileDialogService, IUserClipboardService, IDisposable
 {
     public TopLevel? TopLevel { get; set; }
+
+    public void Dispose()
+    {
+        TopLevel = null;
+    }
 
     public async Task<IReadOnlyList<string>> PickFontFilesAsync(CancellationToken cancellationToken)
     {

@@ -1,4 +1,5 @@
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using System.Runtime.Versioning;
@@ -21,6 +22,7 @@ namespace GlyphStash.Desktop;
 public partial class App : Avalonia.Application
 {
     private ServiceProvider? _serviceProvider;
+    private DesktopUiSessionManager? _uiSessionManager;
     private DesktopTrayController? _trayController;
 
     public override void Initialize()
@@ -34,28 +36,11 @@ public partial class App : Avalonia.Application
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
+            desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
             _serviceProvider.GetRequiredService<IAppLocalizationService>().ApplyAvaloniaResources();
-            var shellViewModel = _serviceProvider.GetRequiredService<ShellViewModel>();
-            var mainWindow = new MainWindow
-            {
-                DataContext = shellViewModel
-            };
-            _serviceProvider.GetRequiredService<DesktopStorageDialogService>().TopLevel = mainWindow;
-            desktop.MainWindow = mainWindow;
-            _trayController = new DesktopTrayController(this, mainWindow, desktop);
-
-            var initialized = false;
-            desktop.MainWindow.Opened += async (_, _) =>
-            {
-                if (initialized)
-                {
-                    return;
-                }
-
-                initialized = true;
-                await _serviceProvider.GetRequiredService<FontActivationCoordinator>().MarkRestartedActivationsStaleAsync(CancellationToken.None);
-                await shellViewModel.InitializeAsync();
-            };
+            _uiSessionManager = new DesktopUiSessionManager(_serviceProvider, desktop);
+            _trayController = new DesktopTrayController(this, _uiSessionManager, desktop);
+            _uiSessionManager.EnsureSession();
             desktop.Exit += (_, _) =>
             {
                 try
@@ -67,6 +52,15 @@ public partial class App : Avalonia.Application
                     catch
                     {
                         // Tray teardown must not block temporary font cleanup.
+                    }
+
+                    try
+                    {
+                        _uiSessionManager?.Dispose();
+                    }
+                    catch
+                    {
+                        // UI teardown is best effort; temporary font cleanup still has priority.
                     }
 
                     _serviceProvider.GetRequiredService<FontActivationCoordinator>()
@@ -85,7 +79,7 @@ public partial class App : Avalonia.Application
     }
 
     [SupportedOSPlatform("windows")]
-    private static ServiceProvider BuildServices()
+    internal static ServiceProvider BuildServices()
     {
         var services = new ServiceCollection();
         var dataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "GlyphStash");
@@ -100,27 +94,28 @@ public partial class App : Avalonia.Application
         services.AddSingleton<IActivationStore>(provider => provider.GetRequiredService<SqliteFontMetadataStore>());
         services.AddSingleton<IOperationLogStore>(provider => provider.GetRequiredService<SqliteFontMetadataStore>());
         services.AddSingleton<IDownloadRecordStore>(provider => provider.GetRequiredService<SqliteFontMetadataStore>());
-        services.AddSingleton<IFontInventoryService, WindowsFontInventoryService>();
-        services.AddSingleton<IFontMetadataReader, OpenTypeFontMetadataReader>();
-        services.AddSingleton<IGlyphCatalogService, OpenTypeGlyphCatalogService>();
-        services.AddSingleton<IFontMergeWorker, FontToolsWorkerClient>();
-        services.AddSingleton<IManagedFontFileStore, ManagedFontFileStore>();
         services.AddSingleton<IWindowsFontApi, WindowsFontApi>();
-        services.AddSingleton<IFontInstallService, WindowsFontInstallService>();
         services.AddSingleton<ITemporaryFontActivationService, WindowsTemporaryFontActivationService>();
-        services.AddSingleton(new HttpClient());
-        services.AddSingleton<IFontSourceProvider, GoogleFontsProvider>();
-        services.AddSingleton<FontLibraryService>();
         services.AddSingleton<FontActivationCoordinator>();
-        services.AddSingleton<LocalFontManagementService>();
-        services.AddSingleton<OnlineFontService>();
-        services.AddSingleton<FontMergeService>();
         services.AddSingleton<IAppLocalizationService, AppLocalizationService>();
-        services.AddSingleton<DesktopStorageDialogService>();
-        services.AddSingleton<IUserFileDialogService>(provider => provider.GetRequiredService<DesktopStorageDialogService>());
-        services.AddSingleton<IUserClipboardService>(provider => provider.GetRequiredService<DesktopStorageDialogService>());
-        services.AddSingleton<IFontPreviewRegistry, AvaloniaFontPreviewRegistry>();
-        services.AddSingleton<ShellViewModel>();
+
+        services.AddScoped<IFontInventoryService, WindowsFontInventoryService>();
+        services.AddScoped<IFontMetadataReader, OpenTypeFontMetadataReader>();
+        services.AddScoped<IGlyphCatalogService, OpenTypeGlyphCatalogService>();
+        services.AddScoped<IFontMergeWorker, FontToolsWorkerClient>();
+        services.AddScoped<IManagedFontFileStore, ManagedFontFileStore>();
+        services.AddScoped<IFontInstallService, WindowsFontInstallService>();
+        services.AddScoped(_ => new HttpClient());
+        services.AddScoped<IFontSourceProvider, GoogleFontsProvider>();
+        services.AddScoped<FontLibraryService>();
+        services.AddScoped<LocalFontManagementService>();
+        services.AddScoped<OnlineFontService>();
+        services.AddScoped<FontMergeService>();
+        services.AddScoped<DesktopStorageDialogService>();
+        services.AddScoped<IUserFileDialogService>(provider => provider.GetRequiredService<DesktopStorageDialogService>());
+        services.AddScoped<IUserClipboardService>(provider => provider.GetRequiredService<DesktopStorageDialogService>());
+        services.AddScoped<IFontPreviewRegistry, AvaloniaFontPreviewRegistry>();
+        services.AddScoped<ShellViewModel>();
 
         return services.BuildServiceProvider();
     }

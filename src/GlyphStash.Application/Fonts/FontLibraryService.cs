@@ -37,7 +37,9 @@ public sealed class FontLibraryService
     public async Task<IReadOnlyList<FontFamilyRecord>> LoadCachedFontsAsync(FontSearchQuery query, CancellationToken cancellationToken)
     {
         await _metadataStore.InitializeAsync(cancellationToken).ConfigureAwait(false);
-        return await _metadataStore.SearchAsync(query, cancellationToken).ConfigureAwait(false);
+        var fonts = await _metadataStore.SearchAsync(query, cancellationToken).ConfigureAwait(false);
+        var active = await GetActiveTemporaryActivationsAsync(cancellationToken).ConfigureAwait(false);
+        return ApplyCurrentTemporaryActivations(fonts, active);
     }
 
     public async Task<IReadOnlyList<FontFamilyRecord>> RescanAsync(CancellationToken cancellationToken)

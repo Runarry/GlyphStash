@@ -38,7 +38,7 @@ internal sealed class AvaloniaTrayWindow : ITrayWindow
             _ => TrayWindowState.Normal
         };
 
-    private static WindowState ToAvalonia(TrayWindowState state) =>
+    public static WindowState ToAvalonia(TrayWindowState state) =>
         state switch
         {
             TrayWindowState.Minimized => WindowState.Minimized,

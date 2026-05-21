@@ -332,6 +332,32 @@ public sealed class ShellViewModelTests
     }
 
     [Fact]
+    public void TrayHideGuard_BlocksWhileNonFontUiWorkIsBusy()
+    {
+        var vm = new ShellViewModel(new FontLibraryService(new FakeInventory([]), new FakeStore([])));
+
+        Assert.True(vm.CanHideToTray);
+        Assert.Equal("", vm.TrayHideBlockReason);
+
+        vm.IsBusy = true;
+
+        Assert.False(vm.CanHideToTray);
+        Assert.Contains("任务完成", vm.TrayHideBlockReason, StringComparison.Ordinal);
+
+        vm.IsBusy = false;
+        vm.IsMergeBusy = true;
+
+        Assert.False(vm.CanHideToTray);
+        Assert.Contains("合并", vm.TrayHideBlockReason, StringComparison.Ordinal);
+
+        vm.IsMergeBusy = false;
+        vm.IsGlyphLoading = true;
+
+        Assert.False(vm.CanHideToTray);
+        Assert.Contains("字形读取", vm.TrayHideBlockReason, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void RemoteFontStyleOption_FormatsGoogleFontsVariants()
     {
         Assert.Equal("Thin 100", RemoteFontStyleOptionViewModel.FormatVariantLabel("100"));

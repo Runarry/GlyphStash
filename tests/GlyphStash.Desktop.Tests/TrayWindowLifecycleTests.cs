@@ -52,6 +52,68 @@ public sealed class TrayWindowLifecycleTests
     }
 
     [Fact]
+    public void HideToTray_WhenGuardDenies_RestoresWindowAndDoesNotScheduleUnload()
+    {
+        var window = new FakeTrayWindow { State = TrayWindowState.Minimized };
+        var unloadSchedules = 0;
+        var blockedReason = "";
+        var lifecycle = new TrayWindowLifecycle(
+            window,
+            () => { },
+            () => TrayHideDecision.Deny("busy"),
+            reason => blockedReason = reason,
+            () => unloadSchedules++);
+
+        var hidden = lifecycle.HideToTray();
+
+        Assert.False(hidden);
+        Assert.False(lifecycle.IsHiddenToTray);
+        Assert.True(window.ShowInTaskbar);
+        Assert.Equal(TrayWindowState.Normal, window.State);
+        Assert.Equal(1, window.ShowCalls);
+        Assert.Equal(1, window.ActivateCalls);
+        Assert.Equal(0, unloadSchedules);
+        Assert.Equal("busy", blockedReason);
+        Assert.False(lifecycle.LastHideDecision.CanHide);
+    }
+
+    [Fact]
+    public void HideToTray_WhenAllowed_SchedulesDeferredUnload()
+    {
+        var window = new FakeTrayWindow { State = TrayWindowState.Normal };
+        var unloadSchedules = 0;
+        var lifecycle = new TrayWindowLifecycle(
+            window,
+            () => { },
+            hiddenToTray: () => unloadSchedules++);
+
+        var hidden = lifecycle.HideToTray();
+
+        Assert.True(hidden);
+        Assert.True(lifecycle.IsHiddenToTray);
+        Assert.Equal(1, unloadSchedules);
+    }
+
+    [Fact]
+    public void ShowFromTray_CancelsDeferredUnload()
+    {
+        var window = new FakeTrayWindow { State = TrayWindowState.Normal };
+        var unloadCancels = 0;
+        var lifecycle = new TrayWindowLifecycle(
+            window,
+            () => { },
+            shownFromTray: () => unloadCancels++);
+
+        lifecycle.HideToTray();
+        lifecycle.ShowFromTray();
+
+        Assert.False(lifecycle.IsHiddenToTray);
+        Assert.Equal(1, unloadCancels);
+        Assert.Equal(1, window.ShowCalls);
+        Assert.Equal(1, window.ActivateCalls);
+    }
+
+    [Fact]
     public void Exit_ShutsDownApplicationOnce()
     {
         var window = new FakeTrayWindow { State = TrayWindowState.Normal };

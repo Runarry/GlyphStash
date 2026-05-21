@@ -9,19 +9,28 @@ public interface IFontPreviewRegistry
     FontFamily Resolve(FontFaceItemViewModel? face, string fallbackFamilyName);
 }
 
-public sealed class AvaloniaFontPreviewRegistry : IFontPreviewRegistry
+public sealed class AvaloniaFontPreviewRegistry : IFontPreviewRegistry, IDisposable
 {
-    private static readonly Uri PreviewCollectionKey = new("fonts:GlyphStashPreview", UriKind.Absolute);
-    private readonly PreviewFontCollection _collection = new(PreviewCollectionKey);
+    private readonly Uri _previewCollectionKey = new($"fonts:GlyphStashPreview-{Guid.NewGuid():N}", UriKind.Absolute);
+    private readonly PreviewFontCollection _collection;
     private readonly HashSet<string> _registeredPaths = new(StringComparer.OrdinalIgnoreCase);
+    private bool _disposed;
 
     public AvaloniaFontPreviewRegistry()
     {
+        _collection = new PreviewFontCollection(_previewCollectionKey);
         FontManager.Current.AddFontCollection(_collection);
     }
 
+    public bool IsDisposed => _disposed;
+
     public FontFamily Resolve(FontFaceItemViewModel? face, string fallbackFamilyName)
     {
+        if (_disposed)
+        {
+            return string.IsNullOrWhiteSpace(fallbackFamilyName) ? FontFamily.Default : new FontFamily(fallbackFamilyName);
+        }
+
         var familyName = string.IsNullOrWhiteSpace(face?.FamilyName) ? fallbackFamilyName : face.FamilyName;
         if (string.IsNullOrWhiteSpace(familyName))
         {
@@ -36,10 +45,22 @@ public sealed class AvaloniaFontPreviewRegistry : IFontPreviewRegistry
         var fullPath = Path.GetFullPath(face.FilePath);
         if (_registeredPaths.Contains(fullPath) || TryRegister(fullPath))
         {
-            return new FontFamily(PreviewCollectionKey, familyName);
+            return new FontFamily(_previewCollectionKey, familyName);
         }
 
         return new FontFamily(familyName);
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        _registeredPaths.Clear();
+        FontManager.Current.RemoveFontCollection(_previewCollectionKey);
     }
 
     private bool TryRegister(string fullPath)

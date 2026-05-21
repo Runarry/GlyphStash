@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Markup.Xaml.Styling;
+using Avalonia.Media;
 using Avalonia.Themes.Fluent;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
@@ -9,6 +10,7 @@ using GlyphStash.Application.Abstractions.Fonts;
 using GlyphStash.Application.Abstractions.Storage;
 using GlyphStash.Application.Fonts;
 using GlyphStash.Domain.Fonts;
+using GlyphStash.Presentation.Services;
 using GlyphStash.Presentation.ViewModels;
 using GlyphStash.Presentation.Views;
 
@@ -119,6 +121,19 @@ public sealed class AvaloniaHeadlessTests
 
         Assert.True(vm.IsMergeRangeDialogOpen);
         Assert.IsType<ShellView>(window.Content);
+    }
+
+    [Fact]
+    public void FontPreviewRegistry_Dispose_ReleasesSessionCollection()
+    {
+        EnsureAvalonia();
+        var registry = new AvaloniaFontPreviewRegistry();
+
+        registry.Dispose();
+        registry.Dispose();
+
+        Assert.True(registry.IsDisposed);
+        Assert.NotEqual(FontFamily.Default, registry.Resolve(null, "Inter"));
     }
 
     private static void EnsureAvalonia()

@@ -93,6 +93,34 @@ public sealed class FontLibraryServiceTests
     }
 
     [Fact]
+    public async Task LoadCachedFontsAsync_ProjectsActiveTemporaryActivationByPath()
+    {
+        var cached = CreateInstalledFont("Brand Sans", "C:/GlyphStash/fonts/BrandSans.ttf", "hash-brand") with
+        {
+            ActivationState = FontActivationState.NotEnabled,
+            SourceKind = FontSourceKind.GlyphStashManaged
+        };
+        var store = new FakeMetadataStore { SearchResultOverride = [cached] };
+        var activationStore = new FakeActivationStore(
+        [
+            new ActivationRecord(
+                "C:/GlyphStash/fonts/BrandSans.ttf",
+                "font:Brand Sans",
+                1,
+                0,
+                DateTimeOffset.UtcNow,
+                "Active",
+                "",
+                "hash-brand")
+        ]);
+        var service = CreateService(store: store, activationStore: activationStore);
+
+        var fonts = await service.LoadCachedFontsAsync(new FontSearchQuery(), CancellationToken.None);
+
+        Assert.Equal(FontActivationState.TemporarilyEnabled, Assert.Single(fonts).ActivationState);
+    }
+
+    [Fact]
     public async Task RescanAsync_PreservesActiveTemporaryActivationByPath()
     {
         var activationStore = new FakeActivationStore(

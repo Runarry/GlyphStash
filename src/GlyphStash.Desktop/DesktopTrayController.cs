@@ -15,19 +15,26 @@ internal sealed class DesktopTrayController : IDisposable
     private readonly TrayWindowLifecycle _lifecycle;
     private readonly TrayIcon _trayIcon;
     private readonly TrayIcons _trayIcons;
-    private readonly IDisposable _windowStateSubscription;
+    private readonly DesktopUiSessionManager _uiSessionManager;
     private bool _disposed;
 
-    public DesktopTrayController(Avalonia.Application application, MainWindow mainWindow, IClassicDesktopStyleApplicationLifetime desktop)
+    public DesktopTrayController(Avalonia.Application application, DesktopUiSessionManager uiSessionManager, IClassicDesktopStyleApplicationLifetime desktop)
     {
         _application = application;
-        _lifecycle = new TrayWindowLifecycle(new AvaloniaTrayWindow(mainWindow), () => desktop.Shutdown());
+        _uiSessionManager = uiSessionManager;
+        _lifecycle = new TrayWindowLifecycle(
+            uiSessionManager,
+            () => desktop.Shutdown(),
+            uiSessionManager.GetHideDecision,
+            uiSessionManager.NotifyHideBlocked,
+            uiSessionManager.ScheduleDeferredUnload,
+            uiSessionManager.CancelDeferredUnload);
         _trayIcon = CreateTrayIcon();
         _trayIcons = [_trayIcon];
         TrayIcon.SetIcons(_application, _trayIcons);
         _trayIcon.Clicked += OnTrayIconClicked;
-        _windowStateSubscription = mainWindow.GetObservable(Window.WindowStateProperty)
-            .Subscribe(new WindowStateObserver(_lifecycle));
+        _uiSessionManager.WindowStateChanged += OnWindowStateChanged;
+        _uiSessionManager.HideToTrayRequested += OnHideToTrayRequested;
     }
 
     public void Dispose()
@@ -38,7 +45,8 @@ internal sealed class DesktopTrayController : IDisposable
         }
 
         _disposed = true;
-        _windowStateSubscription.Dispose();
+        _uiSessionManager.WindowStateChanged -= OnWindowStateChanged;
+        _uiSessionManager.HideToTrayRequested -= OnHideToTrayRequested;
         _trayIcon.Clicked -= OnTrayIconClicked;
         _trayIcon.IsVisible = false;
         TrayIcon.SetIcons(_application, []);
@@ -55,7 +63,7 @@ internal sealed class DesktopTrayController : IDisposable
         });
         menu.Items.Add(new NativeMenuItem("隐藏到托盘")
         {
-            Command = new DelegateCommand(_lifecycle.HideToTray)
+            Command = new DelegateCommand(() => _lifecycle.HideToTray())
         });
         menu.Items.Add(new NativeMenuItemSeparator());
         menu.Items.Add(new NativeMenuItem("退出并关闭临时字体")
@@ -80,24 +88,7 @@ internal sealed class DesktopTrayController : IDisposable
 
     private void OnTrayIconClicked(object? sender, EventArgs e) => _lifecycle.ShowFromTray();
 
-    private sealed class WindowStateObserver : IObserver<WindowState>
-    {
-        private readonly TrayWindowLifecycle _lifecycle;
+    private void OnWindowStateChanged(object? sender, TrayWindowState state) => _lifecycle.HandleWindowStateChanged(state);
 
-        public WindowStateObserver(TrayWindowLifecycle lifecycle)
-        {
-            _lifecycle = lifecycle;
-        }
-
-        public void OnCompleted()
-        {
-        }
-
-        public void OnError(Exception error)
-        {
-        }
-
-        public void OnNext(WindowState value) =>
-            _lifecycle.HandleWindowStateChanged(AvaloniaTrayWindow.FromAvalonia(value));
-    }
+    private void OnHideToTrayRequested(object? sender, EventArgs e) => _lifecycle.HideToTray();
 }

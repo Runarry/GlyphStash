@@ -11,7 +11,7 @@ using DomainUnicodeRange = GlyphStash.Domain.Fonts.UnicodeRange;
 
 namespace GlyphStash.Presentation.ViewModels;
 
-public sealed partial class ShellViewModel : ObservableObject
+public sealed partial class ShellViewModel : ObservableObject, IDisposable
 {
     private const string AllSourceFilter = "全部来源";
     private const string AllStateFilter = "全部状态";
@@ -30,6 +30,7 @@ public sealed partial class ShellViewModel : ObservableObject
     private readonly IUserClipboardService _clipboardService;
     private readonly IFontPreviewRegistry _fontPreviewRegistry;
     private readonly IAppLocalizationService? _localizationService;
+    private readonly EventHandler? _localizationCultureChangedHandler;
     private readonly OnlineFontService? _onlineFontService;
     private readonly IGlyphCatalogService? _glyphCatalogService;
     private readonly FontMergeService? _fontMergeService;
@@ -209,6 +210,9 @@ public sealed partial class ShellViewModel : ObservableObject
     private bool _isGlyphBrowserOpen;
 
     [ObservableProperty]
+    private bool _isGlyphLoading;
+
+    [ObservableProperty]
     private string _glyphSearchText = "";
 
     [ObservableProperty]
@@ -366,9 +370,41 @@ public sealed partial class ShellViewModel : ObservableObject
                 _isApplyingSettings = false;
             }
 
-            _localizationService.CultureChanged += (_, _) => RefreshLocalizedState();
+            _localizationCultureChangedHandler = (_, _) => RefreshLocalizedState();
+            _localizationService.CultureChanged += _localizationCultureChangedHandler;
         }
         RefreshMergeStepState();
+    }
+
+    public void Dispose()
+    {
+        if (IsDisposed)
+        {
+            return;
+        }
+
+        IsDisposed = true;
+        if (_localizationService is not null && _localizationCultureChangedHandler is not null)
+        {
+            _localizationService.CultureChanged -= _localizationCultureChangedHandler;
+        }
+
+        _mergeCancellation?.Cancel();
+        _mergeCancellation?.Dispose();
+        _mergeCancellation = null;
+    }
+
+    public bool IsDisposed { get; private set; }
+
+    public void NotifyTrayHideBlocked(string reason)
+    {
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            return;
+        }
+
+        StatusMessage = reason;
+        ShowToast(reason);
     }
 
     public ObservableCollection<FontFamilyItemViewModel> Fonts { get; } = [];
@@ -676,6 +712,46 @@ public sealed partial class ShellViewModel : ObservableObject
     public bool CanGoPreviousMergeStep => MergeStepIndex > 0 && !IsMergeBusy;
 
     public bool CanCancelMerge => IsMergeBusy;
+
+    public bool CanHideToTray => string.IsNullOrWhiteSpace(TrayHideBlockReason);
+
+    public string TrayHideBlockReason
+    {
+        get
+        {
+            if (IsBusy)
+            {
+                return L("请等待当前字体库任务完成后再隐藏到托盘。");
+            }
+
+            if (IsOnlineSearchBusy)
+            {
+                return L("请等待在线字体搜索完成后再隐藏到托盘。");
+            }
+
+            if (_isProcessingOnlineDownloadQueue)
+            {
+                return L("请等待在线字体下载完成后再隐藏到托盘。");
+            }
+
+            if (IsMergeBusy)
+            {
+                return L("请等待字体合并任务完成或取消后再隐藏到托盘。");
+            }
+
+            if (IsMergeRangeDialogBusy)
+            {
+                return L("请等待合并范围分析完成后再隐藏到托盘。");
+            }
+
+            if (IsGlyphLoading)
+            {
+                return L("请等待字形读取完成后再隐藏到托盘。");
+            }
+
+            return "";
+        }
+    }
 
     public string MergeNextActionLabel => MergeStepIndex switch
     {
@@ -1334,6 +1410,7 @@ public sealed partial class ShellViewModel : ObservableObject
         }
 
         _isProcessingOnlineDownloadQueue = true;
+        NotifyTrayHideState();
         try
         {
             while (OnlineDownloadQueue.FirstOrDefault(item => item.Status == OnlineFontDownloadStatus.Queued) is { } item)
@@ -1364,6 +1441,7 @@ public sealed partial class ShellViewModel : ObservableObject
         finally
         {
             _isProcessingOnlineDownloadQueue = false;
+            NotifyTrayHideState();
             UpdateOnlineQueueStatusIfIdle();
         }
     }
@@ -2162,11 +2240,16 @@ public sealed partial class ShellViewModel : ObservableObject
 
     partial void OnMergeLicenseConfirmedChanged(bool value) => NotifyMergeExportState();
 
+    partial void OnIsBusyChanged(bool value) => NotifyTrayHideState();
+
+    partial void OnIsOnlineSearchBusyChanged(bool value) => NotifyTrayHideState();
+
     partial void OnIsMergeBusyChanged(bool value)
     {
         OnPropertyChanged(nameof(CanGoPreviousMergeStep));
         OnPropertyChanged(nameof(CanCancelMerge));
         OnPropertyChanged(nameof(MergeProgressLabel));
+        NotifyTrayHideState();
     }
 
     partial void OnIsMergeRangeDialogBusyChanged(bool value)
@@ -2174,7 +2257,10 @@ public sealed partial class ShellViewModel : ObservableObject
         OnPropertyChanged(nameof(IsMergeRangeEmptyVisible));
         OnPropertyChanged(nameof(IsMergeRangeBlockEmptyVisible));
         OnPropertyChanged(nameof(CanApplyMergeRangeSelection));
+        NotifyTrayHideState();
     }
+
+    partial void OnIsGlyphLoadingChanged(bool value) => NotifyTrayHideState();
 
     partial void OnMergeStatusChanged(string value) => OnPropertyChanged(nameof(MergeProgressLabel));
 
@@ -2503,6 +2589,7 @@ public sealed partial class ShellViewModel : ObservableObject
 
         try
         {
+            IsGlyphLoading = true;
             GlyphStatus = L("正在读取字体字形...");
             var page = await _glyphCatalogService.GetGlyphsAsync(
                 new GlyphQuery(
@@ -2539,6 +2626,10 @@ public sealed partial class ShellViewModel : ObservableObject
         catch (Exception ex)
         {
             GlyphStatus = BuildErrorMessage(ex);
+        }
+        finally
+        {
+            IsGlyphLoading = false;
         }
     }
 
@@ -3148,6 +3239,12 @@ public sealed partial class ShellViewModel : ObservableObject
         {
             CollectionOptions.Add(collection);
         }
+    }
+
+    private void NotifyTrayHideState()
+    {
+        OnPropertyChanged(nameof(CanHideToTray));
+        OnPropertyChanged(nameof(TrayHideBlockReason));
     }
 
     private void NotifyCollectionState()
