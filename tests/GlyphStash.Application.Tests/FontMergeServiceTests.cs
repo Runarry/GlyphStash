@@ -115,7 +115,7 @@ public sealed class FontMergeServiceTests
         Assert.Equal(FontMergeMode.Overwrite, result.Report.MergeMode);
         Assert.Equal(0, result.Report.SkippedDuplicateCodePointCount);
         Assert.Equal(1, result.Report.OverwrittenCodePointCount);
-        Assert.Contains("覆盖 1", result.Summary, StringComparison.Ordinal);
+        Assert.Equal(1, result.Report.MergedCodePointCount);
     }
 
     private static FontMergeRequest CreateRequest(string basePath, string supplementalPath) =>

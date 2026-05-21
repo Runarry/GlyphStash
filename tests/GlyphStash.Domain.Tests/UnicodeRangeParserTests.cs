@@ -33,6 +33,6 @@ public sealed class UnicodeRangeParserTests
     [InlineData("hello")]
     public void Parse_RejectsInvalidRanges(string value)
     {
-        Assert.Throws<InvalidOperationException>(() => UnicodeRangeParser.Parse(value));
+        Assert.Throws<UnicodeRangeParseException>(() => UnicodeRangeParser.Parse(value));
     }
 }

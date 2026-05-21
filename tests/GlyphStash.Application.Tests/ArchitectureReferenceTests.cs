@@ -5,6 +5,16 @@ namespace GlyphStash.Application.Tests;
 public sealed class ArchitectureReferenceTests
 {
     [Fact]
+    public void Domain_DoesNotReferenceLocalization()
+    {
+        var projectPath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "GlyphStash.Domain", "GlyphStash.Domain.csproj"));
+        var doc = XDocument.Load(projectPath);
+        var references = doc.Descendants("ProjectReference").Select(node => node.Attribute("Include")?.Value).Where(value => value is not null).ToArray();
+
+        Assert.DoesNotContain(references, reference => reference!.Contains("GlyphStash.Localization", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void Application_ReferencesOnlyDomainAndLocalization()
     {
         var projectPath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "GlyphStash.Application", "GlyphStash.Application.csproj"));

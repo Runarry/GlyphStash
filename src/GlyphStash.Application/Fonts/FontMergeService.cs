@@ -399,6 +399,11 @@ public sealed class FontMergeService
     {
         for (var candidate = exception; candidate is not null; candidate = candidate.InnerException)
         {
+            if (candidate is UnicodeRangeParseException unicodeRangeException)
+            {
+                return FormatUnicodeRangeParseError(unicodeRangeException);
+            }
+
             if (candidate is InvalidOperationException && !string.IsNullOrWhiteSpace(candidate.Message))
             {
                 return candidate.Message;
@@ -413,6 +418,19 @@ public sealed class FontMergeService
 
         return string.IsNullOrWhiteSpace(current.Message) ? current.GetType().Name : current.Message;
     }
+
+    private static string FormatUnicodeRangeParseError(UnicodeRangeParseException exception) =>
+        exception.Error switch
+        {
+            UnicodeRangeParseError.Empty => L("请输入 Unicode 范围。"),
+            UnicodeRangeParseError.InvalidRangeFormat => F("Unicode 范围格式无效：{0}", "Invalid Unicode range format: {0}", exception.Value),
+            UnicodeRangeParseError.RangeStartAfterEnd => F("Unicode 范围起点不能大于终点：{0}", "Unicode range start cannot be greater than the end: {0}", exception.Value),
+            UnicodeRangeParseError.InvalidCodePointFormat => F("Unicode 码位格式无效：{0}", "Invalid Unicode code point format: {0}", exception.Value),
+            UnicodeRangeParseError.CodePointOutOfRange => F("Unicode 码位超出范围：{0}", "Unicode code point is out of range: {0}", exception.Value),
+            UnicodeRangeParseError.CodePointInSurrogateRange => F("Unicode 码位不能位于代理区：{0}", "Unicode code point cannot be in the surrogate range: {0}", exception.Value),
+            UnicodeRangeParseError.RangeIncludesSurrogateRange => F("Unicode 范围不能包含代理区：{0}", "Unicode range cannot include the surrogate range: {0}", exception.Value),
+            _ => exception.Message
+        };
 
     private sealed record RequestValidation(IReadOnlyList<UnicodeRange> Ranges, IReadOnlyList<FontMergeIssue> Issues);
 }

@@ -5,7 +5,31 @@
              x:Class="GlyphStash.Presentation.Views.ShellView"
              x:DataType="vm:ShellViewModel"
              Background="{DynamicResource GlyphBackgroundBrush}">
-  <Grid x:Name="ShellRoot" ColumnDefinitions="244,*,360">
+  <UserControl.DataTemplates>
+    <DataTemplate DataType="{x:Type vm:FontLibraryViewModel}">
+      <views:FontLibraryPageView DataContext="{Binding Shell}" />
+    </DataTemplate>
+    <DataTemplate DataType="{x:Type vm:CollectionsViewModel}">
+      <views:CollectionsPageView DataContext="{Binding Shell}" />
+    </DataTemplate>
+    <DataTemplate DataType="{x:Type vm:OnlineFontsViewModel}">
+      <views:OnlineFontsPageView DataContext="{Binding Shell}" />
+    </DataTemplate>
+    <DataTemplate DataType="{x:Type vm:MergeToolViewModel}">
+      <views:MergeToolPageView DataContext="{Binding Shell}" />
+    </DataTemplate>
+    <DataTemplate DataType="{x:Type vm:GlyphBrowserViewModel}">
+      <views:GlyphBrowserPageView DataContext="{Binding Shell}" />
+    </DataTemplate>
+    <DataTemplate DataType="{x:Type vm:SettingsViewModel}">
+      <views:SettingsPageView DataContext="{Binding Shell}" />
+    </DataTemplate>
+    <DataTemplate DataType="{x:Type vm:PlaceholderPageViewModel}">
+      <views:PlaceholderPageView DataContext="{Binding Shell}" />
+    </DataTemplate>
+  </UserControl.DataTemplates>
+
+  <Grid x:Name="ShellRoot" ColumnDefinitions="244,*">
     <Border x:Name="SidebarRail"
             Grid.Column="0"
             Background="{DynamicResource GlyphSurfaceMutedBrush}"
@@ -41,24 +65,9 @@
       </StackPanel>
     </Border>
 
-    <views:FontLibraryPageView x:Name="FontLibraryPage" Grid.Column="1" IsVisible="{Binding IsFontLibraryPage}" />
-    <views:CollectionsPageView Grid.Column="1" Grid.ColumnSpan="2" IsVisible="{Binding IsCollectionsPage}" />
-    <views:OnlineFontsPageView Grid.Column="1" Grid.ColumnSpan="2" IsVisible="{Binding IsOnlineFontsPage}" />
-    <views:MergeToolPageView Grid.Column="1" Grid.ColumnSpan="2" IsVisible="{Binding IsMergeToolPage}" />
-    <views:GlyphBrowserPageView Grid.Column="1" Grid.ColumnSpan="2" IsVisible="{Binding IsGlyphBrowserPage}" />
-    <views:SettingsPageView Grid.Column="1" Grid.ColumnSpan="2" IsVisible="{Binding IsSettingsPage}" />
-    <views:PlaceholderPageView Grid.Column="1" Grid.ColumnSpan="2" IsVisible="{Binding IsPlaceholderPage}" />
+    <ContentControl Grid.Column="1" Content="{Binding CurrentPage}" />
 
-    <Border x:Name="RightDetailsRail"
-            Grid.Column="2"
-            Background="{DynamicResource GlyphSurfaceBrush}"
-            BorderBrush="{DynamicResource GlyphBorderBrush}"
-            BorderThickness="1,0,0,0"
-            IsVisible="{Binding IsFontLibraryPage}">
-      <views:FontDetailsPanelView />
-    </Border>
-
-    <Border Grid.ColumnSpan="3"
+    <Border Grid.ColumnSpan="2"
             Classes="panel"
             Background="{DynamicResource GlyphTextBrush}"
             Padding="14,12"

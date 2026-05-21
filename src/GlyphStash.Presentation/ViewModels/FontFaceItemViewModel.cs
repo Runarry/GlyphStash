@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using GlyphStash.Domain.Fonts;
+using GlyphStash.Localization;
 
 namespace GlyphStash.Presentation.ViewModels;
 
@@ -19,7 +20,14 @@ public sealed partial class FontFaceItemViewModel : ObservableObject
 
     public string FamilyName => _record.FamilyName;
 
-    public string StyleLabel => FontStyleVariantFormatter.FormatFaceStyle(_record.SubfamilyName, _record.Weight, _record.Slant);
+    public string StyleLabel
+    {
+        get
+        {
+            var label = FontStyleVariantFormatter.FormatFaceStyle(_record.SubfamilyName, _record.Weight, _record.Slant);
+            return string.IsNullOrWhiteSpace(label) ? AppText.TranslateLiteral("未知样式") : label;
+        }
+    }
 
     public string SubfamilyName => StyleLabel;
 

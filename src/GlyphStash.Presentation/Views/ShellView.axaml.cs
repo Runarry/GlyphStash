@@ -26,7 +26,7 @@ public partial class ShellView : UserControl
 
     private void UpdateResponsiveLayout(double width)
     {
-        if (width <= 0 || ShellRoot.ColumnDefinitions.Count < 3)
+        if (width <= 0 || ShellRoot.ColumnDefinitions.Count < 2)
         {
             return;
         }
@@ -39,7 +39,5 @@ public partial class ShellView : UserControl
         Classes.Set("compact", isCompact);
 
         ShellRoot.ColumnDefinitions[0].Width = new GridLength(isCompact ? 188 : 220);
-        ShellRoot.ColumnDefinitions[2].Width = new GridLength(isWide ? 360 : 0);
-        FontLibraryPage.SetInlineDetailsMode(!isWide);
     }
 }

@@ -5,18 +5,12 @@ namespace GlyphStash.Presentation.Views;
 
 public partial class FontLibraryPageView : UserControl
 {
+    private const double WideDetailsBreakpoint = 1180;
     private const double TightFilterBreakpoint = 760;
-    private bool _showInlineDetails;
 
     public FontLibraryPageView()
     {
         InitializeComponent();
-        UpdateResponsiveLayout(Bounds.Width);
-    }
-
-    public void SetInlineDetailsMode(bool showInlineDetails)
-    {
-        _showInlineDetails = showInlineDetails;
         UpdateResponsiveLayout(Bounds.Width);
     }
 
@@ -32,19 +26,20 @@ public partial class FontLibraryPageView : UserControl
 
     private void UpdateResponsiveLayout(double width)
     {
-        if (width <= 0 || LibraryContentGrid.ColumnDefinitions.Count < 2)
+        if (width <= 0 || LibraryContentGrid.ColumnDefinitions.Count < 3)
         {
             return;
         }
 
         var isTight = width < TightFilterBreakpoint;
+        var showDetails = width >= WideDetailsBreakpoint;
 
-        Classes.Set("narrow", _showInlineDetails);
+        Classes.Set("narrow", !showDetails);
         Classes.Set("tight", isTight);
 
         LibraryContentGrid.ColumnDefinitions[0].Width = new GridLength(isTight ? 190 : 250);
+        LibraryContentGrid.ColumnDefinitions[2].Width = new GridLength(showDetails ? 360 : 0);
         LibraryContentGrid.ColumnSpacing = isTight ? 12 : 16;
-        InlineDetailsPanel.IsVisible = _showInlineDetails;
-        InlineDetailsPanel.MaxHeight = isTight ? 260 : 300;
+        LibraryDetailsPanel.IsVisible = showDetails;
     }
 }

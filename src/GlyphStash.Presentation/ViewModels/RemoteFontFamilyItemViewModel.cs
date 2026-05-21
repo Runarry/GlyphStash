@@ -83,5 +83,9 @@ public sealed partial class RemoteFontStyleOptionViewModel : ObservableObject
 
     public string FileName => _record.FileName;
 
-    public static string FormatVariantLabel(string variant) => FontStyleVariantFormatter.FormatGoogleFontsVariant(variant);
+    public static string FormatVariantLabel(string variant)
+    {
+        var label = FontStyleVariantFormatter.FormatGoogleFontsVariant(variant);
+        return string.IsNullOrWhiteSpace(label) ? AppText.TranslateLiteral("未知样式") : label;
+    }
 }
