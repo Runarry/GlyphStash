@@ -87,10 +87,10 @@
   <sys:Double x:Key="GlyphSpace5">20</sys:Double>
   <sys:Double x:Key="GlyphSpace6">24</sys:Double>
 
-  <CornerRadius x:Key="GlyphRadiusSm">8</CornerRadius>
-  <CornerRadius x:Key="GlyphRadiusMd">12</CornerRadius>
-  <CornerRadius x:Key="GlyphRadiusLg">16</CornerRadius>
+  <CornerRadius x:Key="GlyphRadiusSm">6</CornerRadius>
+  <CornerRadius x:Key="GlyphRadiusMd">8</CornerRadius>
+  <CornerRadius x:Key="GlyphRadiusLg">10</CornerRadius>
   <CornerRadius x:Key="GlyphRadiusFull">999</CornerRadius>
   <Thickness x:Key="GlyphPagePadding">24,18,24,22</Thickness>
-  <Thickness x:Key="GlyphPanelPadding">16</Thickness>
+  <Thickness x:Key="GlyphPanelPadding">14</Thickness>
 </ResourceDictionary>

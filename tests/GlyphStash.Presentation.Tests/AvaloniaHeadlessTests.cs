@@ -3,6 +3,8 @@ using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Markup.Xaml.Styling;
 using Avalonia.Media;
+using Avalonia.Skia;
+using Avalonia.Styling;
 using Avalonia.Themes.Fluent;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
@@ -18,12 +20,10 @@ namespace GlyphStash.Presentation.Tests;
 
 public sealed class AvaloniaHeadlessTests
 {
-    private static bool s_initialized;
-
     [Fact]
     public void ShellView_LoadsWithThemeResources()
     {
-        EnsureAvalonia();
+        HeadlessTestHost.EnsureAvalonia();
         var vm = new ShellViewModel(new FontLibraryService(new FakeInventory(), new FakeStore()));
         var window = new Window
         {
@@ -45,7 +45,7 @@ public sealed class AvaloniaHeadlessTests
     [Fact]
     public void ShellView_LoadsOnlineFontsPage()
     {
-        EnsureAvalonia();
+        HeadlessTestHost.EnsureAvalonia();
         var vm = new ShellViewModel(new FontLibraryService(new FakeInventory(), new FakeStore()));
         vm.SelectedNavigationItem = vm.NavigationItems.Single(item => item.Key == "online-fonts");
         var remoteFont = new RemoteFontFamily(
@@ -82,7 +82,7 @@ public sealed class AvaloniaHeadlessTests
     [Fact]
     public void ShellView_LoadsMergeToolPage()
     {
-        EnsureAvalonia();
+        HeadlessTestHost.EnsureAvalonia();
         var vm = new ShellViewModel(new FontLibraryService(new FakeInventory(), new FakeStore()));
         vm.SelectedNavigationItem = vm.NavigationItems.Single(item => item.Key == "merge-tool");
         var window = new Window
@@ -103,7 +103,7 @@ public sealed class AvaloniaHeadlessTests
     [Fact]
     public void ShellView_LoadsMergeRangeDialog()
     {
-        EnsureAvalonia();
+        HeadlessTestHost.EnsureAvalonia();
         var vm = new ShellViewModel(new FontLibraryService(new FakeInventory(), new FakeStore()));
         vm.SelectedNavigationItem = vm.NavigationItems.Single(item => item.Key == "merge-tool");
         vm.IsMergeRangeDialogOpen = true;
@@ -126,7 +126,7 @@ public sealed class AvaloniaHeadlessTests
     [Fact]
     public void FontPreviewRegistry_Dispose_ReleasesSessionCollection()
     {
-        EnsureAvalonia();
+        HeadlessTestHost.EnsureAvalonia();
         var registry = new AvaloniaFontPreviewRegistry();
 
         registry.Dispose();
@@ -134,17 +134,6 @@ public sealed class AvaloniaHeadlessTests
 
         Assert.True(registry.IsDisposed);
         Assert.NotEqual(FontFamily.Default, registry.Resolve(null, "Inter"));
-    }
-
-    private static void EnsureAvalonia()
-    {
-        if (s_initialized)
-        {
-            return;
-        }
-
-        TestAppBuilder.BuildAvaloniaApp().SetupWithoutStarting();
-        s_initialized = true;
     }
 
     private sealed class FakeInventory : IFontInventoryService
@@ -162,11 +151,33 @@ public sealed class AvaloniaHeadlessTests
     }
 }
 
+internal static class HeadlessTestHost
+{
+    private static readonly AppLocalizationService LocalizationService = new();
+    private static bool s_initialized;
+
+    public static void EnsureAvalonia()
+    {
+        if (!s_initialized)
+        {
+            if (Avalonia.Application.Current is null)
+            {
+                TestAppBuilder.BuildAvaloniaApp().SetupWithoutStarting();
+            }
+
+            s_initialized = true;
+        }
+
+        LocalizationService.ApplyAvaloniaResources();
+    }
+}
+
 public sealed class TestAppBuilder
 {
     public static AppBuilder BuildAvaloniaApp() =>
         AppBuilder.Configure<TestApp>()
-            .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = true });
+            .UseSkia()
+            .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false });
 }
 
 public sealed class TestApp : Avalonia.Application
@@ -178,7 +189,10 @@ public sealed class TestApp : Avalonia.Application
             Source = new Uri("avares://GlyphStash.Presentation/Styles/Tokens.axaml")
         });
 
-        Styles.Add(new FluentTheme());
+        var fluentTheme = new FluentTheme();
+        fluentTheme.Palettes.Add(ThemeVariant.Light, new ColorPaletteResources { Accent = Color.Parse("#118169") });
+        fluentTheme.Palettes.Add(ThemeVariant.Dark, new ColorPaletteResources { Accent = Color.Parse("#46C2A0") });
+        Styles.Add(fluentTheme);
         Styles.Add(new StyleInclude(new Uri("avares://GlyphStash.Presentation/"))
         {
             Source = new Uri("avares://GlyphStash.Presentation/Styles/Components.axaml")

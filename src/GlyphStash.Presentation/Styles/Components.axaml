@@ -39,7 +39,12 @@
     <Setter Property="BorderBrush" Value="{DynamicResource GlyphBorderBrush}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="{StaticResource GlyphRadiusMd}" />
-    <Setter Property="Padding" Value="13" />
+    <Setter Property="Padding" Value="12" />
+  </Style>
+
+  <Style Selector="Border.subtle-card">
+    <Setter Property="Background" Value="{DynamicResource GlyphSurfaceMutedBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
   </Style>
 
   <Style Selector="Border.card:pointerover">
@@ -151,6 +156,22 @@
     <Setter Property="Padding" Value="0" />
   </Style>
 
+  <Style Selector="ListBox.font-list ListBoxItem">
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="CornerRadius" Value="{StaticResource GlyphRadiusMd}" />
+  </Style>
+
+  <Style Selector="ListBox.font-list ListBoxItem:selected">
+    <Setter Property="Background" Value="{DynamicResource GlyphAccentSoftBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource GlyphTextBrush}" />
+  </Style>
+
+  <Style Selector="ListBox.font-list ListBoxItem:selected Border.card">
+    <Setter Property="Background" Value="{DynamicResource GlyphAccentSoftBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource GlyphAccentBrush}" />
+  </Style>
+
   <Style Selector="ListBox.nav-list">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderThickness" Value="0" />
@@ -165,7 +186,7 @@
   </Style>
 
   <Style Selector="ListBox.nav-list ListBoxItem:selected">
-    <Setter Property="Background" Value="{DynamicResource GlyphSurfaceBrush}" />
+    <Setter Property="Background" Value="{DynamicResource GlyphAccentSoftBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource GlyphAccentBrush}" />
   </Style>
 

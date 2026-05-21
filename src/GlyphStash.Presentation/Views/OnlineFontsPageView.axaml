@@ -3,7 +3,7 @@
              xmlns:vm="using:GlyphStash.Presentation.ViewModels"
              x:Class="GlyphStash.Presentation.Views.OnlineFontsPageView"
              x:DataType="vm:ShellViewModel">
-  <Grid RowDefinitions="76,*,Auto">
+  <Grid x:Name="OnlineFontsRoot" RowDefinitions="76,*,Auto">
     <Border Grid.Row="0" Background="{DynamicResource GlyphSurfaceBrush}" BorderBrush="{DynamicResource GlyphBorderBrush}" BorderThickness="0,0,0,1" Padding="24,0">
       <Grid VerticalAlignment="Center">
         <StackPanel>
@@ -13,8 +13,8 @@
       </Grid>
     </Border>
 
-    <Grid Grid.Row="1" ColumnDefinitions="420,*" ColumnSpacing="16" Margin="{StaticResource GlyphPagePadding}">
-      <Border Grid.Column="0" Classes="panel" Padding="{StaticResource GlyphPanelPadding}">
+    <Grid x:Name="OnlineContentGrid" Grid.Row="1" RowDefinitions="*" ColumnDefinitions="420,*" ColumnSpacing="16" Margin="{StaticResource GlyphPagePadding}">
+      <Border x:Name="OnlineSearchPanel" Grid.Column="0" Classes="panel" Padding="{StaticResource GlyphPanelPadding}">
         <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="14">
           <StackPanel Grid.Row="0" Spacing="7">
             <TextBlock Text="{DynamicResource L.Text.4DC63E6F57C2CE8F}" Classes="caption" FontWeight="Bold" />
@@ -79,7 +79,7 @@
         </Grid>
       </Border>
 
-      <Border Grid.Column="1" Classes="panel" Padding="{StaticResource GlyphPanelPadding}">
+      <Border x:Name="OnlineDetailPanel" Grid.Column="1" Classes="panel" Padding="{StaticResource GlyphPanelPadding}">
         <Grid>
           <TextBlock Text="{DynamicResource L.Text.7584B4954722332F}" Classes="muted" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding !HasSelectedRemoteFont}" />
           <ScrollViewer IsVisible="{Binding HasSelectedRemoteFont}">
@@ -94,11 +94,11 @@
               <TextBlock Text="{Binding SelectedRemoteFont.PreviewText}" FontSize="34" TextWrapping="Wrap" />
               <TextBlock Text="{DynamicResource L.Text.6E455145643D2A7D}" Classes="muted" TextWrapping="Wrap" />
 
-              <UniformGrid Columns="4">
-                <Border Classes="card" Margin="0,0,8,8"><StackPanel><TextBlock Text="Provider" Classes="caption" /><TextBlock Text="Google Fonts" /></StackPanel></Border>
-                <Border Classes="card" Margin="0,0,8,8"><StackPanel><TextBlock Text="{DynamicResource L.Text.8AFBB424399E6EFE}" Classes="caption" /><TextBlock Text="{Binding SelectedRemoteFont.SubsetsLabel}" TextWrapping="Wrap" /></StackPanel></Border>
-                <Border Classes="card" Margin="0,0,8,8"><StackPanel><TextBlock Text="{DynamicResource L.Text.4BFCAB08E83685FB}" Classes="caption" /><TextBlock Text="{Binding SelectedRemoteFont.LastModifiedLabel}" /></StackPanel></Border>
-                <Border Classes="card" Margin="0,0,0,8"><StackPanel><TextBlock Text="{DynamicResource L.Text.2213B1C2CA53850E}" Classes="caption" /><TextBlock Text="{DynamicResource L.Text.DCCEC95B65E15FF0}" /></StackPanel></Border>
+              <UniformGrid x:Name="OnlineMetadataGrid" Columns="4">
+                <Border Classes="card subtle-card" Margin="0,0,8,8"><StackPanel><TextBlock Text="Provider" Classes="caption" /><TextBlock Text="Google Fonts" /></StackPanel></Border>
+                <Border Classes="card subtle-card" Margin="0,0,8,8"><StackPanel><TextBlock Text="{DynamicResource L.Text.8AFBB424399E6EFE}" Classes="caption" /><TextBlock Text="{Binding SelectedRemoteFont.SubsetsLabel}" TextWrapping="Wrap" /></StackPanel></Border>
+                <Border Classes="card subtle-card" Margin="0,0,8,8"><StackPanel><TextBlock Text="{DynamicResource L.Text.4BFCAB08E83685FB}" Classes="caption" /><TextBlock Text="{Binding SelectedRemoteFont.LastModifiedLabel}" /></StackPanel></Border>
+                <Border Classes="card subtle-card" Margin="0,0,0,8"><StackPanel><TextBlock Text="{DynamicResource L.Text.2213B1C2CA53850E}" Classes="caption" /><TextBlock Text="{DynamicResource L.Text.DCCEC95B65E15FF0}" /></StackPanel></Border>
               </UniformGrid>
 
               <Border Classes="card">
@@ -124,7 +124,7 @@
               </Border>
 
               <TextBlock Text="{DynamicResource L.Text.CE1C035DE401A838}" Classes="h2" />
-              <UniformGrid Columns="2">
+              <UniformGrid x:Name="OnlineDownloadOptionsGrid" Columns="2">
                 <CheckBox Content="{DynamicResource L.Text.60A53514EB9228A2}" IsChecked="{Binding DownloadFavorite, Mode=TwoWay}" />
                 <CheckBox Content="{DynamicResource L.Text.C05FE82711F59CA0}" IsChecked="{Binding DownloadInstallForCurrentUser, Mode=TwoWay}" />
                 <CheckBox Content="{DynamicResource L.Text.BC2D06CAB2823593}" IsChecked="{Binding DownloadTemporarilyActivate, Mode=TwoWay}" />

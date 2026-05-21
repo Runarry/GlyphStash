@@ -3,7 +3,7 @@
              xmlns:vm="using:GlyphStash.Presentation.ViewModels"
              x:Class="GlyphStash.Presentation.Views.CollectionsPageView"
              x:DataType="vm:ShellViewModel">
-  <Grid RowDefinitions="76,*,Auto">
+  <Grid x:Name="CollectionsRoot" RowDefinitions="76,*,Auto">
     <Border Grid.Row="0"
             Background="{DynamicResource GlyphSurfaceBrush}"
             BorderBrush="{DynamicResource GlyphBorderBrush}"
@@ -21,8 +21,8 @@
       </Grid>
     </Border>
 
-    <Grid Grid.Row="1" ColumnDefinitions="280,*,320" ColumnSpacing="16" Margin="{StaticResource GlyphPagePadding}">
-      <Border Grid.Column="0" Classes="panel" Padding="{StaticResource GlyphPanelPadding}">
+    <Grid x:Name="CollectionsContentGrid" Grid.Row="1" RowDefinitions="*" ColumnDefinitions="280,*,320" ColumnSpacing="16" Margin="{StaticResource GlyphPagePadding}">
+      <Border x:Name="CollectionsListPanel" Grid.Column="0" Classes="panel" Padding="{StaticResource GlyphPanelPadding}">
         <StackPanel Spacing="14">
           <StackPanel Spacing="7">
             <TextBlock Text="{DynamicResource L.Text.ACEBDAD2FDF3D37B}" Classes="caption" FontWeight="Bold" />
@@ -46,7 +46,7 @@
         </StackPanel>
       </Border>
 
-      <Border Grid.Column="1" Classes="panel" Padding="{StaticResource GlyphPanelPadding}">
+      <Border x:Name="CollectionFontsPanel" Grid.Column="1" Classes="panel" Padding="{StaticResource GlyphPanelPadding}">
         <Grid RowDefinitions="Auto,Auto,*">
           <Grid ColumnDefinitions="*,Auto">
             <StackPanel>
@@ -96,15 +96,16 @@
         </Grid>
       </Border>
 
-      <Border Grid.Column="2" Classes="panel" Padding="{StaticResource GlyphPanelPadding}">
+      <Border x:Name="CollectionDetailPanel" Grid.Column="2" Classes="panel" Padding="{StaticResource GlyphPanelPadding}">
+        <ScrollViewer>
         <StackPanel Spacing="14">
           <TextBlock Text="{DynamicResource L.Text.53B9A21A334EAB03}" Classes="h1" />
           <TextBlock Text="{DynamicResource L.Text.62039847115EE30E}" Classes="muted" TextWrapping="Wrap" />
-          <UniformGrid Columns="2">
-            <Border Classes="card" Margin="0,0,8,8"><StackPanel><TextBlock Text="{DynamicResource L.Text.BAB73DD2F8B2015D}" Classes="caption" /><TextBlock Text="{Binding SelectedCollection.FontCount}" /></StackPanel></Border>
-            <Border Classes="card" Margin="0,0,0,8"><StackPanel><TextBlock Text="{DynamicResource L.Text.BC3F968F53642385}" Classes="caption" /><TextBlock Text="{Binding SelectedCollection.UnknownLicenseLabel}" /></StackPanel></Border>
-            <Border Classes="card" Margin="0,0,8,0"><StackPanel><TextBlock Text="{DynamicResource L.Text.9C2943546C58493C}" Classes="caption" /><TextBlock Text="{Binding SelectedCollection.LastExportedLabel}" /></StackPanel></Border>
-            <Border Classes="card"><StackPanel><TextBlock Text="{DynamicResource L.Text.9800A458C16B9A02}" Classes="caption" /><TextBlock Text="{DynamicResource L.Text.59D857994F8F0067}" /></StackPanel></Border>
+          <UniformGrid x:Name="CollectionMetadataGrid" Columns="2">
+            <Border Classes="card subtle-card" Margin="0,0,8,8"><StackPanel><TextBlock Text="{DynamicResource L.Text.BAB73DD2F8B2015D}" Classes="caption" /><TextBlock Text="{Binding SelectedCollection.FontCount}" /></StackPanel></Border>
+            <Border Classes="card subtle-card" Margin="0,0,0,8"><StackPanel><TextBlock Text="{DynamicResource L.Text.BC3F968F53642385}" Classes="caption" /><TextBlock Text="{Binding SelectedCollection.UnknownLicenseLabel}" /></StackPanel></Border>
+            <Border Classes="card subtle-card" Margin="0,0,8,0"><StackPanel><TextBlock Text="{DynamicResource L.Text.9C2943546C58493C}" Classes="caption" /><TextBlock Text="{Binding SelectedCollection.LastExportedLabel}" /></StackPanel></Border>
+            <Border Classes="card subtle-card"><StackPanel><TextBlock Text="{DynamicResource L.Text.9800A458C16B9A02}" Classes="caption" /><TextBlock Text="{DynamicResource L.Text.59D857994F8F0067}" /></StackPanel></Border>
           </UniformGrid>
           <Border Classes="card">
             <StackPanel>
@@ -113,6 +114,7 @@
             </StackPanel>
           </Border>
         </StackPanel>
+        </ScrollViewer>
       </Border>
     </Grid>
 

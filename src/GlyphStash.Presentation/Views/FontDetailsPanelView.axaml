@@ -3,7 +3,7 @@
              xmlns:vm="using:GlyphStash.Presentation.ViewModels"
              x:Class="GlyphStash.Presentation.Views.FontDetailsPanelView"
              x:DataType="vm:ShellViewModel">
-  <Grid>
+  <Grid x:Name="FontDetailsRoot">
     <Border Padding="18" IsVisible="{Binding HasNoSelectedFont}">
       <StackPanel Spacing="12" VerticalAlignment="Center">
         <TextBlock Text="{DynamicResource L.Text.942396D281D2FC31}" Classes="h1" />
@@ -11,7 +11,7 @@
       </StackPanel>
     </Border>
 
-    <ScrollViewer IsVisible="{Binding HasSelectedFont}">
+    <ScrollViewer x:Name="SelectedFontScrollViewer" IsVisible="{Binding HasSelectedFont}">
       <StackPanel Spacing="16" Margin="18">
         <StackPanel Spacing="10">
           <Grid ColumnDefinitions="*,Auto">
@@ -50,13 +50,13 @@
               <TextBlock Text="{Binding SelectedFont.LicenseLabel}" FontSize="12" />
             </Border>
           </Grid>
-          <UniformGrid Columns="2" Rows="3">
-            <Border Classes="card" Margin="0,0,8,8"><StackPanel><TextBlock Text="{DynamicResource L.Text.C8FFBDF15754D1D2}" Classes="caption" /><TextBlock Text="{Binding SelectedFont.StyleCountLabel}" /></StackPanel></Border>
-            <Border Classes="card" Margin="0,0,0,8"><StackPanel><TextBlock Text="{DynamicResource L.Text.0E8B1C78C5F335BA}" Classes="caption" /><TextBlock Text="{Binding SelectedFont.FormatSummary}" /></StackPanel></Border>
-            <Border Classes="card" Margin="0,0,8,8"><StackPanel><TextBlock Text="{DynamicResource L.Text.5F76B2BF82DD2C5D}" Classes="caption" /><TextBlock Text="{Binding SelectedFont.VersionLabel}" /></StackPanel></Border>
-            <Border Classes="card" Margin="0,0,0,8"><StackPanel><TextBlock Text="{DynamicResource L.Text.BA6117467E72C391}" Classes="caption" /><TextBlock Text="{Binding SelectedFont.ManufacturerLabel}" /></StackPanel></Border>
-            <Border Classes="card" Margin="0,0,8,0"><StackPanel><TextBlock Text="{DynamicResource L.Text.4CE4C98EB27E4B65}" Classes="caption" /><TextBlock Text="{Binding SelectedFont.CoverageLabel}" TextWrapping="Wrap" /></StackPanel></Border>
-            <Border Classes="card"><StackPanel><TextBlock Text="{DynamicResource L.Text.79CF2E84EC2FF518}" Classes="caption" /><TextBlock Text="{Binding SelectedFont.HashLabel}" TextWrapping="Wrap" /></StackPanel></Border>
+          <UniformGrid x:Name="FontMetadataGrid" Columns="2">
+            <Border Classes="card subtle-card" Margin="0,0,8,8"><StackPanel><TextBlock Text="{DynamicResource L.Text.C8FFBDF15754D1D2}" Classes="caption" /><TextBlock Text="{Binding SelectedFont.StyleCountLabel}" /></StackPanel></Border>
+            <Border Classes="card subtle-card" Margin="0,0,0,8"><StackPanel><TextBlock Text="{DynamicResource L.Text.0E8B1C78C5F335BA}" Classes="caption" /><TextBlock Text="{Binding SelectedFont.FormatSummary}" /></StackPanel></Border>
+            <Border Classes="card subtle-card" Margin="0,0,8,8"><StackPanel><TextBlock Text="{DynamicResource L.Text.5F76B2BF82DD2C5D}" Classes="caption" /><TextBlock Text="{Binding SelectedFont.VersionLabel}" /></StackPanel></Border>
+            <Border Classes="card subtle-card" Margin="0,0,0,8"><StackPanel><TextBlock Text="{DynamicResource L.Text.BA6117467E72C391}" Classes="caption" /><TextBlock Text="{Binding SelectedFont.ManufacturerLabel}" /></StackPanel></Border>
+            <Border Classes="card subtle-card" Margin="0,0,8,0"><StackPanel><TextBlock Text="{DynamicResource L.Text.4CE4C98EB27E4B65}" Classes="caption" /><TextBlock Text="{Binding SelectedFont.CoverageLabel}" TextWrapping="Wrap" /></StackPanel></Border>
+            <Border Classes="card subtle-card"><StackPanel><TextBlock Text="{DynamicResource L.Text.79CF2E84EC2FF518}" Classes="caption" /><TextBlock Text="{Binding SelectedFont.HashLabel}" TextWrapping="Wrap" /></StackPanel></Border>
           </UniformGrid>
           <Border Classes="card">
             <StackPanel>
@@ -97,7 +97,14 @@
       <Border Width="520" Classes="panel" Padding="18" HorizontalAlignment="Center" VerticalAlignment="Center">
         <StackPanel Spacing="14">
           <TextBlock Text="{DynamicResource L.Text.B37E13875DF8EBC0}" Classes="h1" />
+          <TextBlock Text="{Binding SelectedFont.FamilyName}" Classes="h2" TextWrapping="Wrap" />
           <TextBlock Text="{DynamicResource L.Text.B73A6046290FE0B0}" Classes="muted" TextWrapping="Wrap" />
+          <Border Classes="card subtle-card">
+            <StackPanel Spacing="5">
+              <TextBlock Text="{DynamicResource L.Text.C71200B5952E3781}" Classes="caption" />
+              <TextBlock Text="{Binding SelectedFont.FilePath}" TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
           <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
             <Button Content="{DynamicResource L.Text.2CD0F3BE8738A86C}" Command="{Binding CloseUninstallDialogCommand}" />
             <Button Content="{DynamicResource L.Text.4FEC200AC3F7FC85}" Classes="danger" Command="{Binding ConfirmUninstallCommand}" />

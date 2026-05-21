@@ -3,7 +3,7 @@
              xmlns:vm="using:GlyphStash.Presentation.ViewModels"
              x:Class="GlyphStash.Presentation.Views.GlyphBrowserPageView"
              x:DataType="vm:ShellViewModel">
-  <Grid RowDefinitions="76,*,Auto">
+  <Grid x:Name="GlyphBrowserRoot" RowDefinitions="76,*,Auto">
     <Border Grid.Row="0" Background="{DynamicResource GlyphSurfaceBrush}" BorderBrush="{DynamicResource GlyphBorderBrush}" BorderThickness="0,0,0,1" Padding="24,0">
       <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
         <StackPanel>
@@ -14,8 +14,8 @@
       </Grid>
     </Border>
 
-    <Grid Grid.Row="1" ColumnDefinitions="260,*,340" ColumnSpacing="16" Margin="{StaticResource GlyphPagePadding}">
-      <Border Grid.Column="0" Classes="panel" Padding="{StaticResource GlyphPanelPadding}">
+    <Grid x:Name="GlyphContentGrid" Grid.Row="1" RowDefinitions="*" ColumnDefinitions="260,*,340" ColumnSpacing="16" Margin="{StaticResource GlyphPagePadding}">
+      <Border x:Name="GlyphFiltersPanel" Grid.Column="0" Classes="panel" Padding="{StaticResource GlyphPanelPadding}">
         <StackPanel Spacing="14">
           <StackPanel Spacing="7">
             <TextBlock Text="{DynamicResource L.Text.53A1A9CD998CC556}" Classes="caption" FontWeight="Bold" />
@@ -47,7 +47,7 @@
         </StackPanel>
       </Border>
 
-      <Border Grid.Column="1" Classes="panel" Padding="{StaticResource GlyphPanelPadding}">
+      <Border x:Name="GlyphGridPanel" Grid.Column="1" Classes="panel" Padding="{StaticResource GlyphPanelPadding}">
         <Grid RowDefinitions="Auto,*">
           <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,12">
             <TextBlock Text="{DynamicResource L.Text.D184B34237E85A19}" Classes="h2" />
@@ -74,21 +74,23 @@
         </Grid>
       </Border>
 
-      <Border Grid.Column="2" Classes="panel" Padding="18">
+      <Border x:Name="GlyphDetailsPanel" Grid.Column="2" Classes="panel" Padding="18">
+        <ScrollViewer>
         <StackPanel Spacing="14">
           <TextBlock Text="{DynamicResource L.Text.F9CEFC6B46BE14BB}" Classes="h1" />
           <TextBlock Text="{Binding SelectedGlyph.Character}" FontSize="76" HorizontalAlignment="Center" />
-          <UniformGrid Columns="2">
-            <Border Classes="card" Margin="0,0,8,8"><StackPanel><TextBlock Text="Unicode" Classes="caption" /><TextBlock Text="{Binding SelectedGlyph.UnicodeLabel}" /></StackPanel></Border>
-            <Border Classes="card" Margin="0,0,0,8"><StackPanel><TextBlock Text="Glyph name" Classes="caption" /><TextBlock Text="{Binding SelectedGlyph.GlyphName}" TextWrapping="Wrap" /></StackPanel></Border>
-            <Border Classes="card" Margin="0,0,8,0"><StackPanel><TextBlock Text="Glyph ID" Classes="caption" /><TextBlock Text="{Binding SelectedGlyph.GlyphIdLabel}" /></StackPanel></Border>
-            <Border Classes="card"><StackPanel><TextBlock Text="{DynamicResource L.Text.7F70788BAED78C9E}" Classes="caption" /><TextBlock Text="{Binding SelectedGlyph.FaceName}" /></StackPanel></Border>
+          <UniformGrid x:Name="GlyphMetadataGrid" Columns="2">
+            <Border Classes="card subtle-card" Margin="0,0,8,8"><StackPanel><TextBlock Text="Unicode" Classes="caption" /><TextBlock Text="{Binding SelectedGlyph.UnicodeLabel}" /></StackPanel></Border>
+            <Border Classes="card subtle-card" Margin="0,0,0,8"><StackPanel><TextBlock Text="Glyph name" Classes="caption" /><TextBlock Text="{Binding SelectedGlyph.GlyphName}" TextWrapping="Wrap" /></StackPanel></Border>
+            <Border Classes="card subtle-card" Margin="0,0,8,0"><StackPanel><TextBlock Text="Glyph ID" Classes="caption" /><TextBlock Text="{Binding SelectedGlyph.GlyphIdLabel}" /></StackPanel></Border>
+            <Border Classes="card subtle-card"><StackPanel><TextBlock Text="{DynamicResource L.Text.7F70788BAED78C9E}" Classes="caption" /><TextBlock Text="{Binding SelectedGlyph.FaceName}" /></StackPanel></Border>
           </UniformGrid>
           <StackPanel Orientation="Horizontal" Spacing="10">
             <Button Content="{DynamicResource L.Text.035C96C316D0211B}" Classes="primary" Command="{Binding CopySelectedGlyphCharacterCommand}" />
             <Button Content="{DynamicResource L.Text.7535A31A55ED4248}" Command="{Binding CopySelectedGlyphUnicodeCommand}" />
           </StackPanel>
         </StackPanel>
+        </ScrollViewer>
       </Border>
     </Grid>
 

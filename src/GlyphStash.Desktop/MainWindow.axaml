@@ -5,8 +5,8 @@
         Title="GlyphStash"
         Width="1360"
         Height="860"
-        MinWidth="980"
-        MinHeight="640"
+        MinWidth="800"
+        MinHeight="600"
         Background="{DynamicResource GlyphBackgroundBrush}">
   <views:ShellView />
 </Window>
