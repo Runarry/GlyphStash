@@ -86,12 +86,20 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     private string _previewMode = "单行";
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSelectedFont))]
+    [NotifyPropertyChangedFor(nameof(HasNoSelectedFont))]
     private FontFamilyItemViewModel? _selectedFont;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSelectedPreviewFace))]
+    [NotifyPropertyChangedFor(nameof(SelectedPreviewFontFamily))]
+    [NotifyPropertyChangedFor(nameof(SelectedPreviewFontWeight))]
+    [NotifyPropertyChangedFor(nameof(SelectedPreviewFontStyle))]
     private FontFaceItemViewModel? _selectedPreviewFace;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanHideToTray))]
+    [NotifyPropertyChangedFor(nameof(TrayHideBlockReason))]
     private bool _isBusy;
 
     [ObservableProperty]
@@ -125,15 +133,20 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     private bool _isToastVisible;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasManagedFontDirectory))]
+    [NotifyPropertyChangedFor(nameof(ManagedDirectoryStatus))]
     private string _managedFontDirectory = "";
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(GoogleFontsApiKeyStatus))]
     private string _googleFontsApiKeyText = "";
 
     [ObservableProperty]
     private string _importStatus = AppText.TranslateLiteral("请选择字体文件并选择 GlyphStash 管理目录。");
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanImportTemporarilyActivate))]
+    [NotifyPropertyChangedFor(nameof(ImportTemporaryActivationReason))]
     private bool _importInstallForCurrentUser;
 
     [ObservableProperty]
@@ -179,12 +192,15 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     private bool _onlineCapabilityWoff2;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSelectedRemoteFont))]
     private RemoteFontFamilyItemViewModel? _selectedRemoteFont;
 
     [ObservableProperty]
     private string _onlineStatus = AppText.TranslateLiteral("请在设置页配置 Google Fonts API key 后搜索在线字体。");
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanHideToTray))]
+    [NotifyPropertyChangedFor(nameof(TrayHideBlockReason))]
     private bool _isOnlineSearchBusy;
 
     [ObservableProperty]
@@ -206,6 +222,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     private bool _isGlyphBrowserOpen;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanHideToTray))]
+    [NotifyPropertyChangedFor(nameof(TrayHideBlockReason))]
     private bool _isGlyphLoading;
 
     [ObservableProperty]
@@ -215,18 +233,28 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     private string _selectedUnicodeBlock = "全部区块";
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSelectedGlyph))]
     private GlyphItemViewModel? _selectedGlyph;
 
     [ObservableProperty]
     private string _glyphStatus = AppText.TranslateLiteral("请从字体详情进入字形浏览。");
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(GlyphPageLabel))]
     private int _glyphPageNumber = 1;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(GlyphPageLabel))]
     private int _glyphTotalPages = 1;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsMergeStepSelectFonts))]
+    [NotifyPropertyChangedFor(nameof(IsMergeStepRanges))]
+    [NotifyPropertyChangedFor(nameof(IsMergeStepPreview))]
+    [NotifyPropertyChangedFor(nameof(IsMergeStepExport))]
+    [NotifyPropertyChangedFor(nameof(IsMergeStepReport))]
+    [NotifyPropertyChangedFor(nameof(CanGoPreviousMergeStep))]
+    [NotifyPropertyChangedFor(nameof(MergeNextActionLabel))]
     private int _mergeStepIndex;
 
     [ObservableProperty]
@@ -236,9 +264,11 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     private string _mergeSupplementalSearchText = "";
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSelectedMergeBaseFont))]
     private FontFamilyItemViewModel? _selectedMergeBaseFont;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSelectedMergeSupplementalFont))]
     private FontFamilyItemViewModel? _selectedMergeSupplementalFont;
 
     [ObservableProperty]
@@ -248,6 +278,11 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     private bool _isMergeRangeDialogOpen;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsMergeRangeEmptyVisible))]
+    [NotifyPropertyChangedFor(nameof(IsMergeRangeBlockEmptyVisible))]
+    [NotifyPropertyChangedFor(nameof(CanApplyMergeRangeSelection))]
+    [NotifyPropertyChangedFor(nameof(CanHideToTray))]
+    [NotifyPropertyChangedFor(nameof(TrayHideBlockReason))]
     private bool _isMergeRangeDialogBusy;
 
     [ObservableProperty]
@@ -260,9 +295,14 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     private string _mergeRangeSupplementalSummary = AppText.TranslateLiteral("未读取补充字体 B。");
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(MergeRangeSegments))]
+    [NotifyPropertyChangedFor(nameof(HasMergeRangeSegments))]
+    [NotifyPropertyChangedFor(nameof(IsMergeRangeBlockEmptyVisible))]
     private MergeRangeBlockItemViewModel? _selectedMergeRangeBlock;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SelectedMergeMode))]
+    [NotifyPropertyChangedFor(nameof(MergeModeDescription))]
     private string _selectedMergeModeLabel = SupplementMergeModeLabel;
 
     [ObservableProperty]
@@ -278,18 +318,27 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     private string _mergeOutputPath = "";
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(MergeProgressLabel))]
     private string _mergeStatus = AppText.TranslateLiteral("请选择基础字体和补充字体。");
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(MergeProgressLabel))]
+    [NotifyPropertyChangedFor(nameof(CanGoPreviousMergeStep))]
+    [NotifyPropertyChangedFor(nameof(CanCancelMerge))]
+    [NotifyPropertyChangedFor(nameof(CanHideToTray))]
+    [NotifyPropertyChangedFor(nameof(TrayHideBlockReason))]
     private bool _isMergeBusy;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(MergeProgressLabel))]
     private int _mergeProgressPercent;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(MergeProgressLabel))]
     private string _mergeProgressStage = "";
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(MergeProgressLabel))]
     private string _mergeProgressMessage = "";
 
     [ObservableProperty]
@@ -459,7 +508,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
 
     public ObservableCollection<MergeRangeBlockItemViewModel> MergeRangeBlocks { get; } = [];
 
-    public ObservableCollection<MergeRangeSegmentItemViewModel> MergeRangeSegments { get; } = [];
+    public IReadOnlyList<MergeRangeSegmentItemViewModel> MergeRangeSegments => GetVisibleMergeRangeSegments().ToList();
 
     public ObservableCollection<MergeStepItemViewModel> MergeSteps { get; } =
     [
@@ -694,7 +743,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
 
     public bool HasMergeRangeBlocks => MergeRangeBlocks.Count > 0;
 
-    public bool HasMergeRangeSegments => MergeRangeSegments.Count > 0;
+    public bool HasMergeRangeSegments => GetVisibleMergeRangeSegments().Any();
 
     public bool HasLoadedMergeRangeSegments => _allMergeRangeSegments.Count > 0;
 

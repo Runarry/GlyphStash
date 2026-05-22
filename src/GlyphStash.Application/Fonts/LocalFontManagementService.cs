@@ -8,42 +8,111 @@ namespace GlyphStash.Application.Fonts;
 
 public sealed class LocalFontManagementService : ILocalFontManagementService
 {
-    private static readonly string[] InstallableExtensions = [".ttf", ".otf", ".ttc", ".otc"];
-    private static readonly string[] RecognizedButUnsupportedExtensions = [".woff", ".woff2"];
-
-    private readonly IFontMetadataReader _metadataReader;
-    private readonly IManagedFontFileStore _fileStore;
-    private readonly IAppSettingsStore _settingsStore;
-    private readonly IFontMetadataStore _metadataStore;
-    private readonly IFontLibraryMutationStore _mutationStore;
-    private readonly ITagStore _tagStore;
-    private readonly ICollectionStore _collectionStore;
-    private readonly IFontInstallService _installService;
-    private readonly FontActivationCoordinator _activationCoordinator;
-    private readonly IOperationLogStore _operationLogStore;
+    private readonly ILocalFontSettingsService _settingsService;
+    private readonly ILocalFontImportService _importService;
+    private readonly ILocalFontOrganizationService _organizationService;
+    private readonly ILocalFontActivationService _activationService;
+    private readonly ILocalFontOperationLogService _operationLogService;
 
     public LocalFontManagementService(
-        IFontMetadataReader metadataReader,
-        IManagedFontFileStore fileStore,
-        IAppSettingsStore settingsStore,
-        IFontMetadataStore metadataStore,
-        IFontLibraryMutationStore mutationStore,
-        ITagStore tagStore,
-        ICollectionStore collectionStore,
-        IFontInstallService installService,
-        FontActivationCoordinator activationCoordinator,
-        IOperationLogStore operationLogStore)
+        ILocalFontSettingsService settingsService,
+        ILocalFontImportService importService,
+        ILocalFontOrganizationService organizationService,
+        ILocalFontActivationService activationService,
+        ILocalFontOperationLogService operationLogService)
     {
-        _metadataReader = metadataReader;
-        _fileStore = fileStore;
+        _settingsService = settingsService;
+        _importService = importService;
+        _organizationService = organizationService;
+        _activationService = activationService;
+        _operationLogService = operationLogService;
+    }
+
+    public Task<UserFontSettings?> GetSettingsAsync(CancellationToken cancellationToken) =>
+        _settingsService.GetSettingsAsync(cancellationToken);
+
+    public Task SaveManagedDirectoryAsync(string directory, CancellationToken cancellationToken) =>
+        _settingsService.SaveManagedDirectoryAsync(directory, cancellationToken);
+
+    public Task SaveGoogleFontsApiKeyAsync(string apiKey, CancellationToken cancellationToken) =>
+        _settingsService.SaveGoogleFontsApiKeyAsync(apiKey, cancellationToken);
+
+    public Task SaveUiCultureAsync(string cultureCode, CancellationToken cancellationToken) =>
+        _settingsService.SaveUiCultureAsync(cultureCode, cancellationToken);
+
+    public Task<FontImportPreview> PreviewImportAsync(IReadOnlyList<string> sourcePaths, CancellationToken cancellationToken) =>
+        _importService.PreviewImportAsync(sourcePaths, cancellationToken);
+
+    public Task<FontImportResult> ImportAsync(FontImportPreview preview, FontImportOptions options, CancellationToken cancellationToken) =>
+        _importService.ImportAsync(preview, options, cancellationToken);
+
+    public Task SetFavoriteAsync(string familyName, bool isFavorite, CancellationToken cancellationToken) =>
+        _organizationService.SetFavoriteAsync(familyName, isFavorite, cancellationToken);
+
+    public Task SetTagsAsync(string familyName, IReadOnlyList<string> tags, CancellationToken cancellationToken) =>
+        _organizationService.SetTagsAsync(familyName, tags, cancellationToken);
+
+    public Task<IReadOnlyList<TagRecord>> GetTagsAsync(CancellationToken cancellationToken) =>
+        _organizationService.GetTagsAsync(cancellationToken);
+
+    public Task CreateTagAsync(string name, CancellationToken cancellationToken) =>
+        _organizationService.CreateTagAsync(name, cancellationToken);
+
+    public Task RenameTagAsync(string oldName, string newName, CancellationToken cancellationToken) =>
+        _organizationService.RenameTagAsync(oldName, newName, cancellationToken);
+
+    public Task DeleteTagAsync(string name, CancellationToken cancellationToken) =>
+        _organizationService.DeleteTagAsync(name, cancellationToken);
+
+    public Task SetCollectionsAsync(string familyName, IReadOnlyList<string> collections, CancellationToken cancellationToken) =>
+        _organizationService.SetCollectionsAsync(familyName, collections, cancellationToken);
+
+    public Task<IReadOnlyList<FontCollectionRecord>> GetCollectionsAsync(CancellationToken cancellationToken) =>
+        _organizationService.GetCollectionsAsync(cancellationToken);
+
+    public Task CreateCollectionAsync(string name, CancellationToken cancellationToken) =>
+        _organizationService.CreateCollectionAsync(name, cancellationToken);
+
+    public Task RenameCollectionAsync(string oldName, string newName, CancellationToken cancellationToken) =>
+        _organizationService.RenameCollectionAsync(oldName, newName, cancellationToken);
+
+    public Task DeleteCollectionAsync(string name, CancellationToken cancellationToken) =>
+        _organizationService.DeleteCollectionAsync(name, cancellationToken);
+
+    public Task AddFontToCollectionAsync(string collectionName, string familyName, CancellationToken cancellationToken) =>
+        _organizationService.AddFontToCollectionAsync(collectionName, familyName, cancellationToken);
+
+    public Task RemoveFontFromCollectionAsync(string collectionName, string familyName, CancellationToken cancellationToken) =>
+        _organizationService.RemoveFontFromCollectionAsync(collectionName, familyName, cancellationToken);
+
+    public Task<ActivationResult> ActivateFontAsync(string ownerKey, FontFamilyRecord font, CancellationToken cancellationToken) =>
+        _activationService.ActivateFontAsync(ownerKey, font, cancellationToken);
+
+    public Task<ActivationResult> DeactivateFontAsync(string ownerKey, FontFamilyRecord font, CancellationToken cancellationToken) =>
+        _activationService.DeactivateFontAsync(ownerKey, font, cancellationToken);
+
+    public Task RecordTemporaryActivationSkippedAsync(string ownerKey, FontFamilyRecord font, string reason, CancellationToken cancellationToken) =>
+        _activationService.RecordTemporaryActivationSkippedAsync(ownerKey, font, reason, cancellationToken);
+
+    public Task<FontInstallResult> InstallFontAsync(FontFamilyRecord font, CancellationToken cancellationToken) =>
+        _activationService.InstallFontAsync(font, cancellationToken);
+
+    public Task<FontUninstallResult> UninstallManagedFontAsync(FontFamilyRecord font, CancellationToken cancellationToken) =>
+        _activationService.UninstallManagedFontAsync(font, cancellationToken);
+
+    public Task<IReadOnlyList<OperationLogEntry>> GetRecentOperationsAsync(int limit, CancellationToken cancellationToken) =>
+        _operationLogService.GetRecentOperationsAsync(limit, cancellationToken);
+}
+
+public sealed class LocalFontSettingsService : ILocalFontSettingsService
+{
+    private readonly IAppSettingsStore _settingsStore;
+    private readonly IOperationLogger _operationLogger;
+
+    public LocalFontSettingsService(IAppSettingsStore settingsStore, IOperationLogger operationLogger)
+    {
         _settingsStore = settingsStore;
-        _metadataStore = metadataStore;
-        _mutationStore = mutationStore;
-        _tagStore = tagStore;
-        _collectionStore = collectionStore;
-        _installService = installService;
-        _activationCoordinator = activationCoordinator;
-        _operationLogStore = operationLogStore;
+        _operationLogger = operationLogger;
     }
 
     public Task<UserFontSettings?> GetSettingsAsync(CancellationToken cancellationToken) =>
@@ -58,14 +127,14 @@ public sealed class LocalFontManagementService : ILocalFontManagementService
 
         var existing = await _settingsStore.GetSettingsAsync(cancellationToken).ConfigureAwait(false);
         await _settingsStore.SaveSettingsAsync(new UserFontSettings(directory, existing?.GoogleFontsApiKey ?? "", existing?.UiCultureCode ?? ""), cancellationToken).ConfigureAwait(false);
-        await LogAsync("settings", "managed-directory", AppText.Format("Log.ManagedDirectoryUpdatedFormat", directory), directory, true, cancellationToken).ConfigureAwait(false);
+        await _operationLogger.LogAsync("settings", "managed-directory", AppText.Format("Log.ManagedDirectoryUpdatedFormat", directory), directory, true, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task SaveGoogleFontsApiKeyAsync(string apiKey, CancellationToken cancellationToken)
     {
         var existing = await _settingsStore.GetSettingsAsync(cancellationToken).ConfigureAwait(false);
         await _settingsStore.SaveSettingsAsync(new UserFontSettings(existing?.ManagedFontDirectory ?? "", apiKey.Trim(), existing?.UiCultureCode ?? ""), cancellationToken).ConfigureAwait(false);
-        await LogAsync("settings", "google-fonts-api-key", AppText.Get("Log.GoogleFontsApiKeyUpdated"), "google-fonts", true, cancellationToken).ConfigureAwait(false);
+        await _operationLogger.LogAsync("settings", "google-fonts-api-key", AppText.Get("Log.GoogleFontsApiKeyUpdated"), "google-fonts", true, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task SaveUiCultureAsync(string cultureCode, CancellationToken cancellationToken)
@@ -73,7 +142,45 @@ public sealed class LocalFontManagementService : ILocalFontManagementService
         var existing = await _settingsStore.GetSettingsAsync(cancellationToken).ConfigureAwait(false);
         var resolved = AppText.ResolveCulture(cultureCode).Name;
         await _settingsStore.SaveSettingsAsync(new UserFontSettings(existing?.ManagedFontDirectory ?? "", existing?.GoogleFontsApiKey ?? "", resolved), cancellationToken).ConfigureAwait(false);
-        await LogAsync("settings", "ui-culture", AppText.Format("Log.UiCultureUpdatedFormat", resolved), resolved, true, cancellationToken).ConfigureAwait(false);
+        await _operationLogger.LogAsync("settings", "ui-culture", AppText.Format("Log.UiCultureUpdatedFormat", resolved), resolved, true, cancellationToken).ConfigureAwait(false);
+    }
+}
+
+public sealed class LocalFontImportService : ILocalFontImportService
+{
+    private static readonly string[] InstallableExtensions = [".ttf", ".otf", ".ttc", ".otc"];
+    private static readonly string[] RecognizedButUnsupportedExtensions = [".woff", ".woff2"];
+
+    private readonly IFontMetadataReader _metadataReader;
+    private readonly IManagedFontFileStore _fileStore;
+    private readonly IAppSettingsStore _settingsStore;
+    private readonly IFontMetadataStore _metadataStore;
+    private readonly IFontLibraryMutationStore _mutationStore;
+    private readonly ICollectionStore _collectionStore;
+    private readonly IFontInstallService _installService;
+    private readonly FontActivationCoordinator _activationCoordinator;
+    private readonly IOperationLogger _operationLogger;
+
+    public LocalFontImportService(
+        IFontMetadataReader metadataReader,
+        IManagedFontFileStore fileStore,
+        IAppSettingsStore settingsStore,
+        IFontMetadataStore metadataStore,
+        IFontLibraryMutationStore mutationStore,
+        ICollectionStore collectionStore,
+        IFontInstallService installService,
+        FontActivationCoordinator activationCoordinator,
+        IOperationLogger operationLogger)
+    {
+        _metadataReader = metadataReader;
+        _fileStore = fileStore;
+        _settingsStore = settingsStore;
+        _metadataStore = metadataStore;
+        _mutationStore = mutationStore;
+        _collectionStore = collectionStore;
+        _installService = installService;
+        _activationCoordinator = activationCoordinator;
+        _operationLogger = operationLogger;
     }
 
     public async Task<FontImportPreview> PreviewImportAsync(IReadOnlyList<string> sourcePaths, CancellationToken cancellationToken)
@@ -212,29 +319,52 @@ public sealed class LocalFontManagementService : ILocalFontManagementService
                 }
 
                 result.Add(new FontImportResultItem(item, true, copy.ManagedPath, installResult.Message));
-                await LogAsync("import", "import-font", F("已导入字体：{0}", "Imported font: {0}", item.FamilyName), copy.ManagedPath, true, cancellationToken).ConfigureAwait(false);
+                await _operationLogger.LogAsync("import", "import-font", F("已导入字体：{0}", "Imported font: {0}", item.FamilyName), copy.ManagedPath, true, cancellationToken).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
                 var message = ex.ToUserMessage();
                 result.Add(new FontImportResultItem(item, false, null, message));
-                await LogAsync("import", "import-font", message, item.SourcePath, false, cancellationToken).ConfigureAwait(false);
+                await _operationLogger.LogAsync("import", "import-font", message, item.SourcePath, false, cancellationToken).ConfigureAwait(false);
             }
         }
 
         return new FontImportResult(result);
     }
 
+    private static FontImportPreviewItem Failed(string sourcePath, string fileName, string format, string message) =>
+        new(sourcePath, fileName, format, "", "", "", "", null, null, null, null, false, false, false, L("不可导入"), message);
+}
+
+public sealed class LocalFontOrganizationService : ILocalFontOrganizationService
+{
+    private readonly IFontLibraryMutationStore _mutationStore;
+    private readonly ITagStore _tagStore;
+    private readonly ICollectionStore _collectionStore;
+    private readonly IOperationLogger _operationLogger;
+
+    public LocalFontOrganizationService(
+        IFontLibraryMutationStore mutationStore,
+        ITagStore tagStore,
+        ICollectionStore collectionStore,
+        IOperationLogger operationLogger)
+    {
+        _mutationStore = mutationStore;
+        _tagStore = tagStore;
+        _collectionStore = collectionStore;
+        _operationLogger = operationLogger;
+    }
+
     public async Task SetFavoriteAsync(string familyName, bool isFavorite, CancellationToken cancellationToken)
     {
         await _mutationStore.SetFavoriteAsync(familyName, isFavorite, cancellationToken).ConfigureAwait(false);
-        await LogAsync("library", "favorite", isFavorite ? F("已收藏：{0}", "Favorited: {0}", familyName) : F("已取消收藏：{0}", "Unfavorited: {0}", familyName), familyName, true, cancellationToken).ConfigureAwait(false);
+        await _operationLogger.LogAsync("library", "favorite", isFavorite ? F("已收藏：{0}", "Favorited: {0}", familyName) : F("已取消收藏：{0}", "Unfavorited: {0}", familyName), familyName, true, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task SetTagsAsync(string familyName, IReadOnlyList<string> tags, CancellationToken cancellationToken)
     {
         await _mutationStore.SetTagsAsync(familyName, tags, cancellationToken).ConfigureAwait(false);
-        await LogAsync("tags", "set-tags", F("已更新标签：{0}", "Updated tags: {0}", familyName), familyName, true, cancellationToken).ConfigureAwait(false);
+        await _operationLogger.LogAsync("tags", "set-tags", F("已更新标签：{0}", "Updated tags: {0}", familyName), familyName, true, cancellationToken).ConfigureAwait(false);
     }
 
     public Task<IReadOnlyList<TagRecord>> GetTagsAsync(CancellationToken cancellationToken) =>
@@ -243,25 +373,25 @@ public sealed class LocalFontManagementService : ILocalFontManagementService
     public async Task CreateTagAsync(string name, CancellationToken cancellationToken)
     {
         await _tagStore.CreateTagAsync(name, cancellationToken).ConfigureAwait(false);
-        await LogAsync("tags", "create", F("已创建标签：{0}", "Created tag: {0}", name), name, true, cancellationToken).ConfigureAwait(false);
+        await _operationLogger.LogAsync("tags", "create", F("已创建标签：{0}", "Created tag: {0}", name), name, true, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task RenameTagAsync(string oldName, string newName, CancellationToken cancellationToken)
     {
         await _tagStore.RenameTagAsync(oldName, newName, cancellationToken).ConfigureAwait(false);
-        await LogAsync("tags", "rename", F("已重命名标签：{0} -> {1}", "Renamed tag: {0} -> {1}", oldName, newName), oldName, true, cancellationToken).ConfigureAwait(false);
+        await _operationLogger.LogAsync("tags", "rename", F("已重命名标签：{0} -> {1}", "Renamed tag: {0} -> {1}", oldName, newName), oldName, true, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task DeleteTagAsync(string name, CancellationToken cancellationToken)
     {
         await _tagStore.DeleteTagAsync(name, cancellationToken).ConfigureAwait(false);
-        await LogAsync("tags", "delete", F("已删除标签：{0}", "Deleted tag: {0}", name), name, true, cancellationToken).ConfigureAwait(false);
+        await _operationLogger.LogAsync("tags", "delete", F("已删除标签：{0}", "Deleted tag: {0}", name), name, true, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task SetCollectionsAsync(string familyName, IReadOnlyList<string> collections, CancellationToken cancellationToken)
     {
         await _mutationStore.SetCollectionsAsync(familyName, collections, cancellationToken).ConfigureAwait(false);
-        await LogAsync("collection", "set-collections", F("已更新集合关联：{0}", "Updated collection links: {0}", familyName), familyName, true, cancellationToken).ConfigureAwait(false);
+        await _operationLogger.LogAsync("collection", "set-collections", F("已更新集合关联：{0}", "Updated collection links: {0}", familyName), familyName, true, cancellationToken).ConfigureAwait(false);
     }
 
     public Task<IReadOnlyList<FontCollectionRecord>> GetCollectionsAsync(CancellationToken cancellationToken) =>
@@ -270,31 +400,48 @@ public sealed class LocalFontManagementService : ILocalFontManagementService
     public async Task CreateCollectionAsync(string name, CancellationToken cancellationToken)
     {
         await _collectionStore.CreateCollectionAsync(name, cancellationToken).ConfigureAwait(false);
-        await LogAsync("collection", "create", F("已创建集合：{0}", "Created collection: {0}", name), name, true, cancellationToken).ConfigureAwait(false);
+        await _operationLogger.LogAsync("collection", "create", F("已创建集合：{0}", "Created collection: {0}", name), name, true, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task RenameCollectionAsync(string oldName, string newName, CancellationToken cancellationToken)
     {
         await _collectionStore.RenameCollectionAsync(oldName, newName, cancellationToken).ConfigureAwait(false);
-        await LogAsync("collection", "rename", F("已重命名集合：{0} -> {1}", "Renamed collection: {0} -> {1}", oldName, newName), oldName, true, cancellationToken).ConfigureAwait(false);
+        await _operationLogger.LogAsync("collection", "rename", F("已重命名集合：{0} -> {1}", "Renamed collection: {0} -> {1}", oldName, newName), oldName, true, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task DeleteCollectionAsync(string name, CancellationToken cancellationToken)
     {
         await _collectionStore.DeleteCollectionAsync(name, cancellationToken).ConfigureAwait(false);
-        await LogAsync("collection", "delete", F("已删除集合：{0}", "Deleted collection: {0}", name), name, true, cancellationToken).ConfigureAwait(false);
+        await _operationLogger.LogAsync("collection", "delete", F("已删除集合：{0}", "Deleted collection: {0}", name), name, true, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task AddFontToCollectionAsync(string collectionName, string familyName, CancellationToken cancellationToken)
     {
         await _collectionStore.AddFontToCollectionAsync(collectionName, familyName, cancellationToken).ConfigureAwait(false);
-        await LogAsync("collection", "add-font", F("已加入集合：{0} -> {1}", "Added to collection: {0} -> {1}", familyName, collectionName), familyName, true, cancellationToken).ConfigureAwait(false);
+        await _operationLogger.LogAsync("collection", "add-font", F("已加入集合：{0} -> {1}", "Added to collection: {0} -> {1}", familyName, collectionName), familyName, true, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task RemoveFontFromCollectionAsync(string collectionName, string familyName, CancellationToken cancellationToken)
     {
         await _collectionStore.RemoveFontFromCollectionAsync(collectionName, familyName, cancellationToken).ConfigureAwait(false);
-        await LogAsync("collection", "remove-font", F("已从集合移除：{0} -> {1}", "Removed from collection: {0} -> {1}", familyName, collectionName), familyName, true, cancellationToken).ConfigureAwait(false);
+        await _operationLogger.LogAsync("collection", "remove-font", F("已从集合移除：{0} -> {1}", "Removed from collection: {0} -> {1}", familyName, collectionName), familyName, true, cancellationToken).ConfigureAwait(false);
+    }
+}
+
+public sealed class LocalFontActivationService : ILocalFontActivationService
+{
+    private readonly IFontInstallService _installService;
+    private readonly FontActivationCoordinator _activationCoordinator;
+    private readonly IOperationLogger _operationLogger;
+
+    public LocalFontActivationService(
+        IFontInstallService installService,
+        FontActivationCoordinator activationCoordinator,
+        IOperationLogger operationLogger)
+    {
+        _installService = installService;
+        _activationCoordinator = activationCoordinator;
+        _operationLogger = operationLogger;
     }
 
     public async Task<ActivationResult> ActivateFontAsync(string ownerKey, FontFamilyRecord font, CancellationToken cancellationToken)
@@ -302,7 +449,7 @@ public sealed class LocalFontManagementService : ILocalFontManagementService
         if (font.ActivationState == FontActivationState.Installed)
         {
             var result = new ActivationResult(false, [], L("已安装，无需临时启用。"));
-            await LogAsync("activation", "activate-blocked", result.Message, font.FamilyName, false, cancellationToken).ConfigureAwait(false);
+            await _operationLogger.LogAsync("activation", "activate-blocked", result.Message, font.FamilyName, false, cancellationToken).ConfigureAwait(false);
             return result;
         }
 
@@ -313,20 +460,20 @@ public sealed class LocalFontManagementService : ILocalFontManagementService
         await _activationCoordinator.DeactivateAsync(ownerKey, ToPhysicalFiles(font), cancellationToken).ConfigureAwait(false);
 
     public Task RecordTemporaryActivationSkippedAsync(string ownerKey, FontFamilyRecord font, string reason, CancellationToken cancellationToken) =>
-        LogAsync("activation", "activate-skipped", $"{font.FamilyName}：{reason}", ownerKey, true, cancellationToken);
+        _operationLogger.LogAsync("activation", "activate-skipped", $"{font.FamilyName}：{reason}", ownerKey, true, cancellationToken);
 
     public async Task<FontInstallResult> InstallFontAsync(FontFamilyRecord font, CancellationToken cancellationToken)
     {
         if (font.SourceKind == FontSourceKind.System)
         {
             var blocked = new FontInstallResult(false, font.PrimaryFilePath, null, L("系统字体已安装，无需执行用户级安装。"));
-            await LogAsync("install", "install", blocked.Message, font.FamilyName, false, cancellationToken).ConfigureAwait(false);
+            await _operationLogger.LogAsync("install", "install", blocked.Message, font.FamilyName, false, cancellationToken).ConfigureAwait(false);
             return blocked;
         }
 
         var file = ToPhysicalFiles(font).First();
         var result = await _installService.InstallForCurrentUserAsync(file, cancellationToken).ConfigureAwait(false);
-        await LogAsync("install", "install", result.Message, font.FamilyName, result.Succeeded, cancellationToken).ConfigureAwait(false);
+        await _operationLogger.LogAsync("install", "install", result.Message, font.FamilyName, result.Succeeded, cancellationToken).ConfigureAwait(false);
         return result;
     }
 
@@ -335,7 +482,7 @@ public sealed class LocalFontManagementService : ILocalFontManagementService
         if (font.SourceKind == FontSourceKind.System)
         {
             var blocked = new FontUninstallResult(false, font.PrimaryFilePath, L("系统字体在 v1 中不支持卸载。"));
-            await LogAsync("install", "uninstall", blocked.Message, font.FamilyName, false, cancellationToken).ConfigureAwait(false);
+            await _operationLogger.LogAsync("install", "uninstall", blocked.Message, font.FamilyName, false, cancellationToken).ConfigureAwait(false);
             return blocked;
         }
 
@@ -349,12 +496,9 @@ public sealed class LocalFontManagementService : ILocalFontManagementService
         var result = await _installService.UninstallManagedFontAsync(
             new ManagedFontRecord(font.FamilyName, file.Path, file.Format, file.Sha256, file.Path, FontActivationState.NotEnabled, file.LastSeenAt, null),
             cancellationToken).ConfigureAwait(false);
-        await LogAsync("install", "uninstall", result.Message, font.FamilyName, result.Succeeded, cancellationToken).ConfigureAwait(false);
+        await _operationLogger.LogAsync("install", "uninstall", result.Message, font.FamilyName, result.Succeeded, cancellationToken).ConfigureAwait(false);
         return result;
     }
-
-    public Task<IReadOnlyList<OperationLogEntry>> GetRecentOperationsAsync(int limit, CancellationToken cancellationToken) =>
-        _operationLogStore.GetRecentOperationsAsync(limit, cancellationToken);
 
     private static IReadOnlyList<FontFileRef> ToPhysicalFiles(FontFamilyRecord font)
     {
@@ -371,11 +515,30 @@ public sealed class LocalFontManagementService : ILocalFontManagementService
 
         return refs;
     }
+}
 
-    private static FontImportPreviewItem Failed(string sourcePath, string fileName, string format, string message) =>
-        new(sourcePath, fileName, format, "", "", "", "", null, null, null, null, false, false, false, L("不可导入"), message);
+public sealed class LocalFontOperationLogService : ILocalFontOperationLogService
+{
+    private readonly IOperationLogStore _operationLogStore;
 
-    private Task LogAsync(string category, string action, string message, string? target, bool succeeded, CancellationToken cancellationToken) =>
+    public LocalFontOperationLogService(IOperationLogStore operationLogStore)
+    {
+        _operationLogStore = operationLogStore;
+    }
+
+    public Task<IReadOnlyList<OperationLogEntry>> GetRecentOperationsAsync(int limit, CancellationToken cancellationToken) =>
+        _operationLogStore.GetRecentOperationsAsync(limit, cancellationToken);
+}
+
+public sealed class OperationLogger : IOperationLogger
+{
+    private readonly IOperationLogStore _operationLogStore;
+
+    public OperationLogger(IOperationLogStore operationLogStore)
+    {
+        _operationLogStore = operationLogStore;
+    }
+
+    public Task LogAsync(string category, string action, string message, string? target, bool succeeded, CancellationToken cancellationToken) =>
         _operationLogStore.AppendOperationAsync(new OperationLogEntry(DateTimeOffset.UtcNow, category, action, message, target, succeeded), cancellationToken);
-
 }

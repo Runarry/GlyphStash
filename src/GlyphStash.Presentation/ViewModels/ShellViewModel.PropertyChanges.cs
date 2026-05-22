@@ -53,14 +53,6 @@ public sealed partial class ShellViewModel
         OnPropertyChanged(nameof(HasSelectedCollection));
     }
 
-    partial void OnManagedFontDirectoryChanged(string value)
-    {
-        OnPropertyChanged(nameof(HasManagedFontDirectory));
-        OnPropertyChanged(nameof(ManagedDirectoryStatus));
-    }
-
-    partial void OnGoogleFontsApiKeyTextChanged(string value) => OnPropertyChanged(nameof(GoogleFontsApiKeyStatus));
-
     private void OnSelectedLanguageChanged(LanguageOptionViewModel? value)
     {
         if (value is null)
@@ -78,17 +70,11 @@ public sealed partial class ShellViewModel
     partial void OnSelectedFontChanged(FontFamilyItemViewModel? value)
     {
         SelectedPreviewFace = SelectDefaultPreviewFace(value);
-        OnPropertyChanged(nameof(HasSelectedFont));
-        OnPropertyChanged(nameof(HasNoSelectedFont));
     }
 
     partial void OnSelectedPreviewFaceChanged(FontFaceItemViewModel? value)
     {
         UpdateSelectedFaceFlags(value);
-        OnPropertyChanged(nameof(HasSelectedPreviewFace));
-        OnPropertyChanged(nameof(SelectedPreviewFontFamily));
-        OnPropertyChanged(nameof(SelectedPreviewFontWeight));
-        OnPropertyChanged(nameof(SelectedPreviewFontStyle));
     }
 
     partial void OnImportInstallForCurrentUserChanged(bool value)
@@ -98,8 +84,6 @@ public sealed partial class ShellViewModel
             ImportTemporarilyActivate = false;
         }
 
-        OnPropertyChanged(nameof(CanImportTemporarilyActivate));
-        OnPropertyChanged(nameof(ImportTemporaryActivationReason));
     }
 
     partial void OnImportTemporarilyActivateChanged(bool value)
@@ -132,16 +116,6 @@ public sealed partial class ShellViewModel
         UpdateCurrentPage();
     }
 
-    partial void OnSelectedRemoteFontChanged(RemoteFontFamilyItemViewModel? value)
-    {
-        OnPropertyChanged(nameof(HasSelectedRemoteFont));
-    }
-
-    partial void OnSelectedGlyphChanged(GlyphItemViewModel? value)
-    {
-        OnPropertyChanged(nameof(HasSelectedGlyph));
-    }
-
     partial void OnGlyphSearchTextChanged(string value)
     {
         if (IsGlyphBrowserOpen)
@@ -166,10 +140,6 @@ public sealed partial class ShellViewModel
         }
     }
 
-    partial void OnGlyphPageNumberChanged(int value) => OnPropertyChanged(nameof(GlyphPageLabel));
-
-    partial void OnGlyphTotalPagesChanged(int value) => OnPropertyChanged(nameof(GlyphPageLabel));
-
     partial void OnMergeStepIndexChanged(int value) => RefreshMergeStepState();
 
     partial void OnMergeBaseSearchTextChanged(string value) => RefreshMergeFontLists();
@@ -178,13 +148,11 @@ public sealed partial class ShellViewModel
 
     partial void OnSelectedMergeBaseFontChanged(FontFamilyItemViewModel? value)
     {
-        OnPropertyChanged(nameof(HasSelectedMergeBaseFont));
         UpdateDefaultMergeOutputName();
     }
 
     partial void OnSelectedMergeSupplementalFontChanged(FontFamilyItemViewModel? value)
     {
-        OnPropertyChanged(nameof(HasSelectedMergeSupplementalFont));
         UpdateDefaultMergeOutputName();
     }
 
@@ -206,8 +174,6 @@ public sealed partial class ShellViewModel
         _currentMergePreview = null;
         MergeConflicts.Clear();
         MergeIssues.Clear();
-        OnPropertyChanged(nameof(SelectedMergeMode));
-        OnPropertyChanged(nameof(MergeModeDescription));
         NotifyMergePreviewState();
     }
 
@@ -216,36 +182,6 @@ public sealed partial class ShellViewModel
     partial void OnMergeOutputPathChanged(string value) => NotifyMergeExportState();
 
     partial void OnMergeLicenseConfirmedChanged(bool value) => NotifyMergeExportState();
-
-    partial void OnIsBusyChanged(bool value) => NotifyTrayHideState();
-
-    partial void OnIsOnlineSearchBusyChanged(bool value) => NotifyTrayHideState();
-
-    partial void OnIsMergeBusyChanged(bool value)
-    {
-        OnPropertyChanged(nameof(CanGoPreviousMergeStep));
-        OnPropertyChanged(nameof(CanCancelMerge));
-        OnPropertyChanged(nameof(MergeProgressLabel));
-        NotifyTrayHideState();
-    }
-
-    partial void OnIsMergeRangeDialogBusyChanged(bool value)
-    {
-        OnPropertyChanged(nameof(IsMergeRangeEmptyVisible));
-        OnPropertyChanged(nameof(IsMergeRangeBlockEmptyVisible));
-        OnPropertyChanged(nameof(CanApplyMergeRangeSelection));
-        NotifyTrayHideState();
-    }
-
-    partial void OnIsGlyphLoadingChanged(bool value) => NotifyTrayHideState();
-
-    partial void OnMergeStatusChanged(string value) => OnPropertyChanged(nameof(MergeProgressLabel));
-
-    partial void OnMergeProgressPercentChanged(int value) => OnPropertyChanged(nameof(MergeProgressLabel));
-
-    partial void OnMergeProgressStageChanged(string value) => OnPropertyChanged(nameof(MergeProgressLabel));
-
-    partial void OnMergeProgressMessageChanged(string value) => OnPropertyChanged(nameof(MergeProgressLabel));
 
     partial void OnPreviewFontSizeChanged(double value)
     {

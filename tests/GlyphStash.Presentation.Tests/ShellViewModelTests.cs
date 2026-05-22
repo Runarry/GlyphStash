@@ -260,9 +260,19 @@ public sealed class ShellViewModelTests
         Assert.Contains(vm.MergeRangeSegments, segment => segment.RangeLabel == "U+0042-U+0043" && segment.IsBoth);
         Assert.Contains(vm.MergeRangeSegments, segment => segment.RangeLabel == "U+0044" && segment.IsSupplementalOnly);
 
+        var changedProperties = new List<string?>();
+        vm.PropertyChanged += (_, args) => changedProperties.Add(args.PropertyName);
+        vm.SelectedMergeRangeBlock = vm.MergeRangeBlocks.Single(block => block.Name == "Basic Latin");
+
+        Assert.Contains(nameof(ShellViewModel.MergeRangeSegments), changedProperties);
+        Assert.Contains(vm.MergeRangeSegments, segment => segment.RangeLabel == "U+0041" && segment.IsBaseOnly);
+        Assert.DoesNotContain(vm.MergeRangeSegments, segment => segment.RangeLabel == "U+4E00");
+
         vm.MergeRangeSegments.Single(segment => segment.RangeLabel == "U+0041").IsSelected = true;
         vm.MergeRangeSegments.Single(segment => segment.RangeLabel == "U+0042-U+0043").IsSelected = true;
+        Assert.True(vm.HasSelectedMergeRangeSegments);
         Assert.True(vm.CanApplyMergeRangeSelection);
+        Assert.Contains("2", vm.MergeRangeSelectedCountLabel, StringComparison.Ordinal);
         vm.ApplyMergeRangeSelectionCommand.Execute(null);
 
         Assert.False(vm.IsMergeRangeDialogOpen);
@@ -990,17 +1000,28 @@ public sealed class ShellViewModelTests
         FakeSettingsStore? settingsStore = null)
     {
         var logStore = new FakeOperationLogStore();
+        var operationLogger = new OperationLogger(logStore);
+        settingsStore ??= new FakeSettingsStore();
+        mutationStore ??= new FakeMutationStore();
+        collectionStore ??= new FakeCollectionStore(collections);
+        tagStore ??= new FakeTagStore();
+        var installService = new FakeInstallService();
+        var activationCoordinator = new FontActivationCoordinator(platform, new FakeActivationStore(), logStore);
         return new LocalFontManagementService(
-            new FakeMetadataReader(),
-            new FakeManagedFontFileStore(),
-            settingsStore ?? new FakeSettingsStore(),
-            new FakeMetadataStore(),
-            mutationStore ?? new FakeMutationStore(),
-            tagStore ?? new FakeTagStore(),
-            collectionStore ?? new FakeCollectionStore(collections),
-            new FakeInstallService(),
-            new FontActivationCoordinator(platform, new FakeActivationStore(), logStore),
-            logStore);
+            new LocalFontSettingsService(settingsStore, operationLogger),
+            new LocalFontImportService(
+                new FakeMetadataReader(),
+                new FakeManagedFontFileStore(),
+                settingsStore,
+                new FakeMetadataStore(),
+                mutationStore,
+                collectionStore,
+                installService,
+                activationCoordinator,
+                operationLogger),
+            new LocalFontOrganizationService(mutationStore, tagStore, collectionStore, operationLogger),
+            new LocalFontActivationService(installService, activationCoordinator, operationLogger),
+            new LocalFontOperationLogService(logStore));
     }
 
     private sealed class FakeInventory : IFontInventoryService

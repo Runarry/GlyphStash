@@ -108,6 +108,12 @@ public partial class App : Avalonia.Application
         services.AddScoped(_ => new HttpClient());
         services.AddScoped<IFontSourceProvider, GoogleFontsProvider>();
         services.AddScoped<IFontLibraryService, FontLibraryService>();
+        services.AddScoped<IOperationLogger, OperationLogger>();
+        services.AddScoped<ILocalFontSettingsService, LocalFontSettingsService>();
+        services.AddScoped<ILocalFontImportService, LocalFontImportService>();
+        services.AddScoped<ILocalFontOrganizationService, LocalFontOrganizationService>();
+        services.AddScoped<ILocalFontActivationService, LocalFontActivationService>();
+        services.AddScoped<ILocalFontOperationLogService, LocalFontOperationLogService>();
         services.AddScoped<ILocalFontManagementService, LocalFontManagementService>();
         services.AddScoped<IOnlineFontService, OnlineFontService>();
         services.AddScoped<IFontMergeService, FontMergeService>();

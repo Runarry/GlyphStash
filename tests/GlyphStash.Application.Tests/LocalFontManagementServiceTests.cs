@@ -8,6 +8,17 @@ namespace GlyphStash.Application.Tests;
 public sealed class LocalFontManagementServiceTests
 {
     [Fact]
+    public async Task Facade_DelegatesSettingsCalls()
+    {
+        var settingsStore = new FakeSettingsStore();
+        var service = CreateService(new FakePlatformActivation(), settingsStore: settingsStore);
+
+        await service.SaveGoogleFontsApiKeyAsync("  key  ", CancellationToken.None);
+
+        Assert.Equal("key", settingsStore.Settings.GoogleFontsApiKey);
+    }
+
+    [Fact]
     public async Task ActivateFontAsync_WhenFontIsInstalled_DoesNotCallPlatformActivation()
     {
         var platform = new FakePlatformActivation();
@@ -85,20 +96,32 @@ public sealed class LocalFontManagementServiceTests
         FakeMutationStore? mutationStore = null,
         FakeTagStore? tagStore = null,
         FakeCollectionStore? collectionStore = null,
-        FakeOperationLogStore? logStore = null)
+        FakeOperationLogStore? logStore = null,
+        FakeSettingsStore? settingsStore = null)
     {
         logStore ??= new FakeOperationLogStore();
+        var operationLogger = new OperationLogger(logStore);
+        settingsStore ??= new FakeSettingsStore();
+        mutationStore ??= new FakeMutationStore();
+        tagStore ??= new FakeTagStore();
+        collectionStore ??= new FakeCollectionStore();
+        var installService = new FakeInstallService();
+        var activationCoordinator = new FontActivationCoordinator(platform, new FakeActivationStore(), logStore);
         return new LocalFontManagementService(
-            new FakeMetadataReader(),
-            new FakeManagedFontFileStore(),
-            new FakeSettingsStore(),
-            new FakeMetadataStore(),
-            mutationStore ?? new FakeMutationStore(),
-            tagStore ?? new FakeTagStore(),
-            collectionStore ?? new FakeCollectionStore(),
-            new FakeInstallService(),
-            new FontActivationCoordinator(platform, new FakeActivationStore(), logStore),
-            logStore);
+            new LocalFontSettingsService(settingsStore, operationLogger),
+            new LocalFontImportService(
+                new FakeMetadataReader(),
+                new FakeManagedFontFileStore(),
+                settingsStore,
+                new FakeMetadataStore(),
+                mutationStore,
+                collectionStore,
+                installService,
+                activationCoordinator,
+                operationLogger),
+            new LocalFontOrganizationService(mutationStore, tagStore, collectionStore, operationLogger),
+            new LocalFontActivationService(installService, activationCoordinator, operationLogger),
+            new LocalFontOperationLogService(logStore));
     }
 
     private static FontFamilyRecord CreateFont(string family, FontActivationState state, FontSourceKind sourceKind)
@@ -161,10 +184,16 @@ public sealed class LocalFontManagementServiceTests
 
     private sealed class FakeSettingsStore : IAppSettingsStore
     {
-        public Task<UserFontSettings?> GetSettingsAsync(CancellationToken cancellationToken) =>
-            Task.FromResult<UserFontSettings?>(new UserFontSettings("C:/GlyphStash"));
+        public UserFontSettings Settings { get; private set; } = new("C:/GlyphStash");
 
-        public Task SaveSettingsAsync(UserFontSettings settings, CancellationToken cancellationToken) => Task.CompletedTask;
+        public Task<UserFontSettings?> GetSettingsAsync(CancellationToken cancellationToken) =>
+            Task.FromResult<UserFontSettings?>(Settings);
+
+        public Task SaveSettingsAsync(UserFontSettings settings, CancellationToken cancellationToken)
+        {
+            Settings = settings;
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class FakeMetadataStore : IFontMetadataStore

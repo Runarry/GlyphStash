@@ -451,7 +451,6 @@ public sealed partial class ShellViewModel
     {
         _allMergeRangeSegments.Clear();
         MergeRangeBlocks.Clear();
-        MergeRangeSegments.Clear();
         SelectedMergeRangeBlock = null;
         MergeRangeBaseSummary = L("未读取基础字体 A。");
         MergeRangeSupplementalSummary = L("未读取补充字体 B。");
@@ -463,7 +462,6 @@ public sealed partial class ShellViewModel
     {
         _allMergeRangeSegments.Clear();
         MergeRangeBlocks.Clear();
-        MergeRangeSegments.Clear();
 
         foreach (var segment in BuildComparisonSegments(baseCoverage.Ranges, supplementalCoverage.Ranges))
         {
@@ -520,21 +518,20 @@ public sealed partial class ShellViewModel
 
     private void RefreshVisibleMergeRangeSegments()
     {
-        MergeRangeSegments.Clear();
+        OnPropertyChanged(nameof(MergeRangeSegments));
+        NotifyMergeRangeDialogState();
+    }
+
+    private IEnumerable<MergeRangeSegmentItemViewModel> GetVisibleMergeRangeSegments()
+    {
         if (SelectedMergeRangeBlock is null)
         {
-            NotifyMergeRangeDialogState();
-            return;
+            return [];
         }
 
-        foreach (var segment in _allMergeRangeSegments.Where(segment =>
-                     SelectedMergeRangeBlock.IsAll
-                     || string.Equals(segment.BlockName, SelectedMergeRangeBlock.Name, StringComparison.Ordinal)))
-        {
-            MergeRangeSegments.Add(segment);
-        }
-
-        NotifyMergeRangeDialogState();
+        return _allMergeRangeSegments.Where(segment =>
+            SelectedMergeRangeBlock.IsAll
+            || string.Equals(segment.BlockName, SelectedMergeRangeBlock.Name, StringComparison.Ordinal));
     }
 
     private static string BuildCoverageSummary(string familyName, string styleName, GlyphCoverage coverage)
@@ -680,6 +677,7 @@ public sealed partial class ShellViewModel
 
     private void NotifyMergeRangeDialogState()
     {
+        OnPropertyChanged(nameof(MergeRangeSegments));
         OnPropertyChanged(nameof(HasMergeRangeBlocks));
         OnPropertyChanged(nameof(HasMergeRangeSegments));
         OnPropertyChanged(nameof(HasLoadedMergeRangeSegments));
@@ -797,14 +795,6 @@ public sealed partial class ShellViewModel
         {
             step.IsActive = step.Index == MergeStepIndex;
         }
-
-        OnPropertyChanged(nameof(IsMergeStepSelectFonts));
-        OnPropertyChanged(nameof(IsMergeStepRanges));
-        OnPropertyChanged(nameof(IsMergeStepPreview));
-        OnPropertyChanged(nameof(IsMergeStepExport));
-        OnPropertyChanged(nameof(IsMergeStepReport));
-        OnPropertyChanged(nameof(CanGoPreviousMergeStep));
-        OnPropertyChanged(nameof(MergeNextActionLabel));
     }
 
     private void NotifyMergePreviewState()
