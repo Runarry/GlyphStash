@@ -31,6 +31,13 @@ public sealed partial class ShellViewModel
         }
     }
 
+    private void ApplyCurrentLanguageSelection()
+    {
+        _selectedLanguage = LanguageOptions.FirstOrDefault(language =>
+            string.Equals(language.CultureCode, _localizationService.CurrentCulture.Name, StringComparison.OrdinalIgnoreCase));
+        OnPropertyChanged(nameof(SelectedLanguage));
+    }
+
     private void RefreshLocalizedState()
     {
         RefreshLocalizedOptions(SourceFilterOptions);
@@ -201,13 +208,6 @@ public sealed partial class ShellViewModel
         ReplaceLocalizedOptions(OnlineSubsetOptionModels, OnlineSubsetOptions);
         ReplaceLocalizedOptions(OnlineCategoryOptionModels, OnlineCategoryOptions);
         ReplaceMergeModeOptions();
-        SelectSourceFilterOption(SelectedSourceFilter);
-        SelectStateFilterOption(SelectedStateFilter);
-        SelectTagFilterOption(SelectedTagFilter);
-        SelectCollectionFilterOption(SelectedCollectionFilter);
-        SelectOnlineSubsetOption(SelectedOnlineSubset);
-        SelectOnlineCategoryOption(SelectedOnlineCategory);
-        SelectMergeModeOption(SelectedMergeModeLabel);
     }
 
     private static void ReplaceLocalizedOptions(ObservableCollection<LocalizedOptionViewModel> target, IEnumerable<string> values)
@@ -231,53 +231,6 @@ public sealed partial class ShellViewModel
         foreach (var option in options)
         {
             option.RefreshLocalizedState();
-        }
-    }
-
-    private void SelectSourceFilterOption(string value) => SelectOption(SourceFilterOptions, value, option => SelectedSourceFilterOption = option);
-
-    private void SelectStateFilterOption(string value) => SelectOption(StateFilterOptions, value, option => SelectedStateFilterOption = option);
-
-    private void SelectTagFilterOption(string value) => SelectOption(TagFilterOptions, value, option => SelectedTagFilterOption = option);
-
-    private void SelectCollectionFilterOption(string value) => SelectOption(CollectionFilterOptions, value, option => SelectedCollectionFilterOption = option);
-
-    private void SelectOnlineSubsetOption(string value) => SelectOption(OnlineSubsetOptionModels, value, option => SelectedOnlineSubsetOption = option);
-
-    private void SelectOnlineCategoryOption(string value) => SelectOption(OnlineCategoryOptionModels, value, option => SelectedOnlineCategoryOption = option);
-
-    private void SelectMergeModeOption(string value) => SelectOption(MergeModeOptionModels, value, option => SelectedMergeModeOption = option);
-
-    private void SelectOption(
-        IReadOnlyList<LocalizedOptionViewModel> options,
-        string value,
-        Action<LocalizedOptionViewModel?> select)
-    {
-        _isSyncingLocalizedOptions = true;
-        try
-        {
-            select(options.FirstOrDefault(option => string.Equals(option.Value, value, StringComparison.CurrentCultureIgnoreCase))
-                   ?? options.FirstOrDefault());
-        }
-        finally
-        {
-            _isSyncingLocalizedOptions = false;
-        }
-    }
-
-    private void SetStableFilterFromOption(
-        LocalizedOptionViewModel? option,
-        string fallback,
-        Action<string> select)
-    {
-        _isSyncingLocalizedOptions = true;
-        try
-        {
-            select(option?.Value ?? fallback);
-        }
-        finally
-        {
-            _isSyncingLocalizedOptions = false;
         }
     }
 
@@ -1179,7 +1132,6 @@ public sealed partial class ShellViewModel
         var filter = TagFilters.FirstOrDefault(candidate => string.Equals(candidate, preferredFilter, StringComparison.CurrentCultureIgnoreCase)) ?? AllTagFilter;
         if (SelectedTagFilter == filter)
         {
-            SelectTagFilterOption(filter);
             OnPropertyChanged(nameof(SelectedTagFilter));
             return;
         }
@@ -1192,7 +1144,6 @@ public sealed partial class ShellViewModel
         var filter = CollectionFilters.FirstOrDefault(candidate => string.Equals(candidate, preferredFilter, StringComparison.CurrentCultureIgnoreCase)) ?? AllCollectionFilter;
         if (SelectedCollectionFilter == filter)
         {
-            SelectCollectionFilterOption(filter);
             OnPropertyChanged(nameof(SelectedCollectionFilter));
             return;
         }

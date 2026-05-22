@@ -114,7 +114,8 @@
                 <StackPanel Spacing="7">
                   <TextBlock Text="{DynamicResource L.Text.B43C644EE7186159}" Classes="caption" FontWeight="Bold" />
                   <ComboBox ItemsSource="{Binding MergeModeOptionModels}"
-                            SelectedItem="{Binding SelectedMergeModeOption, Mode=TwoWay}"
+                            SelectedValue="{Binding SelectedMergeModeLabel, Mode=TwoWay}"
+                            SelectedValueBinding="{Binding Value, x:CompileBindings=False}"
                             HorizontalAlignment="Stretch">
                     <ComboBox.ItemTemplate>
                       <DataTemplate x:DataType="vm:LocalizedOptionViewModel">

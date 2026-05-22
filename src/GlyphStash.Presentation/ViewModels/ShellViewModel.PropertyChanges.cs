@@ -13,43 +13,11 @@ public sealed partial class ShellViewModel
 
     partial void OnSelectedSourceFilterChanged(string value)
     {
-        if (!_isSyncingLocalizedOptions)
-        {
-            SelectSourceFilterOption(value);
-        }
-
-        ApplyFilters();
-    }
-
-    partial void OnSelectedSourceFilterOptionChanged(LocalizedOptionViewModel? value)
-    {
-        if (_isSyncingLocalizedOptions)
-        {
-            return;
-        }
-
-        SetStableFilterFromOption(value, fallback: AllSourceFilter, selected => SelectedSourceFilter = selected);
         ApplyFilters();
     }
 
     partial void OnSelectedStateFilterChanged(string value)
     {
-        if (!_isSyncingLocalizedOptions)
-        {
-            SelectStateFilterOption(value);
-        }
-
-        ApplyFilters();
-    }
-
-    partial void OnSelectedStateFilterOptionChanged(LocalizedOptionViewModel? value)
-    {
-        if (_isSyncingLocalizedOptions)
-        {
-            return;
-        }
-
-        SetStableFilterFromOption(value, fallback: AllStateFilter, selected => SelectedStateFilter = selected);
         ApplyFilters();
     }
 
@@ -61,22 +29,6 @@ public sealed partial class ShellViewModel
             return;
         }
 
-        if (!_isSyncingLocalizedOptions)
-        {
-            SelectTagFilterOption(value);
-        }
-
-        ApplyFilters();
-    }
-
-    partial void OnSelectedTagFilterOptionChanged(LocalizedOptionViewModel? value)
-    {
-        if (_isSyncingLocalizedOptions)
-        {
-            return;
-        }
-
-        SetStableFilterFromOption(value, fallback: AllTagFilter, selected => SelectedTagFilter = selected);
         ApplyFilters();
     }
 
@@ -88,59 +40,7 @@ public sealed partial class ShellViewModel
             return;
         }
 
-        if (!_isSyncingLocalizedOptions)
-        {
-            SelectCollectionFilterOption(value);
-        }
-
         ApplyFilters();
-    }
-
-    partial void OnSelectedCollectionFilterOptionChanged(LocalizedOptionViewModel? value)
-    {
-        if (_isSyncingLocalizedOptions)
-        {
-            return;
-        }
-
-        SetStableFilterFromOption(value, fallback: AllCollectionFilter, selected => SelectedCollectionFilter = selected);
-        ApplyFilters();
-    }
-
-    partial void OnSelectedOnlineSubsetChanged(string value)
-    {
-        if (!_isSyncingLocalizedOptions)
-        {
-            SelectOnlineSubsetOption(value);
-        }
-    }
-
-    partial void OnSelectedOnlineSubsetOptionChanged(LocalizedOptionViewModel? value)
-    {
-        if (_isSyncingLocalizedOptions)
-        {
-            return;
-        }
-
-        SetStableFilterFromOption(value, fallback: AllOnlineSubset, selected => SelectedOnlineSubset = selected);
-    }
-
-    partial void OnSelectedOnlineCategoryChanged(string value)
-    {
-        if (!_isSyncingLocalizedOptions)
-        {
-            SelectOnlineCategoryOption(value);
-        }
-    }
-
-    partial void OnSelectedOnlineCategoryOptionChanged(LocalizedOptionViewModel? value)
-    {
-        if (_isSyncingLocalizedOptions)
-        {
-            return;
-        }
-
-        SetStableFilterFromOption(value, fallback: AllOnlineCategory, selected => SelectedOnlineCategory = selected);
     }
 
     partial void OnCollectionSearchTextChanged(string value) => ApplyCollectionFilter();
@@ -161,7 +61,7 @@ public sealed partial class ShellViewModel
 
     partial void OnGoogleFontsApiKeyTextChanged(string value) => OnPropertyChanged(nameof(GoogleFontsApiKeyStatus));
 
-    partial void OnSelectedLanguageChanged(LanguageOptionViewModel? value)
+    private void OnSelectedLanguageChanged(LanguageOptionViewModel? value)
     {
         if (value is null)
         {
@@ -169,11 +69,6 @@ public sealed partial class ShellViewModel
         }
 
         _localizationService.SetCulture(value.CultureCode);
-        if (_isApplyingSettings)
-        {
-            return;
-        }
-
         RunLatestAsync(
             ref _languageSaveCancellation,
             cancellationToken => SaveSelectedLanguageAsync(value, cancellationToken),
@@ -308,27 +203,12 @@ public sealed partial class ShellViewModel
 
     partial void OnSelectedMergeModeLabelChanged(string value)
     {
-        if (!_isSyncingLocalizedOptions)
-        {
-            SelectMergeModeOption(value);
-        }
-
         _currentMergePreview = null;
         MergeConflicts.Clear();
         MergeIssues.Clear();
         OnPropertyChanged(nameof(SelectedMergeMode));
         OnPropertyChanged(nameof(MergeModeDescription));
         NotifyMergePreviewState();
-    }
-
-    partial void OnSelectedMergeModeOptionChanged(LocalizedOptionViewModel? value)
-    {
-        if (_isSyncingLocalizedOptions)
-        {
-            return;
-        }
-
-        SetStableFilterFromOption(value, fallback: SupplementMergeModeLabel, selected => SelectedMergeModeLabel = selected);
     }
 
     partial void OnMergeOutputFontNameChanged(string value) => NotifyMergeExportState();

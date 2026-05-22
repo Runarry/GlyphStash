@@ -47,8 +47,6 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     private CancellationTokenSource? _onlineDownloadCancellation;
     private CancellationTokenSource? _mergeCancellation;
     private readonly List<MergeRangeSegmentItemViewModel> _allMergeRangeSegments = [];
-    private bool _isApplyingSettings;
-    private bool _isSyncingLocalizedOptions;
     private readonly FontLibraryViewModel _fontLibraryPage;
     private readonly CollectionsViewModel _collectionsPage;
     private readonly OnlineFontsViewModel _onlineFontsPage;
@@ -70,25 +68,13 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     private string _selectedSourceFilter = AllSourceFilter;
 
     [ObservableProperty]
-    private LocalizedOptionViewModel? _selectedSourceFilterOption;
-
-    [ObservableProperty]
     private string _selectedStateFilter = AllStateFilter;
-
-    [ObservableProperty]
-    private LocalizedOptionViewModel? _selectedStateFilterOption;
 
     [ObservableProperty]
     private string _selectedTagFilter = AllTagFilter;
 
     [ObservableProperty]
-    private LocalizedOptionViewModel? _selectedTagFilterOption;
-
-    [ObservableProperty]
     private string _selectedCollectionFilter = AllCollectionFilter;
-
-    [ObservableProperty]
-    private LocalizedOptionViewModel? _selectedCollectionFilterOption;
 
     [ObservableProperty]
     private string _previewText = AppText.TranslateLiteral(DefaultPreviewTextZh);
@@ -181,13 +167,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     private string _selectedOnlineSubset = AllOnlineSubset;
 
     [ObservableProperty]
-    private LocalizedOptionViewModel? _selectedOnlineSubsetOption;
-
-    [ObservableProperty]
     private string _selectedOnlineCategory = AllOnlineCategory;
-
-    [ObservableProperty]
-    private LocalizedOptionViewModel? _selectedOnlineCategoryOption;
 
     [ObservableProperty]
     private string _selectedOnlineSort = "alpha";
@@ -339,8 +319,19 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private string _mergeReportPath = "";
 
-    [ObservableProperty]
     private LanguageOptionViewModel? _selectedLanguage;
+
+    public LanguageOptionViewModel? SelectedLanguage
+    {
+        get => _selectedLanguage;
+        set
+        {
+            if (SetProperty(ref _selectedLanguage, value))
+            {
+                OnSelectedLanguageChanged(value);
+            }
+        }
+    }
 
     public ShellViewModel(
         IFontLibraryService fontLibraryService,
@@ -376,16 +367,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
             LanguageOptions.Add(new LanguageOptionViewModel(language));
         }
 
-        _isApplyingSettings = true;
-        try
-        {
-            SelectedLanguage = LanguageOptions.FirstOrDefault(language =>
-                string.Equals(language.CultureCode, _localizationService.CurrentCulture.Name, StringComparison.OrdinalIgnoreCase));
-        }
-        finally
-        {
-            _isApplyingSettings = false;
-        }
+        ApplyCurrentLanguageSelection();
 
         _localizationCultureChangedHandler = (_, _) => RefreshLocalizedState();
         _localizationService.CultureChanged += _localizationCultureChangedHandler;

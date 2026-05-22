@@ -22,17 +22,8 @@ public sealed partial class ShellViewModel
             var settings = await _localManagementService.GetSettingsAsync(LifetimeToken);
             if (!string.IsNullOrWhiteSpace(settings?.UiCultureCode))
             {
-                _isApplyingSettings = true;
-                try
-                {
-                    _localizationService.SetCulture(settings.UiCultureCode);
-                    SelectedLanguage = LanguageOptions.FirstOrDefault(language =>
-                        string.Equals(language.CultureCode, _localizationService.CurrentCulture.Name, StringComparison.OrdinalIgnoreCase));
-                }
-                finally
-                {
-                    _isApplyingSettings = false;
-                }
+                _localizationService.SetCulture(settings.UiCultureCode);
+                ApplyCurrentLanguageSelection();
             }
 
             ManagedFontDirectory = settings?.ManagedFontDirectory ?? "";

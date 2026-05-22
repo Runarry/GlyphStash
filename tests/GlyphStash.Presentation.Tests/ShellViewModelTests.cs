@@ -97,11 +97,13 @@ public sealed class ShellViewModelTests
                 localizationService: localization);
 
             await Task.Delay(50);
+            Assert.Equal(0, settingsStore.SaveCount);
             Assert.Equal("en-US", (await settingsStore.GetSettingsAsync(CancellationToken.None))?.UiCultureCode);
 
             await vm.InitializeAsync();
 
             Assert.Equal("en-US", localization.CurrentCulture.Name);
+            Assert.Equal(0, settingsStore.SaveCount);
             Assert.Equal("en-US", (await settingsStore.GetSettingsAsync(CancellationToken.None))?.UiCultureCode);
         }
         finally
@@ -1102,11 +1104,14 @@ public sealed class ShellViewModelTests
             _settings = new UserFontSettings("C:/GlyphStash", apiKey, uiCultureCode);
         }
 
+        public int SaveCount { get; private set; }
+
         public Task<UserFontSettings?> GetSettingsAsync(CancellationToken cancellationToken) =>
             Task.FromResult<UserFontSettings?>(_settings);
 
         public Task SaveSettingsAsync(UserFontSettings settings, CancellationToken cancellationToken)
         {
+            SaveCount++;
             _settings = settings;
             return Task.CompletedTask;
         }

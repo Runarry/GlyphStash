@@ -101,6 +101,53 @@ public sealed class AvaloniaHeadlessTests
     }
 
     [Fact]
+    public void ComboBoxSelectedValueBindings_UpdateStableSelectionProperties()
+    {
+        HeadlessTestHost.EnsureAvalonia();
+        var vm = ShellViewModelTestFactory.Create(ShellViewModelTestFactory.CreateLibraryService(new FakeInventory(), new FakeStore()));
+        vm.TagFilterOptions.Add(new LocalizedOptionViewModel("UI", "UI"));
+        vm.CollectionFilterOptions.Add(new LocalizedOptionViewModel("官网改版", "官网改版"));
+
+        var fontLibraryWindow = Show(new FontLibraryPageView { DataContext = vm });
+        try
+        {
+            SelectComboBoxValue(fontLibraryWindow, vm.TagFilterOptions, "UI");
+            SelectComboBoxValue(fontLibraryWindow, vm.CollectionFilterOptions, "官网改版");
+        }
+        finally
+        {
+            fontLibraryWindow.Close();
+        }
+
+        var onlineFontsWindow = Show(new OnlineFontsPageView { DataContext = vm });
+        try
+        {
+            SelectComboBoxValue(onlineFontsWindow, vm.OnlineSubsetOptionModels, "latin-ext");
+            SelectComboBoxValue(onlineFontsWindow, vm.OnlineCategoryOptionModels, "sans-serif");
+        }
+        finally
+        {
+            onlineFontsWindow.Close();
+        }
+
+        var mergeToolWindow = Show(new MergeToolPageView { DataContext = vm });
+        try
+        {
+            SelectComboBoxValue(mergeToolWindow, vm.MergeModeOptionModels, "覆盖");
+        }
+        finally
+        {
+            mergeToolWindow.Close();
+        }
+
+        Assert.Equal("UI", vm.SelectedTagFilter);
+        Assert.Equal("官网改版", vm.SelectedCollectionFilter);
+        Assert.Equal("latin-ext", vm.SelectedOnlineSubset);
+        Assert.Equal("sans-serif", vm.SelectedOnlineCategory);
+        Assert.Equal("覆盖", vm.SelectedMergeModeLabel);
+    }
+
+    [Fact]
     public void ShellView_LoadsMergeRangeDialog()
     {
         HeadlessTestHost.EnsureAvalonia();
@@ -134,6 +181,31 @@ public sealed class AvaloniaHeadlessTests
 
         Assert.True(registry.IsDisposed);
         Assert.NotEqual(FontFamily.Default, registry.Resolve(null, "Inter"));
+    }
+
+    private static Window Show(Control content)
+    {
+        var window = new Window
+        {
+            Width = 1360,
+            Height = 860,
+            Content = content
+        };
+
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+        AvaloniaHeadlessPlatform.ForceRenderTimerTick(3);
+        return window;
+    }
+
+    private static void SelectComboBoxValue(Window window, object itemsSource, string value)
+    {
+        var comboBox = window.GetVisualDescendants()
+            .OfType<ComboBox>()
+            .Single(comboBox => ReferenceEquals(comboBox.ItemsSource, itemsSource));
+        comboBox.SelectedValue = value;
+        Dispatcher.UIThread.RunJobs();
+        AvaloniaHeadlessPlatform.ForceRenderTimerTick(1);
     }
 
     private sealed class FakeInventory : IFontInventoryService

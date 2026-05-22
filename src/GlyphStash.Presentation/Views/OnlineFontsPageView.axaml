@@ -23,7 +23,10 @@
           <Grid Grid.Row="1" ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="10">
             <StackPanel Spacing="7">
               <TextBlock Text="{DynamicResource L.Text.188C30AF512EDBFC}" Classes="caption" FontWeight="Bold" />
-              <ComboBox ItemsSource="{Binding OnlineSubsetOptionModels}" SelectedItem="{Binding SelectedOnlineSubsetOption, Mode=TwoWay}" HorizontalAlignment="Stretch">
+              <ComboBox ItemsSource="{Binding OnlineSubsetOptionModels}"
+                        SelectedValue="{Binding SelectedOnlineSubset, Mode=TwoWay}"
+                        SelectedValueBinding="{Binding Value, x:CompileBindings=False}"
+                        HorizontalAlignment="Stretch">
                 <ComboBox.ItemTemplate>
                   <DataTemplate x:DataType="vm:LocalizedOptionViewModel">
                     <TextBlock Text="{Binding DisplayName}" />
@@ -33,7 +36,10 @@
             </StackPanel>
             <StackPanel Grid.Column="1" Spacing="7">
               <TextBlock Text="{DynamicResource L.Text.515559957FD3ACBD}" Classes="caption" FontWeight="Bold" />
-              <ComboBox ItemsSource="{Binding OnlineCategoryOptionModels}" SelectedItem="{Binding SelectedOnlineCategoryOption, Mode=TwoWay}" HorizontalAlignment="Stretch">
+              <ComboBox ItemsSource="{Binding OnlineCategoryOptionModels}"
+                        SelectedValue="{Binding SelectedOnlineCategory, Mode=TwoWay}"
+                        SelectedValueBinding="{Binding Value, x:CompileBindings=False}"
+                        HorizontalAlignment="Stretch">
                 <ComboBox.ItemTemplate>
                   <DataTemplate x:DataType="vm:LocalizedOptionViewModel">
                     <TextBlock Text="{Binding DisplayName}" />
