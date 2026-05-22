@@ -2,6 +2,7 @@ using System.Runtime.Versioning;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using CommunityToolkit.Mvvm.Input;
 
 namespace GlyphStash.Desktop;
 
@@ -56,16 +57,16 @@ internal sealed class DesktopTrayController : IDisposable
         var menu = new NativeMenu();
         menu.Items.Add(new NativeMenuItem("打开 GlyphStash")
         {
-            Command = new DelegateCommand(_lifecycle.ShowFromTray)
+            Command = new RelayCommand(_lifecycle.ShowFromTray)
         });
         menu.Items.Add(new NativeMenuItem("隐藏到托盘")
         {
-            Command = new DelegateCommand(() => _lifecycle.HideToTray())
+            Command = new RelayCommand(() => _lifecycle.HideToTray())
         });
         menu.Items.Add(new NativeMenuItemSeparator());
         menu.Items.Add(new NativeMenuItem("退出并关闭临时字体")
         {
-            Command = new DelegateCommand(_lifecycle.Exit)
+            Command = new RelayCommand(_lifecycle.Exit)
         });
 
         return new TrayIcon
