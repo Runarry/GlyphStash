@@ -1,8 +1,9 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:feature="using:GlyphStash.Presentation.Features.OnlineFonts"
              xmlns:vm="using:GlyphStash.Presentation.ViewModels"
              x:Class="GlyphStash.Presentation.Views.OnlineFontsPageView"
-             x:DataType="vm:ShellViewModel">
+             x:DataType="feature:OnlineFontsViewModel">
   <Grid x:Name="OnlineFontsRoot" RowDefinitions="76,*,Auto">
     <Border Grid.Row="0" Background="{DynamicResource GlyphSurfaceBrush}" BorderBrush="{DynamicResource GlyphBorderBrush}" BorderThickness="0,0,0,1" Padding="24,0">
       <Grid VerticalAlignment="Center">
@@ -151,7 +152,7 @@
                             <Border Grid.Column="1" Classes="badge"><TextBlock Text="{Binding StatusLabel}" FontSize="12" /></Border>
                             <TextBlock Grid.Row="1" Text="{Binding StylesLabel}" Classes="muted" TextWrapping="Wrap" />
                             <TextBlock Grid.Row="2" Text="{Binding ErrorMessage}" Classes="muted" TextWrapping="Wrap" IsVisible="{Binding IsFailed}" />
-                            <Button Grid.Row="1" Grid.Column="1" Content="{DynamicResource L.Text.B8784C8DD5636FF2}" Classes="sm" Command="{Binding $parent[UserControl].((vm:ShellViewModel)DataContext).RetryOnlineDownloadCommand}" CommandParameter="{Binding}" IsVisible="{Binding CanRetry}" />
+                            <Button Grid.Row="1" Grid.Column="1" Content="{DynamicResource L.Text.B8784C8DD5636FF2}" Classes="sm" Command="{Binding $parent[UserControl].((feature:OnlineFontsViewModel)DataContext).RetryOnlineDownloadCommand}" CommandParameter="{Binding}" IsVisible="{Binding CanRetry}" />
                           </Grid>
                         </Border>
                       </DataTemplate>

@@ -7,6 +7,13 @@ using GlyphStash.Application.Fonts;
 using GlyphStash.Domain.Fonts;
 using GlyphStash.Localization;
 using static GlyphStash.Localization.AppTextExtensions;
+using GlyphStash.Presentation.Features.Collections;
+using GlyphStash.Presentation.Features.FontLibrary;
+using GlyphStash.Presentation.Features.GlyphBrowser;
+using GlyphStash.Presentation.Features.MergeTool;
+using GlyphStash.Presentation.Features.OnlineFonts;
+using GlyphStash.Presentation.Features.Settings;
+using GlyphStash.Presentation.Features.Shell;
 using GlyphStash.Presentation.Services;
 using DomainUnicodeRange = GlyphStash.Domain.Fonts.UnicodeRange;
 
@@ -59,7 +66,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     private NavigationItemViewModel? _selectedNavigationItem;
 
     [ObservableProperty]
-    private ShellPageViewModel? _currentPage;
+    private ShellFeatureViewModel? _currentPage;
 
     [ObservableProperty]
     private string _searchText = "";
@@ -392,6 +399,43 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         IFontPreviewRegistry fontPreviewRegistry,
         IFontMergeService fontMergeService,
         IAppLocalizationService localizationService)
+        : this(
+            fontLibraryService,
+            localManagementService,
+            fileDialogService,
+            onlineFontService,
+            glyphCatalogService,
+            clipboardService,
+            fontPreviewRegistry,
+            fontMergeService,
+            localizationService,
+            new FontLibraryViewModel(),
+            new CollectionsViewModel(),
+            new OnlineFontsViewModel(),
+            new MergeToolViewModel(),
+            new GlyphBrowserViewModel(),
+            new SettingsViewModel(),
+            new PlaceholderPageViewModel())
+    {
+    }
+
+    public ShellViewModel(
+        IFontLibraryService fontLibraryService,
+        ILocalFontManagementService localManagementService,
+        IUserFileDialogService fileDialogService,
+        IOnlineFontService onlineFontService,
+        IGlyphCatalogService glyphCatalogService,
+        IUserClipboardService clipboardService,
+        IFontPreviewRegistry fontPreviewRegistry,
+        IFontMergeService fontMergeService,
+        IAppLocalizationService localizationService,
+        FontLibraryViewModel fontLibraryPage,
+        CollectionsViewModel collectionsPage,
+        OnlineFontsViewModel onlineFontsPage,
+        MergeToolViewModel mergeToolPage,
+        GlyphBrowserViewModel glyphBrowserPage,
+        SettingsViewModel settingsPage,
+        PlaceholderPageViewModel placeholderPage)
     {
         _fontLibraryService = fontLibraryService;
         _localManagementService = localManagementService;
@@ -402,13 +446,20 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         _clipboardService = clipboardService;
         _fontPreviewRegistry = fontPreviewRegistry;
         _localizationService = localizationService;
-        _fontLibraryPage = new FontLibraryViewModel(this);
-        _collectionsPage = new CollectionsViewModel(this);
-        _onlineFontsPage = new OnlineFontsViewModel(this);
-        _mergeToolPage = new MergeToolViewModel(this);
-        _glyphBrowserPage = new GlyphBrowserViewModel(this);
-        _settingsPage = new SettingsViewModel(this);
-        _placeholderPage = new PlaceholderPageViewModel(this);
+        _fontLibraryPage = fontLibraryPage;
+        _collectionsPage = collectionsPage;
+        _onlineFontsPage = onlineFontsPage;
+        _mergeToolPage = mergeToolPage;
+        _glyphBrowserPage = glyphBrowserPage;
+        _settingsPage = settingsPage;
+        _placeholderPage = placeholderPage;
+        _fontLibraryPage.Attach(this);
+        _collectionsPage.Attach(this);
+        _onlineFontsPage.Attach(this);
+        _mergeToolPage.Attach(this);
+        _glyphBrowserPage.Attach(this);
+        _settingsPage.Attach(this);
+        _placeholderPage.Attach(this);
         CurrentPage = _fontLibraryPage;
         InitializeLocalizedOptions();
         foreach (var language in _localizationService.SupportedLanguages)

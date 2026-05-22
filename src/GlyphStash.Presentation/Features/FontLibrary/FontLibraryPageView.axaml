@@ -1,10 +1,11 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:feature="using:GlyphStash.Presentation.Features.FontLibrary"
              xmlns:sys="clr-namespace:System;assembly=System.Runtime"
              xmlns:views="using:GlyphStash.Presentation.Views"
              xmlns:vm="using:GlyphStash.Presentation.ViewModels"
              x:Class="GlyphStash.Presentation.Views.FontLibraryPageView"
-             x:DataType="vm:ShellViewModel">
+             x:DataType="feature:FontLibraryViewModel">
   <Grid x:Name="FontLibraryRoot" RowDefinitions="76,*,Auto">
     <Border Grid.Row="0"
             Background="{DynamicResource GlyphSurfaceBrush}"
@@ -147,11 +148,11 @@
                                   Content="{Binding TemporaryActivationLabel}"
                                   IsEnabled="{Binding CanTemporarilyActivate}"
                                   ToolTip.Tip="{Binding TemporaryActivationDisabledReason}"
-                                  Command="{Binding $parent[UserControl].((vm:ShellViewModel)DataContext).ToggleTemporaryActivationCommand}"
+                                  Command="{Binding $parent[UserControl].((feature:FontLibraryViewModel)DataContext).ToggleTemporaryActivationCommand}"
                                   CommandParameter="{Binding .}" />
                           <Button Classes="ghost sm"
                                   Content="{Binding FavoriteLabel}"
-                                  Command="{Binding $parent[UserControl].((vm:ShellViewModel)DataContext).ToggleFavoriteCommand}"
+                                  Command="{Binding $parent[UserControl].((feature:FontLibraryViewModel)DataContext).ToggleFavoriteCommand}"
                                   CommandParameter="{Binding .}" />
                         </StackPanel>
                       </Grid>
@@ -282,7 +283,7 @@
                           <Button Grid.Column="1"
                                   Classes="sm"
                                   Content="{DynamicResource L.Text.2F9DAA828907B93F}"
-                                  Command="{Binding $parent[UserControl].((vm:ShellViewModel)DataContext).OpenDeleteTagDialogCommand}"
+                                  Command="{Binding $parent[UserControl].((feature:FontLibraryViewModel)DataContext).OpenDeleteTagDialogCommand}"
                                   CommandParameter="{Binding Name}" />
                         </Grid>
                       </DataTemplate>

@@ -1,9 +1,10 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:feature="using:GlyphStash.Presentation.Features.Settings"
              xmlns:sys="clr-namespace:System;assembly=System.Runtime"
              xmlns:vm="using:GlyphStash.Presentation.ViewModels"
              x:Class="GlyphStash.Presentation.Views.SettingsPageView"
-             x:DataType="vm:ShellViewModel">
+             x:DataType="feature:SettingsViewModel">
   <Grid RowDefinitions="76,*,Auto">
     <Border Grid.Row="0"
             Background="{DynamicResource GlyphSurfaceBrush}"

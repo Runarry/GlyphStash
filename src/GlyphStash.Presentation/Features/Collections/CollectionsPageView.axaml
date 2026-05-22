@@ -1,8 +1,9 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:feature="using:GlyphStash.Presentation.Features.Collections"
              xmlns:vm="using:GlyphStash.Presentation.ViewModels"
              x:Class="GlyphStash.Presentation.Views.CollectionsPageView"
-             x:DataType="vm:ShellViewModel">
+             x:DataType="feature:CollectionsViewModel">
   <Grid x:Name="CollectionsRoot" RowDefinitions="76,*,Auto">
     <Border Grid.Row="0"
             Background="{DynamicResource GlyphSurfaceBrush}"
@@ -85,7 +86,7 @@
                       <Button Grid.Column="1"
                               Content="{DynamicResource L.Text.6135D4159E892541}"
                               Classes="sm"
-                              Command="{Binding $parent[UserControl].((vm:ShellViewModel)DataContext).RemoveFontFromCollectionCommand}"
+                              Command="{Binding $parent[UserControl].((feature:CollectionsViewModel)DataContext).RemoveFontFromCollectionCommand}"
                               CommandParameter="{Binding .}" />
                     </Grid>
                   </Border>

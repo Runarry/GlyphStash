@@ -1,8 +1,9 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:feature="using:GlyphStash.Presentation.Features.FontLibrary"
              xmlns:vm="using:GlyphStash.Presentation.ViewModels"
              x:Class="GlyphStash.Presentation.Views.FontDetailsPanelView"
-             x:DataType="vm:ShellViewModel">
+             x:DataType="feature:FontLibraryViewModel">
   <Grid x:Name="FontDetailsRoot">
     <Border Padding="18" IsVisible="{Binding HasNoSelectedFont}">
       <StackPanel Spacing="12" VerticalAlignment="Center">

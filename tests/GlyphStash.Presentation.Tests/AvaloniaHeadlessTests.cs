@@ -108,7 +108,7 @@ public sealed class AvaloniaHeadlessTests
         vm.TagFilterOptions.Add(new LocalizedOptionViewModel("UI", "UI"));
         vm.CollectionFilterOptions.Add(new LocalizedOptionViewModel("官网改版", "官网改版"));
 
-        var fontLibraryWindow = Show(new FontLibraryPageView { DataContext = vm });
+        var fontLibraryWindow = Show(new FontLibraryPageView { DataContext = vm.CurrentPage });
         try
         {
             SelectComboBoxValue(fontLibraryWindow, vm.TagFilterOptions, "UI");
@@ -119,7 +119,8 @@ public sealed class AvaloniaHeadlessTests
             fontLibraryWindow.Close();
         }
 
-        var onlineFontsWindow = Show(new OnlineFontsPageView { DataContext = vm });
+        vm.SelectedNavigationItem = vm.NavigationItems.Single(item => item.Key == "online-fonts");
+        var onlineFontsWindow = Show(new OnlineFontsPageView { DataContext = vm.CurrentPage });
         try
         {
             SelectComboBoxValue(onlineFontsWindow, vm.OnlineSubsetOptionModels, "latin-ext");
@@ -130,7 +131,8 @@ public sealed class AvaloniaHeadlessTests
             onlineFontsWindow.Close();
         }
 
-        var mergeToolWindow = Show(new MergeToolPageView { DataContext = vm });
+        vm.SelectedNavigationItem = vm.NavigationItems.Single(item => item.Key == "merge-tool");
+        var mergeToolWindow = Show(new MergeToolPageView { DataContext = vm.CurrentPage });
         try
         {
             SelectComboBoxValue(mergeToolWindow, vm.MergeModeOptionModels, "覆盖");

@@ -1,31 +1,38 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:views="using:GlyphStash.Presentation.Views"
+             xmlns:collections="using:GlyphStash.Presentation.Features.Collections"
+             xmlns:fontLibrary="using:GlyphStash.Presentation.Features.FontLibrary"
+             xmlns:glyphBrowser="using:GlyphStash.Presentation.Features.GlyphBrowser"
+             xmlns:mergeTool="using:GlyphStash.Presentation.Features.MergeTool"
+             xmlns:onlineFonts="using:GlyphStash.Presentation.Features.OnlineFonts"
+             xmlns:settings="using:GlyphStash.Presentation.Features.Settings"
+             xmlns:shellFeature="using:GlyphStash.Presentation.Features.Shell"
              xmlns:vm="using:GlyphStash.Presentation.ViewModels"
              x:Class="GlyphStash.Presentation.Views.ShellView"
              x:DataType="vm:ShellViewModel"
              Background="{DynamicResource GlyphBackgroundBrush}">
   <UserControl.DataTemplates>
-    <DataTemplate DataType="{x:Type vm:FontLibraryViewModel}">
-      <views:FontLibraryPageView DataContext="{Binding Shell}" />
+    <DataTemplate DataType="{x:Type fontLibrary:FontLibraryViewModel}">
+      <views:FontLibraryPageView />
     </DataTemplate>
-    <DataTemplate DataType="{x:Type vm:CollectionsViewModel}">
-      <views:CollectionsPageView DataContext="{Binding Shell}" />
+    <DataTemplate DataType="{x:Type collections:CollectionsViewModel}">
+      <views:CollectionsPageView />
     </DataTemplate>
-    <DataTemplate DataType="{x:Type vm:OnlineFontsViewModel}">
-      <views:OnlineFontsPageView DataContext="{Binding Shell}" />
+    <DataTemplate DataType="{x:Type onlineFonts:OnlineFontsViewModel}">
+      <views:OnlineFontsPageView />
     </DataTemplate>
-    <DataTemplate DataType="{x:Type vm:MergeToolViewModel}">
-      <views:MergeToolPageView DataContext="{Binding Shell}" />
+    <DataTemplate DataType="{x:Type mergeTool:MergeToolViewModel}">
+      <views:MergeToolPageView />
     </DataTemplate>
-    <DataTemplate DataType="{x:Type vm:GlyphBrowserViewModel}">
-      <views:GlyphBrowserPageView DataContext="{Binding Shell}" />
+    <DataTemplate DataType="{x:Type glyphBrowser:GlyphBrowserViewModel}">
+      <views:GlyphBrowserPageView />
     </DataTemplate>
-    <DataTemplate DataType="{x:Type vm:SettingsViewModel}">
-      <views:SettingsPageView DataContext="{Binding Shell}" />
+    <DataTemplate DataType="{x:Type settings:SettingsViewModel}">
+      <views:SettingsPageView />
     </DataTemplate>
-    <DataTemplate DataType="{x:Type vm:PlaceholderPageViewModel}">
-      <views:PlaceholderPageView DataContext="{Binding Shell}" />
+    <DataTemplate DataType="{x:Type shellFeature:PlaceholderPageViewModel}">
+      <views:PlaceholderPageView />
     </DataTemplate>
   </UserControl.DataTemplates>
 

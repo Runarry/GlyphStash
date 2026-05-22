@@ -1,8 +1,9 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:feature="using:GlyphStash.Presentation.Features.GlyphBrowser"
              xmlns:vm="using:GlyphStash.Presentation.ViewModels"
              x:Class="GlyphStash.Presentation.Views.GlyphBrowserPageView"
-             x:DataType="vm:ShellViewModel">
+             x:DataType="feature:GlyphBrowserViewModel">
   <Grid x:Name="GlyphBrowserRoot" RowDefinitions="76,*,Auto">
     <Border Grid.Row="0" Background="{DynamicResource GlyphSurfaceBrush}" BorderBrush="{DynamicResource GlyphBorderBrush}" BorderThickness="0,0,0,1" Padding="24,0">
       <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">

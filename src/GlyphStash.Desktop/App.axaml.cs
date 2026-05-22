@@ -12,6 +12,7 @@ using GlyphStash.Infrastructure.Glyphs;
 using GlyphStash.Infrastructure.Providers.GoogleFonts;
 using GlyphStash.Infrastructure.Storage.Sqlite;
 using GlyphStash.Platform.Windows.Fonts;
+using GlyphStash.Presentation;
 using GlyphStash.Presentation.Services;
 using GlyphStash.Presentation.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
@@ -121,7 +122,7 @@ public partial class App : Avalonia.Application
         services.AddScoped<IUserFileDialogService>(provider => provider.GetRequiredService<DesktopStorageDialogService>());
         services.AddScoped<IUserClipboardService>(provider => provider.GetRequiredService<DesktopStorageDialogService>());
         services.AddScoped<IFontPreviewRegistry, AvaloniaFontPreviewRegistry>();
-        services.AddScoped<ShellViewModel>();
+        services.AddGlyphStashPresentation();
 
         return services.BuildServiceProvider(new ServiceProviderOptions
         {
