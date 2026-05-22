@@ -4,27 +4,22 @@ using GlyphStash.Domain.Fonts;
 
 namespace GlyphStash.Application.Fonts;
 
-public sealed class FontLibraryService
+public sealed class FontLibraryService : IFontLibraryService
 {
     private readonly IFontInventoryService _inventoryService;
     private readonly IFontMetadataStore _metadataStore;
-    private readonly IAppSettingsStore? _settingsStore;
-    private readonly IManagedFontFileStore? _managedFontFileStore;
-    private readonly IFontMetadataReader? _metadataReader;
-    private readonly IActivationStore? _activationStore;
-
-    public FontLibraryService(IFontInventoryService inventoryService, IFontMetadataStore metadataStore)
-        : this(inventoryService, metadataStore, null, null, null, null)
-    {
-    }
+    private readonly IAppSettingsStore _settingsStore;
+    private readonly IManagedFontFileStore _managedFontFileStore;
+    private readonly IFontMetadataReader _metadataReader;
+    private readonly IActivationStore _activationStore;
 
     public FontLibraryService(
         IFontInventoryService inventoryService,
         IFontMetadataStore metadataStore,
-        IAppSettingsStore? settingsStore,
-        IManagedFontFileStore? managedFontFileStore,
-        IFontMetadataReader? metadataReader,
-        IActivationStore? activationStore)
+        IAppSettingsStore settingsStore,
+        IManagedFontFileStore managedFontFileStore,
+        IFontMetadataReader metadataReader,
+        IActivationStore activationStore)
     {
         _inventoryService = inventoryService;
         _metadataStore = metadataStore;
@@ -58,11 +53,6 @@ public sealed class FontLibraryService
 
     private async Task<IReadOnlyList<FontFamilyRecord>> ScanManagedFontsAsync(CancellationToken cancellationToken)
     {
-        if (_settingsStore is null || _managedFontFileStore is null || _metadataReader is null)
-        {
-            return [];
-        }
-
         var settings = await _settingsStore.GetSettingsAsync(cancellationToken).ConfigureAwait(false);
         if (settings is null || string.IsNullOrWhiteSpace(settings.ManagedFontDirectory))
         {
@@ -125,11 +115,6 @@ public sealed class FontLibraryService
 
     private async Task<IReadOnlyList<ActivationRecord>> GetActiveTemporaryActivationsAsync(CancellationToken cancellationToken)
     {
-        if (_activationStore is null)
-        {
-            return [];
-        }
-
         return await _activationStore.GetOwnedActivationsAsync(cancellationToken).ConfigureAwait(false);
     }
 

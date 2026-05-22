@@ -24,7 +24,7 @@ public sealed class AvaloniaHeadlessTests
     public void ShellView_LoadsWithThemeResources()
     {
         HeadlessTestHost.EnsureAvalonia();
-        var vm = new ShellViewModel(new FontLibraryService(new FakeInventory(), new FakeStore()));
+        var vm = ShellViewModelTestFactory.Create(ShellViewModelTestFactory.CreateLibraryService(new FakeInventory(), new FakeStore()));
         var window = new Window
         {
             Width = 1360,
@@ -46,7 +46,7 @@ public sealed class AvaloniaHeadlessTests
     public void ShellView_LoadsOnlineFontsPage()
     {
         HeadlessTestHost.EnsureAvalonia();
-        var vm = new ShellViewModel(new FontLibraryService(new FakeInventory(), new FakeStore()));
+        var vm = ShellViewModelTestFactory.Create(ShellViewModelTestFactory.CreateLibraryService(new FakeInventory(), new FakeStore()));
         vm.SelectedNavigationItem = vm.NavigationItems.Single(item => item.Key == "online-fonts");
         var remoteFont = new RemoteFontFamily(
             "google-fonts",
@@ -83,7 +83,7 @@ public sealed class AvaloniaHeadlessTests
     public void ShellView_LoadsMergeToolPage()
     {
         HeadlessTestHost.EnsureAvalonia();
-        var vm = new ShellViewModel(new FontLibraryService(new FakeInventory(), new FakeStore()));
+        var vm = ShellViewModelTestFactory.Create(ShellViewModelTestFactory.CreateLibraryService(new FakeInventory(), new FakeStore()));
         vm.SelectedNavigationItem = vm.NavigationItems.Single(item => item.Key == "merge-tool");
         var window = new Window
         {
@@ -104,7 +104,7 @@ public sealed class AvaloniaHeadlessTests
     public void ShellView_LoadsMergeRangeDialog()
     {
         HeadlessTestHost.EnsureAvalonia();
-        var vm = new ShellViewModel(new FontLibraryService(new FakeInventory(), new FakeStore()));
+        var vm = ShellViewModelTestFactory.Create(ShellViewModelTestFactory.CreateLibraryService(new FakeInventory(), new FakeStore()));
         vm.SelectedNavigationItem = vm.NavigationItems.Single(item => item.Key == "merge-tool");
         vm.IsMergeRangeDialogOpen = true;
         vm.MergeRangeDialogStatus = "empty";

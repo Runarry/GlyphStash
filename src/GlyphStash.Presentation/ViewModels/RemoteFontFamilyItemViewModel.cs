@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using GlyphStash.Domain.Fonts;
 using GlyphStash.Localization;
+using static GlyphStash.Localization.AppTextExtensions;
 
 namespace GlyphStash.Presentation.ViewModels;
 
@@ -41,8 +42,6 @@ public sealed partial class RemoteFontFamilyItemViewModel : ObservableObject
         OnPropertyChanged(nameof(LicenseLabel));
         OnPropertyChanged(nameof(PreviewText));
     }
-
-    private static string L(string text) => AppText.TranslateLiteral(text);
 
     private static string FormatLicenseLabel(string text)
     {

@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Input;
 using GlyphStash.Application.Fonts;
 using GlyphStash.Domain.Fonts;
 using GlyphStash.Localization;
+using static GlyphStash.Localization.AppTextExtensions;
 using DomainUnicodeRange = GlyphStash.Domain.Fonts.UnicodeRange;
 
 namespace GlyphStash.Presentation.ViewModels;
@@ -18,33 +19,29 @@ public sealed partial class ShellViewModel
         ScanStatus = L("正在读取 SQLite 字体索引...");
         try
         {
-            if (_localManagementService is not null)
+            var settings = await _localManagementService.GetSettingsAsync(LifetimeToken);
+            if (!string.IsNullOrWhiteSpace(settings?.UiCultureCode))
             {
-                var settings = await _localManagementService.GetSettingsAsync(CancellationToken.None);
-                if (_localizationService is not null && !string.IsNullOrWhiteSpace(settings?.UiCultureCode))
+                _isApplyingSettings = true;
+                try
                 {
-                    _isApplyingSettings = true;
-                    try
-                    {
-                        _localizationService.SetCulture(settings.UiCultureCode);
-                        SelectedLanguage = LanguageOptions.FirstOrDefault(language =>
-                            string.Equals(language.CultureCode, _localizationService.CurrentCulture.Name, StringComparison.OrdinalIgnoreCase));
-                    }
-                    finally
-                    {
-                        _isApplyingSettings = false;
-                    }
+                    _localizationService.SetCulture(settings.UiCultureCode);
+                    SelectedLanguage = LanguageOptions.FirstOrDefault(language =>
+                        string.Equals(language.CultureCode, _localizationService.CurrentCulture.Name, StringComparison.OrdinalIgnoreCase));
                 }
-
-                ManagedFontDirectory = settings?.ManagedFontDirectory ?? "";
-                GoogleFontsApiKeyText = settings?.GoogleFontsApiKey ?? "";
+                finally
+                {
+                    _isApplyingSettings = false;
+                }
             }
 
-            var cached = await _fontLibraryService.LoadCachedFontsAsync(new FontSearchQuery(), CancellationToken.None);
+            ManagedFontDirectory = settings?.ManagedFontDirectory ?? "";
+            GoogleFontsApiKeyText = settings?.GoogleFontsApiKey ?? "";
+            var cached = await _fontLibraryService.LoadCachedFontsAsync(new FontSearchQuery(), LifetimeToken);
             if (cached.Count == 0)
             {
                 ScanStatus = L("首次启动：正在扫描 Windows 字体目录...");
-                cached = await _fontLibraryService.RescanAsync(CancellationToken.None);
+                cached = await _fontLibraryService.RescanAsync(LifetimeToken);
             }
 
             ReplaceFonts(cached);
@@ -58,7 +55,7 @@ public sealed partial class ShellViewModel
         }
         catch (Exception ex)
         {
-            var message = BuildErrorMessage(ex);
+            var message = ex.ToUserMessage();
             ScanStatus = AppText.CurrentCultureCode == AppText.EnglishCultureCode ? $"Font index failed to load: {message}" : $"字体索引加载失败：{message}";
             StatusMessage = AppText.CurrentCultureCode == AppText.EnglishCultureCode ? $"Error: {message}" : $"错误：{message}";
             ShowToast(L("字体索引加载失败，可尝试重新扫描"));
@@ -77,7 +74,7 @@ public sealed partial class ShellViewModel
         ScanStatus = L("正在扫描 C:\\Windows\\Fonts 与用户字体目录...");
         try
         {
-            var fonts = await _fontLibraryService.RescanAsync(CancellationToken.None);
+            var fonts = await _fontLibraryService.RescanAsync(LifetimeToken);
             SearchText = "";
             SelectedSourceFilter = AllSourceFilter;
             SelectedStateFilter = AllStateFilter;
@@ -93,7 +90,7 @@ public sealed partial class ShellViewModel
         }
         catch (Exception ex)
         {
-            var message = BuildErrorMessage(ex);
+            var message = ex.ToUserMessage();
             ScanStatus = AppText.CurrentCultureCode == AppText.EnglishCultureCode ? $"Scan failed: {message}" : $"扫描失败：{message}";
             StatusMessage = AppText.CurrentCultureCode == AppText.EnglishCultureCode ? $"Error: {message}" : $"错误：{message}";
             ShowToast(L("扫描失败，详情已写入状态栏"));
@@ -205,12 +202,6 @@ public sealed partial class ShellViewModel
         IsMergeRangeDialogOpen = true;
         ClearMergeRangeDialog();
 
-        if (_glyphCatalogService is null)
-        {
-            MergeRangeDialogStatus = L("字形覆盖服务未装配。");
-            return;
-        }
-
         var baseFace = SelectMergeFace(SelectedMergeBaseFont);
         var supplementalFace = SelectMergeFace(SelectedMergeSupplementalFont);
         MergeRangeBaseSummary = BuildPendingMergeRangeSummary(SelectedMergeBaseFont, baseFace, AppText.CurrentCultureCode == AppText.EnglishCultureCode ? "Base font A" : "基础字体 A");
@@ -243,10 +234,10 @@ public sealed partial class ShellViewModel
         {
             var baseCoverage = await _glyphCatalogService.GetCoverageAsync(
                 new GlyphCoverageQuery(baseFace.FilePath, baseFace.StyleLabel),
-                CancellationToken.None);
+                LifetimeToken);
             var supplementalCoverage = await _glyphCatalogService.GetCoverageAsync(
                 new GlyphCoverageQuery(supplementalFace.FilePath, supplementalFace.StyleLabel),
-                CancellationToken.None);
+                LifetimeToken);
 
             MergeRangeBaseSummary = BuildCoverageSummary(SelectedMergeBaseFont.FamilyName, baseFace.StyleLabel, baseCoverage);
             MergeRangeSupplementalSummary = BuildCoverageSummary(SelectedMergeSupplementalFont.FamilyName, supplementalFace.StyleLabel, supplementalCoverage);
@@ -259,7 +250,7 @@ public sealed partial class ShellViewModel
         }
         catch (Exception ex)
         {
-            MergeRangeDialogStatus = BuildErrorMessage(ex);
+            MergeRangeDialogStatus = ex.ToUserMessage();
         }
         finally
         {
@@ -307,19 +298,13 @@ public sealed partial class ShellViewModel
     [RelayCommand]
     private async Task PreviewMergeAsync()
     {
-        if (_fontMergeService is null)
-        {
-            MergeStatus = L("合并服务不可用。");
-            return;
-        }
-
         IsMergeBusy = true;
         MergeProgressPercent = 0;
         MergeProgressStage = L("预览");
         MergeProgressMessage = L("正在预检查输入。");
         try
         {
-            var preview = await _fontMergeService.PreviewAsync(CreateMergeRequest(includeOutput: false), CancellationToken.None);
+            var preview = await _fontMergeService.PreviewAsync(CreateMergeRequest(includeOutput: false), LifetimeToken);
             ApplyMergePreview(preview);
             MergeStatus = preview.HasBlockingIssues
                 ? L("冲突预览存在阻止级问题，请检查提示。")
@@ -327,7 +312,7 @@ public sealed partial class ShellViewModel
         }
         catch (Exception ex)
         {
-            MergeStatus = BuildErrorMessage(ex);
+            MergeStatus = ex.ToUserMessage();
             ShowToast(L("合并预览失败"));
         }
         finally
@@ -340,7 +325,7 @@ public sealed partial class ShellViewModel
     private async Task ChooseMergeOutputPathAsync()
     {
         var suggested = BuildSuggestedMergeOutputFileName();
-        var path = await _fileDialogService.PickMergeOutputFileAsync(suggested, CancellationToken.None);
+        var path = await _fileDialogService.PickMergeOutputFileAsync(suggested, LifetimeToken);
         if (!string.IsNullOrWhiteSpace(path))
         {
             MergeOutputPath = path;
@@ -350,14 +335,8 @@ public sealed partial class ShellViewModel
     [RelayCommand]
     private async Task StartMergeAsync()
     {
-        if (_fontMergeService is null)
-        {
-            MergeStatus = L("合并服务不可用。");
-            return;
-        }
-
         _mergeCancellation?.Dispose();
-        _mergeCancellation = new CancellationTokenSource();
+        _mergeCancellation = CancellationTokenSource.CreateLinkedTokenSource(LifetimeToken);
         IsMergeBusy = true;
         MergeProgressPercent = 0;
         MergeProgressStage = L("准备");
@@ -394,7 +373,7 @@ public sealed partial class ShellViewModel
         }
         catch (Exception ex)
         {
-            MergeStatus = BuildErrorMessage(ex);
+            MergeStatus = ex.ToUserMessage();
             ShowToast(L("合并导出失败"));
         }
         finally
@@ -415,13 +394,7 @@ public sealed partial class ShellViewModel
     [RelayCommand]
     private async Task LoadMergeReportAsync()
     {
-        if (_fontMergeService is null)
-        {
-            MergeStatus = L("合并服务不可用。");
-            return;
-        }
-
-        var path = await _fileDialogService.PickMergeReportFileAsync(CancellationToken.None);
+        var path = await _fileDialogService.PickMergeReportFileAsync(LifetimeToken);
         if (string.IsNullOrWhiteSpace(path))
         {
             return;
@@ -429,14 +402,14 @@ public sealed partial class ShellViewModel
 
         try
         {
-            var report = await _fontMergeService.ReadReportAsync(path, CancellationToken.None);
+            var report = await _fontMergeService.ReadReportAsync(path, LifetimeToken);
             ApplyMergeReport(report, path);
             MergeStepIndex = 4;
             MergeStatus = L("历史合并报告已加载。");
         }
         catch (Exception ex)
         {
-            MergeStatus = BuildErrorMessage(ex);
+            MergeStatus = ex.ToUserMessage();
             ShowToast(L("合并报告加载失败"));
         }
     }
@@ -457,10 +430,7 @@ public sealed partial class ShellViewModel
         }
 
         font.IsFavorite = !font.IsFavorite;
-        if (_localManagementService is not null)
-        {
-            await _localManagementService.SetFavoriteAsync(font.FamilyName, font.IsFavorite, CancellationToken.None);
-        }
+        await _localManagementService.SetFavoriteAsync(font.FamilyName, font.IsFavorite, LifetimeToken);
 
         ShowToast(font.IsFavorite ? L("已加入收藏") : L("已取消收藏"));
     }
@@ -473,15 +443,15 @@ public sealed partial class ShellViewModel
         ImportPreviewItems.Clear();
         OnPropertyChanged(nameof(HasImportPreview));
 
-        var files = await _fileDialogService.PickFontFilesAsync(CancellationToken.None);
-        if (files.Count == 0 || _localManagementService is null)
+        var files = await _fileDialogService.PickFontFilesAsync(LifetimeToken);
+        if (files.Count == 0)
         {
             return;
         }
 
         try
         {
-            _currentImportPreview = await _localManagementService.PreviewImportAsync(files, CancellationToken.None);
+            _currentImportPreview = await _localManagementService.PreviewImportAsync(files, LifetimeToken);
             foreach (var item in _currentImportPreview.Items)
             {
                 ImportPreviewItems.Add(new ImportPreviewItemViewModel(item));
@@ -495,7 +465,7 @@ public sealed partial class ShellViewModel
         }
         catch (Exception ex)
         {
-            ImportStatus = BuildErrorMessage(ex);
+            ImportStatus = ex.ToUserMessage();
         }
         finally
         {
@@ -509,13 +479,13 @@ public sealed partial class ShellViewModel
     [RelayCommand]
     private async Task ChooseManagedDirectoryAsync()
     {
-        var directory = await _fileDialogService.PickManagedDirectoryAsync(CancellationToken.None);
-        if (string.IsNullOrWhiteSpace(directory) || _localManagementService is null)
+        var directory = await _fileDialogService.PickManagedDirectoryAsync(LifetimeToken);
+        if (string.IsNullOrWhiteSpace(directory))
         {
             return;
         }
 
-        await _localManagementService.SaveManagedDirectoryAsync(directory, CancellationToken.None);
+        await _localManagementService.SaveManagedDirectoryAsync(directory, LifetimeToken);
         ManagedFontDirectory = directory;
         ImportStatus = L("管理目录已选择，可以开始导入。");
         await ReloadOperationLogsAsync();
@@ -525,12 +495,7 @@ public sealed partial class ShellViewModel
     [RelayCommand]
     private async Task SaveGoogleFontsApiKeyAsync()
     {
-        if (_localManagementService is null)
-        {
-            return;
-        }
-
-        await _localManagementService.SaveGoogleFontsApiKeyAsync(GoogleFontsApiKeyText, CancellationToken.None);
+        await _localManagementService.SaveGoogleFontsApiKeyAsync(GoogleFontsApiKeyText, LifetimeToken);
         OnlineStatus = string.IsNullOrWhiteSpace(GoogleFontsApiKeyText)
             ? L("Google Fonts API key 已清空。")
             : L("Google Fonts API key 已保存，可以搜索在线字体。");
@@ -541,12 +506,6 @@ public sealed partial class ShellViewModel
     [RelayCommand]
     private async Task SearchOnlineFontsAsync()
     {
-        if (_onlineFontService is null)
-        {
-            OnlineStatus = L("在线字体服务未装配。");
-            return;
-        }
-
         RemoteFonts.Clear();
         SelectedRemoteFont = null;
         IsOnlineSearchBusy = true;
@@ -559,7 +518,7 @@ public sealed partial class ShellViewModel
                 NormalizeOnlineFilter(SelectedOnlineCategory, AllOnlineCategory),
                 BuildOnlineCapabilities(),
                 SelectedOnlineSort,
-                CancellationToken.None);
+                LifetimeToken);
             foreach (var result in results)
             {
                 RemoteFonts.Add(new RemoteFontFamilyItemViewModel(result));
@@ -574,7 +533,7 @@ public sealed partial class ShellViewModel
         }
         catch (Exception ex)
         {
-            OnlineStatus = BuildErrorMessage(ex);
+            OnlineStatus = ex.ToUserMessage();
         }
         finally
         {
@@ -586,7 +545,7 @@ public sealed partial class ShellViewModel
     [RelayCommand]
     private async Task DownloadSelectedOnlineFontAsync()
     {
-        if (_onlineFontService is null || SelectedRemoteFont is null)
+        if (SelectedRemoteFont is null)
         {
             OnlineStatus = L("请先选择一个在线字体。");
             return;
@@ -624,11 +583,14 @@ public sealed partial class ShellViewModel
 
     private async Task ProcessOnlineDownloadQueueAsync()
     {
-        if (_onlineFontService is null || _isProcessingOnlineDownloadQueue)
+        if (_isProcessingOnlineDownloadQueue)
         {
             return;
         }
 
+        CancelAndDispose(ref _onlineDownloadCancellation);
+        _onlineDownloadCancellation = CancellationTokenSource.CreateLinkedTokenSource(LifetimeToken);
+        var cancellationToken = _onlineDownloadCancellation.Token;
         _isProcessingOnlineDownloadQueue = true;
         NotifyTrayHideState();
         try
@@ -641,17 +603,23 @@ public sealed partial class ShellViewModel
                     : $"队列中 {OnlineDownloadQueue.Count:N0} 项，正在下载 {item.FamilyName}...";
                 try
                 {
-                    var result = await _onlineFontService.DownloadAsync(item.Family, item.Styles, item.Options, CancellationToken.None);
+                    var result = await _onlineFontService.DownloadAsync(item.Family, item.Styles, item.Options, cancellationToken);
                     item.MarkSucceeded(result.Message);
-                    var cached = await _fontLibraryService.LoadCachedFontsAsync(new FontSearchQuery(), CancellationToken.None);
+                    var cached = await _fontLibraryService.LoadCachedFontsAsync(new FontSearchQuery(), cancellationToken);
                     ReplaceFonts(cached);
-                    await ReloadM2StateAsync();
+                    await ReloadM2StateAsync(cancellationToken: cancellationToken);
                     OnlineStatus = AppText.CurrentCultureCode == AppText.EnglishCultureCode ? $"Download complete: {item.FamilyName}" : $"下载完成：{item.FamilyName}";
                     ShowToast(AppText.CurrentCultureCode == AppText.EnglishCultureCode ? $"Downloaded {item.FamilyName}" : $"已下载 {item.FamilyName}");
                 }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    item.MarkFailed(L("下载已取消。"));
+                    OnlineStatus = L("下载队列已取消。");
+                    break;
+                }
                 catch (Exception ex)
                 {
-                    var message = BuildErrorMessage(ex);
+                    var message = ex.ToUserMessage();
                     item.MarkFailed(message);
                     OnlineStatus = AppText.CurrentCultureCode == AppText.EnglishCultureCode ? $"Download failed: {item.FamilyName}. {message}" : $"下载失败：{item.FamilyName}。{message}";
                     ShowToast(L("下载失败，可重试"));
@@ -661,6 +629,7 @@ public sealed partial class ShellViewModel
         finally
         {
             _isProcessingOnlineDownloadQueue = false;
+            CancelAndDispose(ref _onlineDownloadCancellation);
             NotifyTrayHideState();
             UpdateOnlineQueueStatusIfIdle();
         }
@@ -693,12 +662,6 @@ public sealed partial class ShellViewModel
             return;
         }
 
-        if (_glyphCatalogService is null)
-        {
-            GlyphStatus = L("字形浏览服务未装配。");
-            return;
-        }
-
         SelectedPreviewFace ??= SelectDefaultPreviewFace(SelectedFont);
         if (SelectedPreviewFace is null)
         {
@@ -724,7 +687,7 @@ public sealed partial class ShellViewModel
         GlyphPageNumber = 1;
         IsGlyphBrowserOpen = true;
         NotifyNavigationState();
-        await LoadGlyphsAsync();
+        await LoadGlyphsAsync(BeginLatest(ref _glyphLoadCancellation));
     }
 
     [RelayCommand]
@@ -746,7 +709,7 @@ public sealed partial class ShellViewModel
         }
 
         GlyphPageNumber++;
-        await LoadGlyphsAsync();
+        await LoadGlyphsAsync(BeginLatest(ref _glyphLoadCancellation));
     }
 
     [RelayCommand]
@@ -758,7 +721,7 @@ public sealed partial class ShellViewModel
         }
 
         GlyphPageNumber--;
-        await LoadGlyphsAsync();
+        await LoadGlyphsAsync(BeginLatest(ref _glyphLoadCancellation));
     }
 
     [RelayCommand]
@@ -769,7 +732,7 @@ public sealed partial class ShellViewModel
             return;
         }
 
-        await _clipboardService.SetTextAsync(SelectedGlyph.Character, CancellationToken.None);
+        await _clipboardService.SetTextAsync(SelectedGlyph.Character, LifetimeToken);
         ShowToast(AppText.CurrentCultureCode == AppText.EnglishCultureCode ? $"Copied character: {SelectedGlyph.Character}" : $"已复制字符：{SelectedGlyph.Character}");
     }
 
@@ -781,14 +744,14 @@ public sealed partial class ShellViewModel
             return;
         }
 
-        await _clipboardService.SetTextAsync(SelectedGlyph.UnicodeLabel, CancellationToken.None);
+        await _clipboardService.SetTextAsync(SelectedGlyph.UnicodeLabel, LifetimeToken);
         ShowToast(AppText.CurrentCultureCode == AppText.EnglishCultureCode ? $"Copied Unicode: {SelectedGlyph.UnicodeLabel}" : $"已复制 Unicode：{SelectedGlyph.UnicodeLabel}");
     }
 
     [RelayCommand]
     private async Task StartImportAsync()
     {
-        if (_localManagementService is null || _currentImportPreview is null)
+        if (_currentImportPreview is null)
         {
             ShowToast(L("请先选择字体文件"));
             return;
@@ -807,8 +770,8 @@ public sealed partial class ShellViewModel
             var result = await _localManagementService.ImportAsync(
                 _currentImportPreview,
                 new FontImportOptions(ImportInstallForCurrentUser, temporarilyActivate, ParseNames(ImportTagsText), ParseNames(ImportCollectionsText)),
-                CancellationToken.None);
-            var cached = await _fontLibraryService.LoadCachedFontsAsync(new FontSearchQuery(), CancellationToken.None);
+                LifetimeToken);
+            var cached = await _fontLibraryService.LoadCachedFontsAsync(new FontSearchQuery(), LifetimeToken);
             ReplaceFonts(cached);
             await ReloadM2StateAsync();
             IsImportDialogOpen = false;
@@ -818,7 +781,7 @@ public sealed partial class ShellViewModel
         }
         catch (Exception ex)
         {
-            ImportStatus = BuildErrorMessage(ex);
+            ImportStatus = ex.ToUserMessage();
             ShowToast(L("导入失败，详情已写入导入窗口"));
         }
         finally
@@ -861,11 +824,8 @@ public sealed partial class ShellViewModel
         var collections = MergeNames(CollectionOptions.Where(option => option.IsSelected).Select(option => option.Name), ParseNames(CollectionEditorText));
         var tagFilter = NormalizeFilter(SelectedTagFilter, AllTagFilter);
         var collectionFilter = NormalizeFilter(SelectedCollectionFilter, AllCollectionFilter);
-        if (_localManagementService is not null)
-        {
-            await _localManagementService.SetTagsAsync(SelectedFont.FamilyName, tags, CancellationToken.None);
-            await _localManagementService.SetCollectionsAsync(SelectedFont.FamilyName, collections, CancellationToken.None);
-        }
+        await _localManagementService.SetTagsAsync(SelectedFont.FamilyName, tags, LifetimeToken);
+        await _localManagementService.SetCollectionsAsync(SelectedFont.FamilyName, collections, LifetimeToken);
 
         SelectedFont.SetTagsAndCollections(tags, collections);
         await ReloadM2StateAsync(tagFilter, collectionFilter);
@@ -896,14 +856,14 @@ public sealed partial class ShellViewModel
     [RelayCommand]
     private async Task ConfirmDeleteTagAsync()
     {
-        if (_localManagementService is null || string.IsNullOrWhiteSpace(PendingDeleteTagName))
+        if (string.IsNullOrWhiteSpace(PendingDeleteTagName))
         {
             CloseDeleteTagDialog();
             return;
         }
 
         var deletedName = PendingDeleteTagName;
-        await _localManagementService.DeleteTagAsync(deletedName, CancellationToken.None);
+        await _localManagementService.DeleteTagAsync(deletedName, LifetimeToken);
         foreach (var font in _allFonts)
         {
             font.RemoveTag(deletedName);
@@ -931,13 +891,13 @@ public sealed partial class ShellViewModel
     [RelayCommand]
     private async Task ConfirmUninstallAsync()
     {
-        if (SelectedFont is null || _localManagementService is null)
+        if (SelectedFont is null)
         {
             IsUninstallDialogOpen = false;
             return;
         }
 
-        var result = await _localManagementService.UninstallManagedFontAsync(SelectedFont.ToRecord(), CancellationToken.None);
+        var result = await _localManagementService.UninstallManagedFontAsync(SelectedFont.ToRecord(), LifetimeToken);
         IsUninstallDialogOpen = false;
         ShowToast(result.Message);
         await ReloadOperationLogsAsync();
@@ -946,12 +906,12 @@ public sealed partial class ShellViewModel
     [RelayCommand]
     private async Task InstallSelectedFontAsync()
     {
-        if (SelectedFont is null || _localManagementService is null)
+        if (SelectedFont is null)
         {
             return;
         }
 
-        var result = await _localManagementService.InstallFontAsync(SelectedFont.ToRecord(), CancellationToken.None);
+        var result = await _localManagementService.InstallFontAsync(SelectedFont.ToRecord(), LifetimeToken);
         if (result.Succeeded)
         {
             SelectedFont.SetActivationState(FontActivationState.Installed);
@@ -965,7 +925,7 @@ public sealed partial class ShellViewModel
     private async Task ToggleTemporaryActivationAsync(FontFamilyItemViewModel? font)
     {
         font ??= SelectedFont;
-        if (font is null || _localManagementService is null)
+        if (font is null)
         {
             return;
         }
@@ -981,8 +941,8 @@ public sealed partial class ShellViewModel
             var owner = $"font:{font.FamilyName}";
             var wasTemporarilyEnabled = font.ActivationState == FontActivationState.TemporarilyEnabled;
             var result = wasTemporarilyEnabled
-                ? await _localManagementService.DeactivateFontAsync(owner, font.ToRecord(), CancellationToken.None)
-                : await _localManagementService.ActivateFontAsync(owner, font.ToRecord(), CancellationToken.None);
+                ? await _localManagementService.DeactivateFontAsync(owner, font.ToRecord(), LifetimeToken)
+                : await _localManagementService.ActivateFontAsync(owner, font.ToRecord(), LifetimeToken);
 
             if (result.Succeeded)
             {
@@ -994,19 +954,19 @@ public sealed partial class ShellViewModel
         }
         catch (Exception ex)
         {
-            ShowToast(BuildErrorMessage(ex));
+            ShowToast(ex.ToUserMessage());
         }
     }
 
     [RelayCommand]
     private async Task CreateCollectionAsync()
     {
-        if (_localManagementService is null || string.IsNullOrWhiteSpace(NewCollectionName))
+        if (string.IsNullOrWhiteSpace(NewCollectionName))
         {
             return;
         }
 
-        await _localManagementService.CreateCollectionAsync(NewCollectionName, CancellationToken.None);
+        await _localManagementService.CreateCollectionAsync(NewCollectionName, LifetimeToken);
         NewCollectionName = "";
         await ReloadCollectionsAsync();
         ApplyFilters();
@@ -1031,14 +991,14 @@ public sealed partial class ShellViewModel
     [RelayCommand]
     private async Task ConfirmDeleteCollectionAsync()
     {
-        if (SelectedCollection is null || _localManagementService is null)
+        if (SelectedCollection is null)
         {
             IsDeleteCollectionDialogOpen = false;
             return;
         }
 
         var deletedName = SelectedCollection.Name;
-        await _localManagementService.DeleteCollectionAsync(deletedName, CancellationToken.None);
+        await _localManagementService.DeleteCollectionAsync(deletedName, LifetimeToken);
         if (SelectedCollectionFilter == deletedName)
         {
             SelectedCollectionFilter = AllCollectionFilter;
@@ -1054,12 +1014,12 @@ public sealed partial class ShellViewModel
     [RelayCommand]
     private async Task RemoveFontFromCollectionAsync(FontFamilyItemViewModel? font)
     {
-        if (font is null || SelectedCollection is null || _localManagementService is null)
+        if (font is null || SelectedCollection is null)
         {
             return;
         }
 
-        await _localManagementService.RemoveFontFromCollectionAsync(SelectedCollection.Name, font.FamilyName, CancellationToken.None);
+        await _localManagementService.RemoveFontFromCollectionAsync(SelectedCollection.Name, font.FamilyName, LifetimeToken);
         await ReloadCollectionsAsync();
         ShowToast(L("已从集合移除字体"));
     }
@@ -1067,7 +1027,7 @@ public sealed partial class ShellViewModel
     [RelayCommand]
     private async Task ActivateSelectedCollectionAsync()
     {
-        if (SelectedCollection is null || _localManagementService is null)
+        if (SelectedCollection is null)
         {
             return;
         }
@@ -1088,12 +1048,12 @@ public sealed partial class ShellViewModel
                     $"collection:{SelectedCollection.Name}",
                     font.ToRecord(),
                     reason,
-                    CancellationToken.None);
+                    LifetimeToken);
                 skippedCount++;
                 continue;
             }
 
-            var result = await _localManagementService.ActivateFontAsync($"collection:{SelectedCollection.Name}", font.ToRecord(), CancellationToken.None);
+            var result = await _localManagementService.ActivateFontAsync($"collection:{SelectedCollection.Name}", font.ToRecord(), LifetimeToken);
             if (result.Succeeded)
             {
                 font.SetActivationState(FontActivationState.TemporarilyEnabled);
@@ -1114,14 +1074,14 @@ public sealed partial class ShellViewModel
     [RelayCommand]
     private async Task DeactivateSelectedCollectionAsync()
     {
-        if (SelectedCollection is null || _localManagementService is null)
+        if (SelectedCollection is null)
         {
             return;
         }
 
         foreach (var font in CollectionFonts)
         {
-            await _localManagementService.DeactivateFontAsync($"collection:{SelectedCollection.Name}", font.ToRecord(), CancellationToken.None);
+            await _localManagementService.DeactivateFontAsync($"collection:{SelectedCollection.Name}", font.ToRecord(), LifetimeToken);
             if (font.ActivationState == FontActivationState.TemporarilyEnabled)
             {
                 font.SetActivationState(FontActivationState.NotEnabled);

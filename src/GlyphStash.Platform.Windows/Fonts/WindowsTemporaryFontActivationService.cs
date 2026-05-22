@@ -3,6 +3,7 @@ using GlyphStash.Application.Abstractions.Fonts;
 using GlyphStash.Application.Fonts;
 using GlyphStash.Domain.Fonts;
 using GlyphStash.Localization;
+using static GlyphStash.Localization.AppTextExtensions;
 
 namespace GlyphStash.Platform.Windows.Fonts;
 
@@ -104,5 +105,4 @@ public sealed class WindowsTemporaryFontActivationService : ITemporaryFontActiva
         }
     }
 
-    private static string L(string text) => AppText.TranslateLiteral(text);
 }

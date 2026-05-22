@@ -17,7 +17,7 @@ public sealed class ShellViewModelTests
     public async Task Initialize_LoadsCachedFontsAndFiltersBySearch()
     {
         var store = new FakeStore([CreateFont("Inter"), CreateFont("Cascadia Code")]);
-        var vm = new ShellViewModel(new FontLibraryService(new FakeInventory([]), store));
+        var vm = ShellViewModelTestFactory.Create(ShellViewModelTestFactory.CreateLibraryService(new FakeInventory([]), store));
 
         await vm.InitializeAsync();
         vm.SearchText = "Cascadia";
@@ -32,7 +32,7 @@ public sealed class ShellViewModelTests
     public async Task PreviewSettings_UpdateFontItems()
     {
         var store = new FakeStore([CreateFont("Inter")]);
-        var vm = new ShellViewModel(new FontLibraryService(new FakeInventory([]), store));
+        var vm = ShellViewModelTestFactory.Create(ShellViewModelTestFactory.CreateLibraryService(new FakeInventory([]), store));
 
         await vm.InitializeAsync();
         vm.PreviewText = "Hello 字体";
@@ -47,7 +47,7 @@ public sealed class ShellViewModelTests
     [Fact]
     public async Task Initialize_DefaultsToFontLibraryNavigation()
     {
-        var vm = new ShellViewModel(new FontLibraryService(new FakeInventory([]), new FakeStore([CreateFont("Inter")])));
+        var vm = ShellViewModelTestFactory.Create(ShellViewModelTestFactory.CreateLibraryService(new FakeInventory([]), new FakeStore([CreateFont("Inter")])));
 
         await vm.InitializeAsync();
 
@@ -64,8 +64,8 @@ public sealed class ShellViewModelTests
         var settingsStore = new FakeSettingsStore();
         var service = CreateLocalService(new FakePlatformActivation(), [], settingsStore: settingsStore);
         var localization = new AppLocalizationService();
-        var vm = new ShellViewModel(
-            new FontLibraryService(new FakeInventory([]), new FakeStore([CreateFont("Inter")])),
+        var vm = ShellViewModelTestFactory.Create(
+            ShellViewModelTestFactory.CreateLibraryService(new FakeInventory([]), new FakeStore([CreateFont("Inter")])),
             service,
             NullUserFileDialogService.Instance,
             localizationService: localization);
@@ -90,8 +90,8 @@ public sealed class ShellViewModelTests
             var settingsStore = new FakeSettingsStore(uiCultureCode: "en-US");
             var service = CreateLocalService(new FakePlatformActivation(), [], settingsStore: settingsStore);
             var localization = new AppLocalizationService();
-            var vm = new ShellViewModel(
-                new FontLibraryService(new FakeInventory([]), new FakeStore([CreateFont("Inter")])),
+            var vm = ShellViewModelTestFactory.Create(
+                ShellViewModelTestFactory.CreateLibraryService(new FakeInventory([]), new FakeStore([CreateFont("Inter")])),
                 service,
                 NullUserFileDialogService.Instance,
                 localizationService: localization);
@@ -117,8 +117,8 @@ public sealed class ShellViewModelTests
         try
         {
             var localization = new AppLocalizationService();
-            var vm = new ShellViewModel(
-                new FontLibraryService(new FakeInventory([]), new FakeStore([])),
+            var vm = ShellViewModelTestFactory.Create(
+                ShellViewModelTestFactory.CreateLibraryService(new FakeInventory([]), new FakeStore([])),
                 null,
                 NullUserFileDialogService.Instance,
                 localizationService: localization);
@@ -148,7 +148,7 @@ public sealed class ShellViewModelTests
     [Fact]
     public async Task Navigation_HidesComponentDemoAndCanSwitchToImplementedPages()
     {
-        var vm = new ShellViewModel(new FontLibraryService(new FakeInventory([]), new FakeStore([CreateFont("Inter")])));
+        var vm = ShellViewModelTestFactory.Create(ShellViewModelTestFactory.CreateLibraryService(new FakeInventory([]), new FakeStore([CreateFont("Inter")])));
         await vm.InitializeAsync();
 
         if (vm.NavigationItems.Any(item => item.Key == "component-demo"))
@@ -191,8 +191,8 @@ public sealed class ShellViewModelTests
                 CreateFontWithFaces("Base", ("Regular", 400, "Normal", basePath)),
                 CreateFontWithFaces("Patch", ("Regular", 400, "Normal", supplementalPath))
             };
-        var vm = new ShellViewModel(
-            new FontLibraryService(new FakeInventory([]), new FakeStore(fonts)),
+        var vm = ShellViewModelTestFactory.Create(
+            ShellViewModelTestFactory.CreateLibraryService(new FakeInventory([]), new FakeStore(fonts)),
             null,
             NullUserFileDialogService.Instance,
             fontMergeService: new FontMergeService(new FakeMergeWorker()));
@@ -238,8 +238,8 @@ public sealed class ShellViewModelTests
                 CreateFontWithFaces("Base", ("Regular", 400, "Normal", basePath), ("Bold", 700, "Normal", baseBoldPath)),
                 CreateFontWithFaces("Patch", ("Regular", 400, "Normal", supplementalPath))
             };
-        var vm = new ShellViewModel(
-            new FontLibraryService(new FakeInventory([]), new FakeStore(fonts)),
+        var vm = ShellViewModelTestFactory.Create(
+            ShellViewModelTestFactory.CreateLibraryService(new FakeInventory([]), new FakeStore(fonts)),
             null,
             NullUserFileDialogService.Instance,
             glyphCatalogService: glyphService);
@@ -268,28 +268,28 @@ public sealed class ShellViewModelTests
     }
 
     [Fact]
-    public async Task MergeRangeDialog_ShowsStatusWhenCoverageServiceUnavailable()
+    public async Task MergeRangeDialog_ShowsStatusWhenFontsAreMissing()
     {
-        var vm = new ShellViewModel(
-            new FontLibraryService(new FakeInventory([]), new FakeStore([])),
+        var vm = ShellViewModelTestFactory.Create(
+            ShellViewModelTestFactory.CreateLibraryService(new FakeInventory([]), new FakeStore([])),
             null,
             NullUserFileDialogService.Instance);
 
         await vm.OpenMergeRangeDialogCommand.ExecuteAsync(null);
 
         Assert.True(vm.IsMergeRangeDialogOpen);
-        Assert.Contains("未装配", vm.MergeRangeDialogStatus, StringComparison.Ordinal);
+        Assert.Contains("请先选择基础字体 A 和补充字体 B", vm.MergeRangeDialogStatus, StringComparison.Ordinal);
         Assert.False(vm.CanApplyMergeRangeSelection);
 
         vm.ApplyMergeRangeSelectionCommand.Execute(null);
 
-        Assert.Contains("未装配", vm.MergeRangeDialogStatus, StringComparison.Ordinal);
+        Assert.Contains("请先选择基础字体 A 和补充字体 B", vm.MergeRangeDialogStatus, StringComparison.Ordinal);
     }
 
     [Fact]
     public async Task ScanFailure_ShowsRootErrorMessage()
     {
-        var vm = new ShellViewModel(new FontLibraryService(new ThrowingInventory(), new FakeStore([])));
+        var vm = ShellViewModelTestFactory.Create(ShellViewModelTestFactory.CreateLibraryService(new ThrowingInventory(), new FakeStore([])));
 
         await vm.InitializeAsync();
 
@@ -321,7 +321,7 @@ public sealed class ShellViewModelTests
     [Fact]
     public void ImportInstallForCurrentUser_DisablesTemporaryActivationOption()
     {
-        var vm = new ShellViewModel(new FontLibraryService(new FakeInventory([]), new FakeStore([])));
+        var vm = ShellViewModelTestFactory.Create(ShellViewModelTestFactory.CreateLibraryService(new FakeInventory([]), new FakeStore([])));
 
         vm.ImportTemporarilyActivate = true;
         vm.ImportInstallForCurrentUser = true;
@@ -334,7 +334,7 @@ public sealed class ShellViewModelTests
     [Fact]
     public void TrayHideGuard_BlocksWhileNonFontUiWorkIsBusy()
     {
-        var vm = new ShellViewModel(new FontLibraryService(new FakeInventory([]), new FakeStore([])));
+        var vm = ShellViewModelTestFactory.Create(ShellViewModelTestFactory.CreateLibraryService(new FakeInventory([]), new FakeStore([])));
 
         Assert.True(vm.CanHideToTray);
         Assert.Equal("", vm.TrayHideBlockReason);
@@ -371,7 +371,7 @@ public sealed class ShellViewModelTests
     public void SelectedFont_DefaultsPreviewFaceToRegular400()
     {
         var font = CreateFontWithFaces("Noto Sans", ("Thin 100", 100, "Normal", "C:/Fonts/NotoSans-Thin.ttf"), ("Regular 400", 400, "Normal", "C:/Fonts/NotoSans-Regular.ttf"));
-        var vm = new ShellViewModel(new FontLibraryService(new FakeInventory([]), new FakeStore([])));
+        var vm = ShellViewModelTestFactory.Create(ShellViewModelTestFactory.CreateLibraryService(new FakeInventory([]), new FakeStore([])));
 
         vm.SelectedFont = new FontFamilyItemViewModel(font);
 
@@ -383,7 +383,7 @@ public sealed class ShellViewModelTests
     public void SelectedFont_DefaultsPreviewFaceToFirstWhenRegularMissing()
     {
         var font = CreateFontWithFaces("Noto Sans", ("Thin 100", 100, "Normal", "C:/Fonts/NotoSans-Thin.ttf"), ("Bold 700", 700, "Normal", "C:/Fonts/NotoSans-Bold.ttf"));
-        var vm = new ShellViewModel(new FontLibraryService(new FakeInventory([]), new FakeStore([])));
+        var vm = ShellViewModelTestFactory.Create(ShellViewModelTestFactory.CreateLibraryService(new FakeInventory([]), new FakeStore([])));
 
         vm.SelectedFont = new FontFamilyItemViewModel(font);
 
@@ -396,14 +396,12 @@ public sealed class ShellViewModelTests
     {
         var font = new FontFamilyItemViewModel(CreateFontWithFaces("Noto Sans", ("Regular 400", 400, "Normal", "C:/Fonts/NotoSans-Regular.ttf"), ("Bold Italic 700", 700, "Italic", "C:/Fonts/NotoSans-BoldItalic.ttf")));
         var registry = new CapturingFontPreviewRegistry();
-        var vm = new ShellViewModel(
-            new FontLibraryService(new FakeInventory([]), new FakeStore([])),
+        var vm = ShellViewModelTestFactory.Create(
+            ShellViewModelTestFactory.CreateLibraryService(new FakeInventory([]), new FakeStore([])),
             null,
             NullUserFileDialogService.Instance,
-            fontPreviewRegistry: registry)
-        {
-            SelectedFont = font
-        };
+            fontPreviewRegistry: registry);
+        vm.SelectedFont = font;
 
         var boldItalic = font.Faces.Single(face => face.StyleLabel == "Bold Italic 700");
         vm.SelectedPreviewFace = boldItalic;
@@ -426,15 +424,13 @@ public sealed class ShellViewModelTests
         await File.WriteAllBytesAsync(boldPath, [0], CancellationToken.None);
         var font = new FontFamilyItemViewModel(CreateFontWithFaces("Noto Sans", ("Regular 400", 400, "Normal", regularPath), ("Bold 700", 700, "Normal", boldPath)));
         var glyphService = new CapturingGlyphCatalogService();
-        var vm = new ShellViewModel(
-            new FontLibraryService(new FakeInventory([]), new FakeStore([])),
+        var vm = ShellViewModelTestFactory.Create(
+            ShellViewModelTestFactory.CreateLibraryService(new FakeInventory([]), new FakeStore([])),
             null,
             NullUserFileDialogService.Instance,
-            glyphCatalogService: glyphService)
-        {
-            SelectedFont = font,
-            SelectedPreviewFace = font.Faces.Single(face => face.StyleLabel == "Bold 700")
-        };
+            glyphCatalogService: glyphService);
+        vm.SelectedFont = font;
+        vm.SelectedPreviewFace = font.Faces.Single(face => face.StyleLabel == "Bold 700");
 
         await vm.OpenGlyphBrowserCommand.ExecuteAsync(null);
 
@@ -450,18 +446,43 @@ public sealed class ShellViewModelTests
     }
 
     [Fact]
+    public async Task GlyphSearch_CancelsPreviousLoadAndKeepsLatestResult()
+    {
+        var regularPath = Path.Combine(Path.GetTempPath(), "GlyphStash.Tests", $"{Guid.NewGuid():N}-regular.ttf");
+        Directory.CreateDirectory(Path.GetDirectoryName(regularPath)!);
+        await File.WriteAllBytesAsync(regularPath, [0], CancellationToken.None);
+        var font = new FontFamilyItemViewModel(CreateFontWithFaces("Noto Sans", ("Regular 400", 400, "Normal", regularPath)));
+        var glyphService = new CancelableGlyphCatalogService();
+        var vm = ShellViewModelTestFactory.Create(
+            ShellViewModelTestFactory.CreateLibraryService(new FakeInventory([]), new FakeStore([])),
+            null,
+            NullUserFileDialogService.Instance,
+            glyphCatalogService: glyphService);
+        vm.SelectedFont = font;
+        vm.SelectedPreviewFace = font.Faces[0];
+
+        await vm.OpenGlyphBrowserCommand.ExecuteAsync(null);
+        vm.GlyphSearchText = "old";
+        await glyphService.OldStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        vm.GlyphSearchText = "new";
+
+        await WaitUntilAsync(() => string.Equals(vm.GlyphStatus, "page:new", StringComparison.Ordinal));
+
+        Assert.Contains("old", glyphService.CanceledSearches);
+        Assert.Equal("page:new", vm.GlyphStatus);
+    }
+
+    [Fact]
     public async Task OpenGlyphBrowser_ShowsUnavailableReasonWhenSelectedFaceHasNoPhysicalPath()
     {
         var font = new FontFamilyItemViewModel(CreateFontWithFaces("Noto Sans", ("Regular 400", 400, "Normal", "installed://Noto%20Sans")));
-        var vm = new ShellViewModel(
-            new FontLibraryService(new FakeInventory([]), new FakeStore([])),
+        var vm = ShellViewModelTestFactory.Create(
+            ShellViewModelTestFactory.CreateLibraryService(new FakeInventory([]), new FakeStore([])),
             null,
             NullUserFileDialogService.Instance,
-            glyphCatalogService: new CapturingGlyphCatalogService())
-        {
-            SelectedFont = font,
-            SelectedPreviewFace = font.Faces[0]
-        };
+            glyphCatalogService: new CapturingGlyphCatalogService());
+        vm.SelectedFont = font;
+        vm.SelectedPreviewFace = font.Faces[0];
 
         await vm.OpenGlyphBrowserCommand.ExecuteAsync(null);
 
@@ -483,8 +504,8 @@ public sealed class ShellViewModelTests
         var service = CreateLocalService(
             platform,
             [new FontCollectionRecord("Website", fonts.Select(font => font.FamilyName).ToList())]);
-        var vm = new ShellViewModel(
-            new FontLibraryService(new FakeInventory([]), new FakeStore(fonts)),
+        var vm = ShellViewModelTestFactory.Create(
+            ShellViewModelTestFactory.CreateLibraryService(new FakeInventory([]), new FakeStore(fonts)),
             service,
             NullUserFileDialogService.Instance);
 
@@ -505,7 +526,7 @@ public sealed class ShellViewModelTests
             CreateFont("Inter", tags: ["无衬线", "UI"], collections: ["官网改版"]),
             CreateFont("Serif Sans", tags: ["衬线"], collections: ["书籍"])
         };
-        var vm = new ShellViewModel(new FontLibraryService(new FakeInventory([]), new FakeStore(fonts)));
+        var vm = ShellViewModelTestFactory.Create(ShellViewModelTestFactory.CreateLibraryService(new FakeInventory([]), new FakeStore(fonts)));
 
         await vm.InitializeAsync();
         vm.SelectedTagFilter = "UI";
@@ -529,8 +550,8 @@ public sealed class ShellViewModelTests
             mutationStore: mutationStore,
             collectionStore: collectionStore,
             tagStore: tagStore);
-        var vm = new ShellViewModel(
-            new FontLibraryService(new FakeInventory([]), new FakeStore(fonts)),
+        var vm = ShellViewModelTestFactory.Create(
+            ShellViewModelTestFactory.CreateLibraryService(new FakeInventory([]), new FakeStore(fonts)),
             service,
             NullUserFileDialogService.Instance);
 
@@ -571,8 +592,8 @@ public sealed class ShellViewModelTests
             mutationStore: mutationStore,
             collectionStore: collectionStore,
             tagStore: tagStore);
-        var vm = new ShellViewModel(
-            new FontLibraryService(new FakeInventory([]), new FakeStore(fonts)),
+        var vm = ShellViewModelTestFactory.Create(
+            ShellViewModelTestFactory.CreateLibraryService(new FakeInventory([]), new FakeStore(fonts)),
             service,
             NullUserFileDialogService.Instance);
 
@@ -603,8 +624,8 @@ public sealed class ShellViewModelTests
             collectionStore.Collections,
             collectionStore: collectionStore,
             tagStore: tagStore);
-        var vm = new ShellViewModel(
-            new FontLibraryService(new FakeInventory([]), new FakeStore(fonts)),
+        var vm = ShellViewModelTestFactory.Create(
+            ShellViewModelTestFactory.CreateLibraryService(new FakeInventory([]), new FakeStore(fonts)),
             service,
             NullUserFileDialogService.Instance);
         var notifiedProperties = new List<string?>();
@@ -640,8 +661,8 @@ public sealed class ShellViewModelTests
             mutationStore: mutationStore,
             collectionStore: collectionStore,
             tagStore: tagStore);
-        var vm = new ShellViewModel(
-            new FontLibraryService(new FakeInventory([]), new FakeStore(fonts)),
+        var vm = ShellViewModelTestFactory.Create(
+            ShellViewModelTestFactory.CreateLibraryService(new FakeInventory([]), new FakeStore(fonts)),
             service,
             NullUserFileDialogService.Instance);
         var removedSelectedTag = false;
@@ -682,8 +703,8 @@ public sealed class ShellViewModelTests
             mutationStore: mutationStore,
             collectionStore: collectionStore,
             tagStore: tagStore);
-        var vm = new ShellViewModel(
-            new FontLibraryService(new FakeInventory([]), new FakeStore(fonts)),
+        var vm = ShellViewModelTestFactory.Create(
+            ShellViewModelTestFactory.CreateLibraryService(new FakeInventory([]), new FakeStore(fonts)),
             service,
             NullUserFileDialogService.Instance);
 
@@ -715,8 +736,8 @@ public sealed class ShellViewModelTests
             platform,
             [],
             tagStore: tagStore);
-        var vm = new ShellViewModel(
-            new FontLibraryService(new FakeInventory([]), new FakeStore(fonts)),
+        var vm = ShellViewModelTestFactory.Create(
+            ShellViewModelTestFactory.CreateLibraryService(new FakeInventory([]), new FakeStore(fonts)),
             service,
             NullUserFileDialogService.Instance);
 
@@ -743,8 +764,8 @@ public sealed class ShellViewModelTests
             platform,
             collectionStore.Collections,
             collectionStore: collectionStore);
-        var vm = new ShellViewModel(
-            new FontLibraryService(new FakeInventory([]), new FakeStore([CreateFont("Inter", collections: ["官网改版"])])),
+        var vm = ShellViewModelTestFactory.Create(
+            ShellViewModelTestFactory.CreateLibraryService(new FakeInventory([]), new FakeStore([CreateFont("Inter", collections: ["官网改版"])])),
             service,
             NullUserFileDialogService.Instance);
 
@@ -771,8 +792,8 @@ public sealed class ShellViewModelTests
             new FontActivationCoordinator(new FakePlatformActivation(), new FakeActivationStore(), logStore),
             logStore,
             new FakeDownloadRecordStore());
-        var vm = new ShellViewModel(
-            new FontLibraryService(new FakeInventory([]), new FakeStore([])),
+        var vm = ShellViewModelTestFactory.Create(
+            ShellViewModelTestFactory.CreateLibraryService(new FakeInventory([]), new FakeStore([])),
             null,
             NullUserFileDialogService.Instance,
             onlineService);
@@ -797,19 +818,17 @@ public sealed class ShellViewModelTests
             new FontActivationCoordinator(new FakePlatformActivation(), new FakeActivationStore(), logStore),
             logStore,
             new FakeDownloadRecordStore());
-        var vm = new ShellViewModel(
-            new FontLibraryService(new FakeInventory([]), new FakeStore([])),
+        var vm = ShellViewModelTestFactory.Create(
+            ShellViewModelTestFactory.CreateLibraryService(new FakeInventory([]), new FakeStore([])),
             null,
             NullUserFileDialogService.Instance,
-            onlineService)
-        {
-            OnlineSearchText = "Noto",
-            SelectedOnlineSubset = "latin-ext",
-            SelectedOnlineCategory = "sans-serif",
-            SelectedOnlineSort = "popularity",
-            OnlineCapabilityVf = true,
-            OnlineCapabilityWoff2 = true
-        };
+            onlineService);
+        vm.OnlineSearchText = "Noto";
+        vm.SelectedOnlineSubset = "latin-ext";
+        vm.SelectedOnlineCategory = "sans-serif";
+        vm.SelectedOnlineSort = "popularity";
+        vm.OnlineCapabilityVf = true;
+        vm.OnlineCapabilityWoff2 = true;
 
         await vm.SearchOnlineFontsCommand.ExecuteAsync(null);
 
@@ -835,14 +854,12 @@ public sealed class ShellViewModelTests
             new FontActivationCoordinator(new FakePlatformActivation(), new FakeActivationStore(), logStore),
             logStore,
             new FakeDownloadRecordStore());
-        var vm = new ShellViewModel(
-            new FontLibraryService(new FakeInventory([]), new FakeStore([])),
+        var vm = ShellViewModelTestFactory.Create(
+            ShellViewModelTestFactory.CreateLibraryService(new FakeInventory([]), new FakeStore([])),
             null,
             NullUserFileDialogService.Instance,
-            onlineService)
-        {
-            SelectedRemoteFont = new RemoteFontFamilyItemViewModel(CreateRemoteFont("Noto Sans"))
-        };
+            onlineService);
+        vm.SelectedRemoteFont = new RemoteFontFamilyItemViewModel(CreateRemoteFont("Noto Sans"));
 
         await vm.DownloadSelectedOnlineFontCommand.ExecuteAsync(null);
 
@@ -867,14 +884,12 @@ public sealed class ShellViewModelTests
             new FontActivationCoordinator(new FakePlatformActivation(), new FakeActivationStore(), logStore),
             logStore,
             new FakeDownloadRecordStore());
-        var vm = new ShellViewModel(
-            new FontLibraryService(new FakeInventory([]), new FakeStore([])),
+        var vm = ShellViewModelTestFactory.Create(
+            ShellViewModelTestFactory.CreateLibraryService(new FakeInventory([]), new FakeStore([])),
             null,
             NullUserFileDialogService.Instance,
-            onlineService)
-        {
-            SelectedRemoteFont = new RemoteFontFamilyItemViewModel(CreateRemoteFont("Noto Sans"))
-        };
+            onlineService);
+        vm.SelectedRemoteFont = new RemoteFontFamilyItemViewModel(CreateRemoteFont("Noto Sans"));
 
         await vm.DownloadSelectedOnlineFontCommand.ExecuteAsync(null);
 
@@ -954,6 +969,15 @@ public sealed class ShellViewModelTests
         args.Action == NotifyCollectionChangedAction.Reset
         || (args.Action is NotifyCollectionChangedAction.Remove or NotifyCollectionChangedAction.Replace
             && (args.OldItems?.Cast<string>().Any(item => string.Equals(item, option, StringComparison.CurrentCultureIgnoreCase)) ?? false));
+
+    private static async Task WaitUntilAsync(Func<bool> condition)
+    {
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        while (!condition())
+        {
+            await Task.Delay(20, timeout.Token);
+        }
+    }
 
     private static LocalFontManagementService CreateLocalService(
         FakePlatformActivation platform,
@@ -1143,6 +1167,35 @@ public sealed class ShellViewModelTests
                 ? coverage
                 : new GlyphCoverage([], [new GlyphCoverageBlock(UnicodeCoverageBlocks.AllBlocks, 0, 0, 0)], [], 0, "empty"));
         }
+    }
+
+    private sealed class CancelableGlyphCatalogService : IGlyphCatalogService
+    {
+        public TaskCompletionSource OldStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public List<string> CanceledSearches { get; } = [];
+
+        public async Task<GlyphPage> GetGlyphsAsync(GlyphQuery query, CancellationToken cancellationToken)
+        {
+            if (string.Equals(query.SearchText, "old", StringComparison.Ordinal))
+            {
+                OldStarted.TrySetResult();
+                try
+                {
+                    await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    CanceledSearches.Add(query.SearchText);
+                    throw;
+                }
+            }
+
+            return new GlyphPage([], [new UnicodeBlockOption("全部区块", 0, 0)], query.PageNumber, query.PageSize, 0, $"page:{query.SearchText}");
+        }
+
+        public Task<GlyphCoverage> GetCoverageAsync(GlyphCoverageQuery query, CancellationToken cancellationToken) =>
+            Task.FromResult(new GlyphCoverage([], [], [], 0, ""));
     }
 
     private sealed class FakeMergeWorker : IFontMergeWorker

@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using GlyphStash.Application.Fonts;
 using GlyphStash.Localization;
+using static GlyphStash.Localization.AppTextExtensions;
 
 namespace GlyphStash.Presentation.ViewModels;
 
@@ -39,5 +40,4 @@ public sealed class ImportPreviewItemViewModel : ObservableObject
         OnPropertyChanged(nameof(LicenseLabel));
     }
 
-    private static string L(string text) => AppText.TranslateLiteral(text);
 }

@@ -4,6 +4,7 @@ using System.Text.Json;
 using GlyphStash.Application.Abstractions.Fonts;
 using GlyphStash.Domain.Fonts;
 using GlyphStash.Localization;
+using static GlyphStash.Localization.AppTextExtensions;
 
 namespace GlyphStash.Infrastructure.Providers.GoogleFonts;
 
@@ -218,5 +219,4 @@ public sealed class GoogleFontsProvider : IFontSourceProvider
         return value.Replace(' ', '-');
     }
 
-    private static string L(string text) => AppText.TranslateLiteral(text);
 }

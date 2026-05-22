@@ -5,6 +5,7 @@ using GlyphStash.Application.Abstractions.Fonts;
 using GlyphStash.Application.Fonts;
 using GlyphStash.Domain.Fonts;
 using GlyphStash.Localization;
+using static GlyphStash.Localization.AppTextExtensions;
 
 namespace GlyphStash.Infrastructure.FontTools;
 
@@ -200,7 +201,6 @@ public sealed class FontToolsWorkerClient : IFontMergeWorker
         }
     }
 
-    private static string L(string text) => AppText.TranslateLiteral(text);
 }
 
 internal sealed record FontToolsWorkerRequestMessage(

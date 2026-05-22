@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using GlyphStash.Domain.Fonts;
 using GlyphStash.Localization;
+using static GlyphStash.Localization.AppTextExtensions;
 
 namespace GlyphStash.Presentation.ViewModels;
 
@@ -34,5 +35,4 @@ public sealed class MergeIssueItemViewModel : ObservableObject
 
     public void RefreshLocalizedState() => OnPropertyChanged(nameof(SeverityLabel));
 
-    private static string L(string text) => AppText.TranslateLiteral(text);
 }

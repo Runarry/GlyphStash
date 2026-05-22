@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using GlyphStash.Domain.Fonts;
 using GlyphStash.Localization;
+using static GlyphStash.Localization.AppTextExtensions;
 
 namespace GlyphStash.Presentation.ViewModels;
 
@@ -55,5 +56,4 @@ public sealed class MergeConflictItemViewModel : ObservableObject
         _ => L("未知")
     };
 
-    private static string L(string text) => AppText.TranslateLiteral(text);
 }

@@ -4,6 +4,7 @@ using GlyphStash.Application.Fonts;
 using GlyphStash.Domain.Fonts;
 using GlyphStash.Localization;
 using Microsoft.Win32;
+using static GlyphStash.Localization.AppTextExtensions;
 
 namespace GlyphStash.Platform.Windows.Fonts;
 
@@ -113,5 +114,4 @@ public sealed class WindowsFontInstallService : IFontInstallService
             && Path.GetFileName(installedPath).StartsWith("GlyphStash-", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static string L(string text) => AppText.TranslateLiteral(text);
 }

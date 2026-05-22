@@ -163,7 +163,7 @@ public sealed partial class ShellViewModel
 
     partial void OnSelectedLanguageChanged(LanguageOptionViewModel? value)
     {
-        if (value is null || _localizationService is null)
+        if (value is null)
         {
             return;
         }
@@ -174,7 +174,10 @@ public sealed partial class ShellViewModel
             return;
         }
 
-        _ = SaveSelectedLanguageAsync(value);
+        RunLatestAsync(
+            ref _languageSaveCancellation,
+            cancellationToken => SaveSelectedLanguageAsync(value, cancellationToken),
+            ex => StatusMessage = ex.ToUserMessage());
     }
 
     partial void OnSelectedFontChanged(FontFamilyItemViewModel? value)
@@ -249,7 +252,10 @@ public sealed partial class ShellViewModel
         if (IsGlyphBrowserOpen)
         {
             GlyphPageNumber = 1;
-            _ = LoadGlyphsAsync();
+            RunLatestAsync(
+                ref _glyphLoadCancellation,
+                LoadGlyphsAsync,
+                ex => GlyphStatus = ex.ToUserMessage());
         }
     }
 
@@ -258,7 +264,10 @@ public sealed partial class ShellViewModel
         if (IsGlyphBrowserOpen)
         {
             GlyphPageNumber = 1;
-            _ = LoadGlyphsAsync();
+            RunLatestAsync(
+                ref _glyphLoadCancellation,
+                LoadGlyphsAsync,
+                ex => GlyphStatus = ex.ToUserMessage());
         }
     }
 

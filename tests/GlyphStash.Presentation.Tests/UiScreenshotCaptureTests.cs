@@ -191,7 +191,7 @@ public sealed class UiScreenshotCaptureTests
 
     private static ShellViewModel CreateSampleViewModel()
     {
-        var vm = new ShellViewModel(new FontLibraryService(new FakeInventory(), new FakeStore()));
+        var vm = ShellViewModelTestFactory.Create(ShellViewModelTestFactory.CreateLibraryService(new FakeInventory(), new FakeStore()));
         ReplaceFonts(vm, SampleFonts());
 
         vm.ManagedFontDirectory = @"C:\Users\sleep\GlyphStash\ManagedFonts";

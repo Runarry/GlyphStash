@@ -6,6 +6,7 @@ using GlyphStash.Application.Abstractions.Fonts;
 using GlyphStash.Application.Fonts;
 using GlyphStash.Domain.Fonts;
 using GlyphStash.Localization;
+using static GlyphStash.Localization.AppTextExtensions;
 using GlyphStash.Presentation.Services;
 using DomainUnicodeRange = GlyphStash.Domain.Fonts.UnicodeRange;
 
@@ -24,21 +25,26 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     private const string DefaultPreviewTextZh = "GlyphStash 字体预览 Aa 123 你好";
     private const string DefaultPreviewTextEn = "GlyphStash font preview Aa 123 Hello";
 
-    private readonly FontLibraryService _fontLibraryService;
-    private readonly LocalFontManagementService? _localManagementService;
+    private readonly IFontLibraryService _fontLibraryService;
+    private readonly ILocalFontManagementService _localManagementService;
     private readonly IUserFileDialogService _fileDialogService;
     private readonly IUserClipboardService _clipboardService;
     private readonly IFontPreviewRegistry _fontPreviewRegistry;
-    private readonly IAppLocalizationService? _localizationService;
+    private readonly IAppLocalizationService _localizationService;
     private readonly EventHandler? _localizationCultureChangedHandler;
-    private readonly OnlineFontService? _onlineFontService;
-    private readonly IGlyphCatalogService? _glyphCatalogService;
-    private readonly FontMergeService? _fontMergeService;
+    private readonly IOnlineFontService _onlineFontService;
+    private readonly IGlyphCatalogService _glyphCatalogService;
+    private readonly IFontMergeService _fontMergeService;
     private readonly List<FontFamilyItemViewModel> _allFonts = [];
     private FontImportPreview? _currentImportPreview;
     private bool _isProcessingOnlineDownloadQueue;
     private FontFaceItemViewModel? _currentGlyphFace;
     private FontMergePreview? _currentMergePreview;
+    private readonly CancellationTokenSource _lifetimeCancellation = new();
+    private CancellationTokenSource? _languageSaveCancellation;
+    private CancellationTokenSource? _glyphLoadCancellation;
+    private CancellationTokenSource? _collectionReloadCancellation;
+    private CancellationTokenSource? _onlineDownloadCancellation;
     private CancellationTokenSource? _mergeCancellation;
     private readonly List<MergeRangeSegmentItemViewModel> _allMergeRangeSegments = [];
     private bool _isApplyingSettings;
@@ -336,21 +342,16 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private LanguageOptionViewModel? _selectedLanguage;
 
-    public ShellViewModel(FontLibraryService fontLibraryService)
-        : this(fontLibraryService, null, NullUserFileDialogService.Instance)
-    {
-    }
-
     public ShellViewModel(
-        FontLibraryService fontLibraryService,
-        LocalFontManagementService? localManagementService,
+        IFontLibraryService fontLibraryService,
+        ILocalFontManagementService localManagementService,
         IUserFileDialogService fileDialogService,
-        OnlineFontService? onlineFontService = null,
-        IGlyphCatalogService? glyphCatalogService = null,
-        IUserClipboardService? clipboardService = null,
-        IFontPreviewRegistry? fontPreviewRegistry = null,
-        FontMergeService? fontMergeService = null,
-        IAppLocalizationService? localizationService = null)
+        IOnlineFontService onlineFontService,
+        IGlyphCatalogService glyphCatalogService,
+        IUserClipboardService clipboardService,
+        IFontPreviewRegistry fontPreviewRegistry,
+        IFontMergeService fontMergeService,
+        IAppLocalizationService localizationService)
     {
         _fontLibraryService = fontLibraryService;
         _localManagementService = localManagementService;
@@ -358,8 +359,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         _onlineFontService = onlineFontService;
         _glyphCatalogService = glyphCatalogService;
         _fontMergeService = fontMergeService;
-        _clipboardService = clipboardService ?? NullUserFileDialogService.Instance;
-        _fontPreviewRegistry = fontPreviewRegistry ?? NullFontPreviewRegistry.Instance;
+        _clipboardService = clipboardService;
+        _fontPreviewRegistry = fontPreviewRegistry;
         _localizationService = localizationService;
         _fontLibraryPage = new FontLibraryViewModel(this);
         _collectionsPage = new CollectionsViewModel(this);
@@ -370,27 +371,24 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         _placeholderPage = new PlaceholderPageViewModel(this);
         CurrentPage = _fontLibraryPage;
         InitializeLocalizedOptions();
-        if (_localizationService is not null)
+        foreach (var language in _localizationService.SupportedLanguages)
         {
-            foreach (var language in _localizationService.SupportedLanguages)
-            {
-                LanguageOptions.Add(new LanguageOptionViewModel(language));
-            }
-
-            _isApplyingSettings = true;
-            try
-            {
-                SelectedLanguage = LanguageOptions.FirstOrDefault(language =>
-                    string.Equals(language.CultureCode, _localizationService.CurrentCulture.Name, StringComparison.OrdinalIgnoreCase));
-            }
-            finally
-            {
-                _isApplyingSettings = false;
-            }
-
-            _localizationCultureChangedHandler = (_, _) => RefreshLocalizedState();
-            _localizationService.CultureChanged += _localizationCultureChangedHandler;
+            LanguageOptions.Add(new LanguageOptionViewModel(language));
         }
+
+        _isApplyingSettings = true;
+        try
+        {
+            SelectedLanguage = LanguageOptions.FirstOrDefault(language =>
+                string.Equals(language.CultureCode, _localizationService.CurrentCulture.Name, StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            _isApplyingSettings = false;
+        }
+
+        _localizationCultureChangedHandler = (_, _) => RefreshLocalizedState();
+        _localizationService.CultureChanged += _localizationCultureChangedHandler;
         RefreshMergeStepState();
     }
 
@@ -402,14 +400,20 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         }
 
         IsDisposed = true;
-        if (_localizationService is not null && _localizationCultureChangedHandler is not null)
+        _lifetimeCancellation.Cancel();
+        if (_localizationCultureChangedHandler is not null)
         {
             _localizationService.CultureChanged -= _localizationCultureChangedHandler;
         }
 
+        CancelAndDispose(ref _languageSaveCancellation);
+        CancelAndDispose(ref _glyphLoadCancellation);
+        CancelAndDispose(ref _collectionReloadCancellation);
+        CancelAndDispose(ref _onlineDownloadCancellation);
         _mergeCancellation?.Cancel();
         _mergeCancellation?.Dispose();
         _mergeCancellation = null;
+        _lifetimeCancellation.Dispose();
     }
 
     public bool IsDisposed { get; private set; }

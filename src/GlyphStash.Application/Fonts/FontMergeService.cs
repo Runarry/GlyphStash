@@ -3,10 +3,11 @@ using GlyphStash.Application.Abstractions.Fonts;
 using GlyphStash.Application.Abstractions.Storage;
 using GlyphStash.Domain.Fonts;
 using GlyphStash.Localization;
+using static GlyphStash.Localization.AppTextExtensions;
 
 namespace GlyphStash.Application.Fonts;
 
-public sealed class FontMergeService
+public sealed class FontMergeService : IFontMergeService
 {
     private static readonly string[] SupportedExtensions = [".ttf", ".otf"];
     private static readonly string[] RecognizedButUnsupportedExtensions = [".ttc", ".otc", ".woff", ".woff2"];
@@ -53,7 +54,7 @@ public sealed class FontMergeService
         {
             return EmptyPreview(
                 validation.Ranges,
-                [.. validation.Issues, new FontMergeIssue(FontMergeIssueKind.WorkerFailed, FontMergeIssueSeverity.Error, BuildErrorMessage(ex), "fontTools worker")]);
+                [.. validation.Issues, new FontMergeIssue(FontMergeIssueKind.WorkerFailed, FontMergeIssueSeverity.Error, ToMergeUserMessage(ex), "fontTools worker")]);
         }
     }
 
@@ -112,7 +113,7 @@ public sealed class FontMergeService
         }
         catch (Exception ex)
         {
-            var issue = new FontMergeIssue(FontMergeIssueKind.WorkerFailed, FontMergeIssueSeverity.Error, BuildErrorMessage(ex), "fontTools worker");
+            var issue = new FontMergeIssue(FontMergeIssueKind.WorkerFailed, FontMergeIssueSeverity.Error, ToMergeUserMessage(ex), "fontTools worker");
             var report = CreateReport(request, validation.Ranges, null, [.. validation.Issues, issue], false, issue.Message, "");
             var reportPath = await TryWriteReportAsync(request.OutputPath, report, cancellationToken).ConfigureAwait(false);
             await LogAsync("merge", "export", issue.Message, request.OutputPath, false, cancellationToken).ConfigureAwait(false);
@@ -149,7 +150,7 @@ public sealed class FontMergeService
         }
         catch (Exception ex)
         {
-            issues.Add(new FontMergeIssue(FontMergeIssueKind.InvalidInput, FontMergeIssueSeverity.Error, BuildErrorMessage(ex), L("Unicode 范围")));
+            issues.Add(new FontMergeIssue(FontMergeIssueKind.InvalidInput, FontMergeIssueSeverity.Error, ToMergeUserMessage(ex), L("Unicode 范围")));
         }
 
         ValidateFont(request.BaseFont, L("基础字体 A"), issues);
@@ -335,11 +336,6 @@ public sealed class FontMergeService
             ? L("覆盖模式：指定范围内补充字体存在的码位覆盖基础字体")
             : L("补全模式：基础字体已有码位默认跳过");
 
-    private static string L(string text) => AppText.TranslateLiteral(text);
-
-    private static string F(string zhTemplate, string enTemplate, params object?[] args) =>
-        AppText.FormatLiteral(zhTemplate, enTemplate, args);
-
     private static async Task<string> WriteReportAsync(string outputPath, FontMergeReport report, CancellationToken cancellationToken)
     {
         var reportPath = BuildReportPath(outputPath);
@@ -395,7 +391,7 @@ public sealed class FontMergeService
         }
     }
 
-    private static string BuildErrorMessage(Exception exception)
+    private static string ToMergeUserMessage(Exception exception)
     {
         for (var candidate = exception; candidate is not null; candidate = candidate.InnerException)
         {
@@ -403,20 +399,9 @@ public sealed class FontMergeService
             {
                 return FormatUnicodeRangeParseError(unicodeRangeException);
             }
-
-            if (candidate is InvalidOperationException && !string.IsNullOrWhiteSpace(candidate.Message))
-            {
-                return candidate.Message;
-            }
         }
 
-        var current = exception;
-        while (current.InnerException is not null)
-        {
-            current = current.InnerException;
-        }
-
-        return string.IsNullOrWhiteSpace(current.Message) ? current.GetType().Name : current.Message;
+        return exception.ToUserMessage();
     }
 
     private static string FormatUnicodeRangeParseError(UnicodeRangeParseException exception) =>

@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using GlyphStash.Domain.Fonts;
 using GlyphStash.Localization;
+using static GlyphStash.Localization.AppTextExtensions;
 
 namespace GlyphStash.Presentation.ViewModels;
 
@@ -135,8 +136,6 @@ public sealed partial class FontFamilyItemViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(FavoriteLabel));
     }
-
-    private static string L(string text) => AppText.TranslateLiteral(text);
 
     public void RefreshLocalizedState()
     {

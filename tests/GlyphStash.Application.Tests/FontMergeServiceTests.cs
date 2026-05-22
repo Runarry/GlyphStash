@@ -1,6 +1,7 @@
 using GlyphStash.Application.Abstractions.Fonts;
 using GlyphStash.Application.Fonts;
 using GlyphStash.Domain.Fonts;
+using GlyphStash.Localization;
 
 namespace GlyphStash.Application.Tests;
 
@@ -116,6 +117,35 @@ public sealed class FontMergeServiceTests
         Assert.Equal(0, result.Report.SkippedDuplicateCodePointCount);
         Assert.Equal(1, result.Report.OverwrittenCodePointCount);
         Assert.Equal(1, result.Report.MergedCodePointCount);
+    }
+
+    [Fact]
+    public async Task Preview_FormatsUnicodeRangeParseErrors()
+    {
+        try
+        {
+            AppText.SetCulture("en-US");
+            var directory = CreateTempDirectory();
+            var basePath = Path.Combine(directory, "Base.ttf");
+            var supplementalPath = Path.Combine(directory, "Patch.ttf");
+            await File.WriteAllBytesAsync(basePath, [1], CancellationToken.None);
+            await File.WriteAllBytesAsync(supplementalPath, [1], CancellationToken.None);
+            var service = new FontMergeService(new FakeMergeWorker());
+
+            var preview = await service.PreviewAsync(
+                CreateRequest(basePath, supplementalPath) with { UnicodeRanges = "U+0043-U+0041" },
+                CancellationToken.None);
+
+            Assert.True(preview.HasBlockingIssues);
+            Assert.Contains(
+                preview.Issues,
+                issue => issue.Kind == FontMergeIssueKind.InvalidInput
+                         && issue.Message == "Unicode range start cannot be greater than the end: U+0043-U+0041");
+        }
+        finally
+        {
+            AppText.SetCulture("zh-CN");
+        }
     }
 
     private static FontMergeRequest CreateRequest(string basePath, string supplementalPath) =>

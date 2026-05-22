@@ -4,27 +4,30 @@ using CommunityToolkit.Mvvm.Input;
 using GlyphStash.Application.Fonts;
 using GlyphStash.Domain.Fonts;
 using GlyphStash.Localization;
+using static GlyphStash.Localization.AppTextExtensions;
 using DomainUnicodeRange = GlyphStash.Domain.Fonts.UnicodeRange;
 
 namespace GlyphStash.Presentation.ViewModels;
 
 public sealed partial class ShellViewModel
 {
-    private async Task SaveSelectedLanguageAsync(LanguageOptionViewModel language)
+    private CancellationToken LifetimeToken => _lifetimeCancellation.Token;
+
+    private async Task SaveSelectedLanguageAsync(LanguageOptionViewModel language, CancellationToken cancellationToken)
     {
         try
         {
-            if (_localManagementService is not null)
-            {
-                await _localManagementService.SaveUiCultureAsync(language.CultureCode, CancellationToken.None);
-                await ReloadOperationLogsAsync();
-            }
+            await _localManagementService.SaveUiCultureAsync(language.CultureCode, cancellationToken);
+            await ReloadOperationLogsAsync(cancellationToken);
 
             ShowToast(T("Toast.LanguageChangedFormat", language.DisplayName));
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
         catch (Exception ex)
         {
-            ShowToast(BuildErrorMessage(ex));
+            ShowToast(ex.ToUserMessage());
         }
     }
 
@@ -181,8 +184,6 @@ public sealed partial class ShellViewModel
 
     private static string T(string key, params object?[] args) => AppText.Format(key, args);
 
-    private static string L(string text) => AppText.TranslateLiteral(text);
-
     private static string FormatCurrentPageStatus(NavigationItemViewModel item) =>
         AppText.CurrentCultureCode == AppText.EnglishCultureCode ? $"Current page: {item.Title}" : $"当前页面：{item.Title}";
 
@@ -296,9 +297,9 @@ public sealed partial class ShellViewModel
         OnPropertyChanged(nameof(FontCountLabel));
     }
 
-    private async Task LoadGlyphsAsync()
+    private async Task LoadGlyphsAsync(CancellationToken cancellationToken)
     {
-        if (_glyphCatalogService is null || !IsGlyphBrowserOpen)
+        if (!IsGlyphBrowserOpen)
         {
             return;
         }
@@ -322,7 +323,9 @@ public sealed partial class ShellViewModel
                     false,
                     GlyphPageNumber,
                     120),
-                CancellationToken.None);
+                cancellationToken);
+
+            cancellationToken.ThrowIfCancellationRequested();
 
             Glyphs.Clear();
             foreach (var glyph in page.Glyphs)
@@ -345,9 +348,12 @@ public sealed partial class ShellViewModel
                 : page.EmptyMessage;
             OnPropertyChanged(nameof(HasGlyphs));
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
         catch (Exception ex)
         {
-            GlyphStatus = BuildErrorMessage(ex);
+            GlyphStatus = ex.ToUserMessage();
         }
         finally
         {
@@ -370,30 +376,25 @@ public sealed partial class ShellViewModel
 
     private void ApplyCollectionFilter()
     {
-        if (_localManagementService is null)
-        {
-            return;
-        }
-
-        _ = ReloadCollectionsAsync();
+        RunLatestAsync(
+            ref _collectionReloadCancellation,
+            cancellationToken => ReloadCollectionsAsync(cancellationToken: cancellationToken),
+            ex => StatusMessage = ex.ToUserMessage());
     }
 
-    private async Task ReloadM2StateAsync(string? preferredTagFilter = null, string? preferredCollectionFilter = null)
+    private async Task ReloadM2StateAsync(string? preferredTagFilter = null, string? preferredCollectionFilter = null, CancellationToken cancellationToken = default)
     {
-        await ReloadTagsAsync(preferredTagFilter);
-        await ReloadCollectionsAsync(preferredCollectionFilter);
-        await ReloadOperationLogsAsync();
+        cancellationToken = ResolveCancellationToken(cancellationToken);
+        await ReloadTagsAsync(preferredTagFilter, cancellationToken);
+        await ReloadCollectionsAsync(preferredCollectionFilter, cancellationToken);
+        await ReloadOperationLogsAsync(cancellationToken);
     }
 
-    private async Task ReloadTagsAsync(string? preferredFilter = null)
+    private async Task ReloadTagsAsync(string? preferredFilter = null, CancellationToken cancellationToken = default)
     {
-        if (_localManagementService is null)
-        {
-            return;
-        }
-
+        cancellationToken = ResolveCancellationToken(cancellationToken);
         var selectedTag = NormalizeFilter(preferredFilter ?? SelectedTagFilter, AllTagFilter);
-        var tags = await _localManagementService.GetTagsAsync(CancellationToken.None);
+        var tags = await _localManagementService.GetTagsAsync(cancellationToken);
         AvailableTags.Clear();
         foreach (var tag in tags)
         {
@@ -408,15 +409,11 @@ public sealed partial class ShellViewModel
         SelectTagFilter(selectedTag);
     }
 
-    private async Task ReloadCollectionsAsync(string? preferredFilter = null)
+    private async Task ReloadCollectionsAsync(string? preferredFilter = null, CancellationToken cancellationToken = default)
     {
-        if (_localManagementService is null)
-        {
-            return;
-        }
-
+        cancellationToken = ResolveCancellationToken(cancellationToken);
         var selectedName = SelectedCollection?.Name;
-        var collections = await _localManagementService.GetCollectionsAsync(CancellationToken.None);
+        var collections = await _localManagementService.GetCollectionsAsync(cancellationToken);
         var selectedFilter = NormalizeFilter(preferredFilter ?? SelectedCollectionFilter, AllCollectionFilter);
         AvailableCollections.Clear();
         var collectionNames = collections
@@ -447,15 +444,11 @@ public sealed partial class ShellViewModel
         OnPropertyChanged(nameof(HasSelectedCollection));
     }
 
-    private async Task ReloadOperationLogsAsync()
+    private async Task ReloadOperationLogsAsync(CancellationToken cancellationToken = default)
     {
-        if (_localManagementService is null)
-        {
-            return;
-        }
-
+        cancellationToken = ResolveCancellationToken(cancellationToken);
         OperationLogs.Clear();
-        var logs = await _localManagementService.GetRecentOperationsAsync(8, CancellationToken.None);
+        var logs = await _localManagementService.GetRecentOperationsAsync(8, cancellationToken);
         foreach (var log in logs)
         {
             OperationLogs.Add(new OperationLogItemViewModel(log));
@@ -980,6 +973,69 @@ public sealed partial class ShellViewModel
         OnPropertyChanged(nameof(EmptyStateMessage));
     }
 
+    private CancellationToken ResolveCancellationToken(CancellationToken cancellationToken) =>
+        cancellationToken.CanBeCanceled ? cancellationToken : LifetimeToken;
+
+    private void RunLatestAsync(
+        ref CancellationTokenSource? slot,
+        Func<CancellationToken, Task> operation,
+        Action<Exception>? onError = null)
+    {
+        if (IsDisposed)
+        {
+            return;
+        }
+
+        CancelAndDispose(ref slot);
+        var cancellation = CancellationTokenSource.CreateLinkedTokenSource(LifetimeToken);
+        slot = cancellation;
+        _ = RunFireAndForgetAsync(cancellation, operation, onError);
+    }
+
+    private CancellationToken BeginLatest(ref CancellationTokenSource? slot)
+    {
+        CancelAndDispose(ref slot);
+        slot = CancellationTokenSource.CreateLinkedTokenSource(LifetimeToken);
+        return slot.Token;
+    }
+
+    private async Task RunFireAndForgetAsync(
+        CancellationTokenSource cancellation,
+        Func<CancellationToken, Task> operation,
+        Action<Exception>? onError)
+    {
+        try
+        {
+            await operation(cancellation.Token);
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+        }
+        catch (Exception ex)
+        {
+            if (onError is not null)
+            {
+                onError(ex);
+            }
+            else
+            {
+                ShowToast(ex.ToUserMessage());
+            }
+        }
+    }
+
+    private static void CancelAndDispose(ref CancellationTokenSource? cancellation)
+    {
+        if (cancellation is null)
+        {
+            return;
+        }
+
+        cancellation.Cancel();
+        cancellation.Dispose();
+        cancellation = null;
+    }
+
     private void NotifyNavigationState()
     {
         OnPropertyChanged(nameof(IsFontLibraryPage));
@@ -1142,25 +1198,6 @@ public sealed partial class ShellViewModel
         }
 
         SelectedCollectionFilter = filter;
-    }
-
-    private static string BuildErrorMessage(Exception exception)
-    {
-        for (var candidate = exception; candidate is not null; candidate = candidate.InnerException)
-        {
-            if (candidate is InvalidOperationException && !string.IsNullOrWhiteSpace(candidate.Message))
-            {
-                return candidate.Message;
-            }
-        }
-
-        var current = exception;
-        while (current.InnerException is not null)
-        {
-            current = current.InnerException;
-        }
-
-        return string.IsNullOrWhiteSpace(current.Message) ? current.GetType().Name : current.Message;
     }
 
     private async void ShowToast(string message)

@@ -2,10 +2,11 @@ using GlyphStash.Application.Abstractions.Fonts;
 using GlyphStash.Application.Abstractions.Storage;
 using GlyphStash.Domain.Fonts;
 using GlyphStash.Localization;
+using static GlyphStash.Localization.AppTextExtensions;
 
 namespace GlyphStash.Application.Fonts;
 
-public sealed class OnlineFontService
+public sealed class OnlineFontService : IOnlineFontService
 {
     private readonly IFontSourceProvider _provider;
     private readonly IAppSettingsStore _settingsStore;
@@ -172,7 +173,6 @@ public sealed class OnlineFontService
     private Task LogAsync(string category, string action, string message, string? target, bool succeeded, CancellationToken cancellationToken) =>
         _operationLogStore.AppendOperationAsync(new OperationLogEntry(DateTimeOffset.UtcNow, category, action, message, target, succeeded), cancellationToken);
 
-    private static string L(string text) => AppText.TranslateLiteral(text);
 }
 
 public sealed record OnlineFontImportOptions(

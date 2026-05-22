@@ -2,10 +2,11 @@ using GlyphStash.Application.Abstractions.Fonts;
 using GlyphStash.Application.Abstractions.Storage;
 using GlyphStash.Domain.Fonts;
 using GlyphStash.Localization;
+using static GlyphStash.Localization.AppTextExtensions;
 
 namespace GlyphStash.Application.Fonts;
 
-public sealed class LocalFontManagementService
+public sealed class LocalFontManagementService : ILocalFontManagementService
 {
     private static readonly string[] InstallableExtensions = [".ttf", ".otf", ".ttc", ".otc"];
     private static readonly string[] RecognizedButUnsupportedExtensions = [".woff", ".woff2"];
@@ -136,7 +137,7 @@ public sealed class LocalFontManagementService
             }
             catch (Exception ex)
             {
-                items.Add(Failed(sourcePath, fileName, format, BuildErrorMessage(ex)));
+                items.Add(Failed(sourcePath, fileName, format, ex.ToUserMessage()));
             }
         }
 
@@ -215,7 +216,7 @@ public sealed class LocalFontManagementService
             }
             catch (Exception ex)
             {
-                var message = BuildErrorMessage(ex);
+                var message = ex.ToUserMessage();
                 result.Add(new FontImportResultItem(item, false, null, message));
                 await LogAsync("import", "import-font", message, item.SourcePath, false, cancellationToken).ConfigureAwait(false);
             }
@@ -377,19 +378,4 @@ public sealed class LocalFontManagementService
     private Task LogAsync(string category, string action, string message, string? target, bool succeeded, CancellationToken cancellationToken) =>
         _operationLogStore.AppendOperationAsync(new OperationLogEntry(DateTimeOffset.UtcNow, category, action, message, target, succeeded), cancellationToken);
 
-    private static string L(string text) => AppText.TranslateLiteral(text);
-
-    private static string F(string zhTemplate, string enTemplate, params object?[] args) =>
-        AppText.FormatLiteral(zhTemplate, enTemplate, args);
-
-    private static string BuildErrorMessage(Exception exception)
-    {
-        var current = exception;
-        while (current.InnerException is not null)
-        {
-            current = current.InnerException;
-        }
-
-        return string.IsNullOrWhiteSpace(current.Message) ? current.GetType().Name : current.Message;
-    }
 }

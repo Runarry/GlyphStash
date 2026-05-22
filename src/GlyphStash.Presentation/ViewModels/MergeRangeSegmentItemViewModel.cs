@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using GlyphStash.Domain.Fonts;
 using GlyphStash.Localization;
+using static GlyphStash.Localization.AppTextExtensions;
 
 namespace GlyphStash.Presentation.ViewModels;
 
@@ -62,5 +63,4 @@ public sealed partial class MergeRangeSegmentItemViewModel : ObservableObject
         }
     }
 
-    private static string L(string text) => AppText.TranslateLiteral(text);
 }

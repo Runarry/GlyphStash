@@ -107,16 +107,20 @@ public partial class App : Avalonia.Application
         services.AddScoped<IFontInstallService, WindowsFontInstallService>();
         services.AddScoped(_ => new HttpClient());
         services.AddScoped<IFontSourceProvider, GoogleFontsProvider>();
-        services.AddScoped<FontLibraryService>();
-        services.AddScoped<LocalFontManagementService>();
-        services.AddScoped<OnlineFontService>();
-        services.AddScoped<FontMergeService>();
+        services.AddScoped<IFontLibraryService, FontLibraryService>();
+        services.AddScoped<ILocalFontManagementService, LocalFontManagementService>();
+        services.AddScoped<IOnlineFontService, OnlineFontService>();
+        services.AddScoped<IFontMergeService, FontMergeService>();
         services.AddScoped<DesktopStorageDialogService>();
         services.AddScoped<IUserFileDialogService>(provider => provider.GetRequiredService<DesktopStorageDialogService>());
         services.AddScoped<IUserClipboardService>(provider => provider.GetRequiredService<DesktopStorageDialogService>());
         services.AddScoped<IFontPreviewRegistry, AvaloniaFontPreviewRegistry>();
         services.AddScoped<ShellViewModel>();
 
-        return services.BuildServiceProvider();
+        return services.BuildServiceProvider(new ServiceProviderOptions
+        {
+            ValidateScopes = true,
+            ValidateOnBuild = true
+        });
     }
 }

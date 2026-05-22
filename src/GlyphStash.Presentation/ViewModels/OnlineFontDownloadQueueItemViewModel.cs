@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using GlyphStash.Application.Fonts;
 using GlyphStash.Domain.Fonts;
 using GlyphStash.Localization;
+using static GlyphStash.Localization.AppTextExtensions;
 
 namespace GlyphStash.Presentation.ViewModels;
 
@@ -110,5 +111,4 @@ public sealed partial class OnlineFontDownloadQueueItemViewModel : ObservableObj
         OnPropertyChanged(nameof(StatusLabel));
     }
 
-    private static string L(string text) => AppText.TranslateLiteral(text);
 }

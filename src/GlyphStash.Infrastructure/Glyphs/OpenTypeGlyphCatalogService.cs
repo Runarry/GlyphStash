@@ -2,6 +2,7 @@ using System.Buffers.Binary;
 using GlyphStash.Application.Abstractions.Fonts;
 using GlyphStash.Domain.Fonts;
 using GlyphStash.Localization;
+using static GlyphStash.Localization.AppTextExtensions;
 
 namespace GlyphStash.Infrastructure.Glyphs;
 
@@ -459,5 +460,4 @@ public sealed class OpenTypeGlyphCatalogService : IGlyphCatalogService
 
     private sealed record TableRecord(int Offset, int Length);
 
-    private static string L(string text) => AppText.TranslateLiteral(text);
 }
