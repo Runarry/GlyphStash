@@ -116,6 +116,9 @@ public sealed partial class ShellViewModel
         OnPropertyChanged(nameof(MergeDefaultStrategy));
         OnPropertyChanged(nameof(ManagedDirectoryStatus));
         OnPropertyChanged(nameof(GoogleFontsApiKeyStatus));
+        OnPropertyChanged(nameof(AppUpdateCurrentVersion));
+        OnPropertyChanged(nameof(AppUpdateSource));
+        OnPropertyChanged(nameof(AppUpdateProgressLabel));
         OnPropertyChanged(nameof(PendingDeleteTagConfirmationText));
         OnPropertyChanged(nameof(CompatibilityMatrix));
         OnPropertyChanged(nameof(SelectedLanguage));
@@ -138,6 +141,7 @@ public sealed partial class ShellViewModel
         StatusMessage = RefreshStatusMessageText(StatusMessage);
         ImportStatus = LocalizeStoredLiteral(ImportStatus);
         OnlineStatus = LocalizeStoredLiteral(OnlineStatus);
+        AppUpdateStatus = LocalizeStoredLiteral(AppUpdateStatus);
         GlyphStatus = LocalizeStoredLiteral(GlyphStatus);
         MergeStatus = LocalizeStoredLiteral(MergeStatus);
         MergeRangeDialogStatus = LocalizeStoredLiteral(MergeRangeDialogStatus);

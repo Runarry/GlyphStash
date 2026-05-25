@@ -64,6 +64,51 @@
         </Border>
 
         <Border Classes="panel" Padding="{StaticResource GlyphPanelPadding}">
+          <StackPanel Spacing="12">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+              <StackPanel Spacing="10">
+                <TextBlock Text="{DynamicResource L.Text.64C230D2256744E6}" Classes="h2" />
+                <TextBlock Text="{Binding AppUpdateStatus}" Classes="muted" TextWrapping="Wrap" />
+              </StackPanel>
+              <Button Grid.Column="1"
+                      Content="{DynamicResource L.Text.7F68EBAD19BA6BCD}"
+                      Classes="primary"
+                      Command="{Binding CheckForAppUpdatesCommand}"
+                      IsEnabled="{Binding !IsAppUpdateBusy}"
+                      VerticalAlignment="Top" />
+            </Grid>
+
+            <UniformGrid Columns="2">
+              <Border Classes="card subtle-card" Margin="0,0,8,0">
+                <StackPanel>
+                  <TextBlock Text="{DynamicResource L.Text.837BC95767211631}" Classes="caption" />
+                  <TextBlock Text="{Binding AppUpdateCurrentVersion}" TextWrapping="Wrap" />
+                </StackPanel>
+              </Border>
+              <Border Classes="card subtle-card">
+                <StackPanel>
+                  <TextBlock Text="{DynamicResource L.Text.73299101ABB72E75}" Classes="caption" />
+                  <TextBlock Text="{Binding AppUpdateSource}" TextWrapping="Wrap" />
+                </StackPanel>
+              </Border>
+            </UniformGrid>
+
+            <Border Classes="card" IsVisible="{Binding CanDownloadAppUpdate}">
+              <StackPanel Spacing="10">
+                <TextBlock Text="{Binding AppUpdateAvailableVersion}" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding AppUpdateReleaseNotes}" TextWrapping="Wrap" MaxHeight="120" IsVisible="{Binding HasAppUpdateReleaseNotes}" />
+                <TextBlock Text="{Binding AppUpdateProgressLabel}" Classes="muted" IsVisible="{Binding IsAppUpdateBusy}" />
+                <ProgressBar Minimum="0" Maximum="100" Value="{Binding AppUpdateProgress}" IsVisible="{Binding IsAppUpdateBusy}" />
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
+                  <Button Content="{DynamicResource L.Text.9D2CA261281A158A}" Command="{Binding DismissAppUpdateCommand}" IsEnabled="{Binding !IsAppUpdateBusy}" />
+                  <Button Content="{DynamicResource L.Text.8EAAEC4C18D65C3A}" Classes="primary" Command="{Binding DownloadAndRestartAppUpdateCommand}" IsEnabled="{Binding CanDownloadAppUpdate}" />
+                </StackPanel>
+              </StackPanel>
+            </Border>
+          </StackPanel>
+        </Border>
+
+        <Border Classes="panel" Padding="{StaticResource GlyphPanelPadding}">
           <Grid ColumnDefinitions="*,240" ColumnSpacing="16">
             <StackPanel Spacing="10">
               <TextBlock Text="{DynamicResource L.Settings.Language}" Classes="h2" />

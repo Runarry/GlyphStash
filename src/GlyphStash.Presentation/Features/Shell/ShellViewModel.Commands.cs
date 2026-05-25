@@ -495,6 +495,90 @@ public sealed partial class ShellViewModel
     }
 
     [RelayCommand]
+    private async Task CheckForAppUpdatesAsync()
+    {
+        if (IsAppUpdateBusy)
+        {
+            return;
+        }
+
+        IsAppUpdateBusy = true;
+        HasPendingAppUpdate = false;
+        AppUpdateAvailableVersion = "";
+        AppUpdateReleaseNotes = "";
+        AppUpdateProgress = 0;
+        AppUpdateStatus = L("正在检查应用更新...");
+        try
+        {
+            var result = await _appUpdateService.CheckForUpdatesAsync(LifetimeToken);
+            AppUpdateStatus = result.Message;
+            if (result.CanDownload)
+            {
+                HasPendingAppUpdate = true;
+                AppUpdateAvailableVersion = result.AvailableVersion ?? "";
+                AppUpdateReleaseNotes = string.IsNullOrWhiteSpace(result.ReleaseNotes)
+                    ? L("该版本没有发布说明。")
+                    : result.ReleaseNotes;
+            }
+
+            ShowToast(result.Message);
+        }
+        finally
+        {
+            IsAppUpdateBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task DownloadAndRestartAppUpdateAsync()
+    {
+        if (!CanDownloadAppUpdate)
+        {
+            return;
+        }
+
+        IsAppUpdateBusy = true;
+        AppUpdateProgress = 0;
+        AppUpdateStatus = L("正在下载应用更新...");
+        try
+        {
+            var progress = new InlineProgress(value => AppUpdateProgress = value);
+            var result = await _appUpdateService.DownloadAndApplyUpdateAsync(progress, LifetimeToken);
+            AppUpdateStatus = result.Message;
+            if (!result.Succeeded)
+            {
+                ShowToast(result.Message);
+            }
+        }
+        finally
+        {
+            IsAppUpdateBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    private void DismissAppUpdate()
+    {
+        HasPendingAppUpdate = false;
+        AppUpdateAvailableVersion = "";
+        AppUpdateReleaseNotes = "";
+        AppUpdateProgress = 0;
+        AppUpdateStatus = L("已暂缓本次应用更新。");
+    }
+
+    private sealed class InlineProgress : IProgress<int>
+    {
+        private readonly Action<int> _report;
+
+        public InlineProgress(Action<int> report)
+        {
+            _report = report;
+        }
+
+        public void Report(int value) => _report(value);
+    }
+
+    [RelayCommand]
     private async Task SearchOnlineFontsAsync()
     {
         RemoteFonts.Clear();

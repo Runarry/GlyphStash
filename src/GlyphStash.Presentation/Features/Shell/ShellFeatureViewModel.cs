@@ -174,6 +174,16 @@ public abstract class ShellFeatureViewModel : ObservableObject
 
     public string GoogleFontsApiKeyStatus => Shell.GoogleFontsApiKeyStatus;
     public string GoogleFontsApiKeyText { get => Shell.GoogleFontsApiKeyText; set => Shell.GoogleFontsApiKeyText = value; }
+    public string AppUpdateCurrentVersion => Shell.AppUpdateCurrentVersion;
+    public string AppUpdateSource => Shell.AppUpdateSource;
+    public string AppUpdateStatus => Shell.AppUpdateStatus;
+    public string AppUpdateAvailableVersion => Shell.AppUpdateAvailableVersion;
+    public string AppUpdateReleaseNotes => Shell.AppUpdateReleaseNotes;
+    public int AppUpdateProgress => Shell.AppUpdateProgress;
+    public string AppUpdateProgressLabel => Shell.AppUpdateProgressLabel;
+    public bool IsAppUpdateBusy => Shell.IsAppUpdateBusy;
+    public bool CanDownloadAppUpdate => Shell.CanDownloadAppUpdate;
+    public bool HasAppUpdateReleaseNotes => Shell.HasAppUpdateReleaseNotes;
     public ObservableCollection<LanguageOptionViewModel> LanguageOptions => Shell.LanguageOptions;
     public LanguageOptionViewModel? SelectedLanguage { get => Shell.SelectedLanguage; set => Shell.SelectedLanguage = value; }
     public IReadOnlyList<string> CompatibilityMatrix => Shell.CompatibilityMatrix;
@@ -229,4 +239,7 @@ public abstract class ShellFeatureViewModel : ObservableObject
     public ICommand CloseMergeRangeDialogCommand => Shell.CloseMergeRangeDialogCommand;
     public ICommand ApplyMergeRangeSelectionCommand => Shell.ApplyMergeRangeSelectionCommand;
     public ICommand SaveGoogleFontsApiKeyCommand => Shell.SaveGoogleFontsApiKeyCommand;
+    public ICommand CheckForAppUpdatesCommand => Shell.CheckForAppUpdatesCommand;
+    public ICommand DownloadAndRestartAppUpdateCommand => Shell.DownloadAndRestartAppUpdateCommand;
+    public ICommand DismissAppUpdateCommand => Shell.DismissAppUpdateCommand;
 }

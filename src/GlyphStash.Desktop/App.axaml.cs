@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using System.Runtime.Versioning;
+using GlyphStash.Application.Abstractions.App;
 using GlyphStash.Application.Abstractions.Fonts;
 using GlyphStash.Application.Abstractions.Storage;
 using GlyphStash.Application.Fonts;
@@ -99,6 +100,7 @@ public partial class App : Avalonia.Application
         services.AddSingleton<ITemporaryFontActivationService, WindowsTemporaryFontActivationService>();
         services.AddSingleton<FontActivationCoordinator>();
         services.AddSingleton<IAppLocalizationService, AppLocalizationService>();
+        services.AddSingleton<IAppUpdateService, VelopackAppUpdateService>();
 
         services.AddScoped<IFontInventoryService, WindowsFontInventoryService>();
         services.AddScoped<IFontMetadataReader, OpenTypeFontMetadataReader>();

@@ -1,5 +1,6 @@
 using System.Collections.Specialized;
 using Avalonia.Media;
+using GlyphStash.Application.Abstractions.App;
 using GlyphStash.Application.Abstractions.Fonts;
 using GlyphStash.Application.Abstractions.Storage;
 using GlyphStash.Application.Fonts;
@@ -79,6 +80,42 @@ public sealed class ShellViewModelTests
         Assert.Equal("Configured", AppText.Get("Common.Configured"));
 
         AppText.SetCulture("zh-CN");
+    }
+
+    [Fact]
+    public async Task CheckForAppUpdates_ShowsAvailableUpdateAndEnablesDownload()
+    {
+        var updateService = new FakeAppUpdateService(
+            AppUpdateCheckResult.Available("0.1.0", "0.2.0", "发现新版本，可以下载并重启更新。", "Release notes"));
+        var vm = ShellViewModelTestFactory.Create(
+            ShellViewModelTestFactory.CreateLibraryService(new FakeInventory([]), new FakeStore([CreateFont("Inter")])),
+            appUpdateService: updateService);
+
+        await vm.InitializeAsync();
+        await vm.CheckForAppUpdatesCommand.ExecuteAsync(null);
+
+        Assert.True(vm.CanDownloadAppUpdate);
+        Assert.Equal("0.2.0", vm.AppUpdateAvailableVersion);
+        Assert.Equal("Release notes", vm.AppUpdateReleaseNotes);
+        Assert.Contains("新版本", vm.AppUpdateStatus, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task DownloadAndRestartAppUpdate_ReportsProgressAndFailure()
+    {
+        var updateService = new FakeAppUpdateService(
+            AppUpdateCheckResult.Available("0.1.0", "0.2.0", "available", ""));
+        updateService.ApplyResult = new AppUpdateApplyResult(false, "failed");
+        var vm = ShellViewModelTestFactory.Create(
+            ShellViewModelTestFactory.CreateLibraryService(new FakeInventory([]), new FakeStore([CreateFont("Inter")])),
+            appUpdateService: updateService);
+
+        await vm.InitializeAsync();
+        await vm.CheckForAppUpdatesCommand.ExecuteAsync(null);
+        await vm.DownloadAndRestartAppUpdateCommand.ExecuteAsync(null);
+
+        Assert.Equal(42, vm.AppUpdateProgress);
+        Assert.Equal("failed", vm.AppUpdateStatus);
     }
 
     [Fact]
@@ -1436,6 +1473,31 @@ public sealed class ShellViewModelTests
 
         public Task<FontUninstallResult> UninstallManagedFontAsync(ManagedFontRecord managedFont, CancellationToken cancellationToken) =>
             Task.FromResult(new FontUninstallResult(true, managedFont.ManagedFilePath, "uninstalled"));
+    }
+
+    private sealed class FakeAppUpdateService : IAppUpdateService
+    {
+        private readonly AppUpdateCheckResult _checkResult;
+
+        public FakeAppUpdateService(AppUpdateCheckResult checkResult)
+        {
+            _checkResult = checkResult;
+        }
+
+        public string UpdateSource => "https://github.com/Runarry/GlyphStash";
+
+        public string CurrentVersion => _checkResult.CurrentVersion;
+
+        public AppUpdateApplyResult ApplyResult { get; set; } = new(true, "applied");
+
+        public Task<AppUpdateCheckResult> CheckForUpdatesAsync(CancellationToken cancellationToken) =>
+            Task.FromResult(_checkResult);
+
+        public Task<AppUpdateApplyResult> DownloadAndApplyUpdateAsync(IProgress<int>? progress, CancellationToken cancellationToken)
+        {
+            progress?.Report(42);
+            return Task.FromResult(ApplyResult);
+        }
     }
 
     private sealed class FakeOperationLogStore : IOperationLogStore

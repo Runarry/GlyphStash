@@ -1,4 +1,5 @@
 using GlyphStash.Application.Abstractions.Fonts;
+using GlyphStash.Application.Abstractions.App;
 using GlyphStash.Application.Abstractions.Storage;
 using GlyphStash.Application.Fonts;
 using GlyphStash.Domain.Fonts;
@@ -18,6 +19,7 @@ internal static class ShellViewModelTestFactory
         IUserClipboardService? clipboardService = null,
         IFontPreviewRegistry? fontPreviewRegistry = null,
         IFontMergeService? fontMergeService = null,
+        IAppUpdateService? appUpdateService = null,
         IAppLocalizationService? localizationService = null) =>
         new(
             fontLibraryService,
@@ -28,6 +30,7 @@ internal static class ShellViewModelTestFactory
             clipboardService ?? NullUserFileDialogService.Instance,
             fontPreviewRegistry ?? NullFontPreviewRegistry.Instance,
             fontMergeService ?? NoOpFontMergeService.Instance,
+            appUpdateService ?? NoOpAppUpdateService.Instance,
             localizationService ?? new AppLocalizationService());
 
     public static FontLibraryService CreateLibraryService(
@@ -159,6 +162,21 @@ internal static class ShellViewModelTestFactory
 
         public Task<FontMergeReport> ReadReportAsync(string reportPath, CancellationToken cancellationToken) =>
             throw new InvalidOperationException("No merge report is configured for this test.");
+    }
+
+    private sealed class NoOpAppUpdateService : IAppUpdateService
+    {
+        public static NoOpAppUpdateService Instance { get; } = new();
+
+        public string UpdateSource => "https://github.com/Runarry/GlyphStash";
+
+        public string CurrentVersion => "0.0.0-test";
+
+        public Task<AppUpdateCheckResult> CheckForUpdatesAsync(CancellationToken cancellationToken) =>
+            Task.FromResult(AppUpdateCheckResult.NoUpdate(CurrentVersion, "current"));
+
+        public Task<AppUpdateApplyResult> DownloadAndApplyUpdateAsync(IProgress<int>? progress, CancellationToken cancellationToken) =>
+            Task.FromResult(new AppUpdateApplyResult(false, "no update"));
     }
 
     private sealed class NoOpSettingsStore : IAppSettingsStore

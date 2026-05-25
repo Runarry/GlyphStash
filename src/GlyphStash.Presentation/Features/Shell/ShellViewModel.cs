@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using GlyphStash.Application.Abstractions.App;
 using GlyphStash.Application.Abstractions.Fonts;
 using GlyphStash.Application.Fonts;
 using GlyphStash.Domain.Fonts;
@@ -42,6 +43,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     private readonly IOnlineFontService _onlineFontService;
     private readonly IGlyphCatalogService _glyphCatalogService;
     private readonly IFontMergeService _fontMergeService;
+    private readonly IAppUpdateService _appUpdateService;
     private readonly List<FontFamilyItemViewModel> _allFonts = [];
     private FontImportPreview? _currentImportPreview;
     private bool _isProcessingOnlineDownloadQueue;
@@ -108,6 +110,29 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     [NotifyPropertyChangedFor(nameof(CanHideToTray))]
     [NotifyPropertyChangedFor(nameof(TrayHideBlockReason))]
     private bool _isBusy;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanDownloadAppUpdate))]
+    [NotifyPropertyChangedFor(nameof(AppUpdateProgressLabel))]
+    private bool _isAppUpdateBusy;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanDownloadAppUpdate))]
+    private bool _hasPendingAppUpdate;
+
+    [ObservableProperty]
+    private string _appUpdateStatus = AppText.TranslateLiteral("尚未检查应用更新。");
+
+    [ObservableProperty]
+    private string _appUpdateAvailableVersion = "";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasAppUpdateReleaseNotes))]
+    private string _appUpdateReleaseNotes = "";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(AppUpdateProgressLabel))]
+    private int _appUpdateProgress;
 
     [ObservableProperty]
     private bool _isImportDialogOpen;
@@ -398,6 +423,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         IUserClipboardService clipboardService,
         IFontPreviewRegistry fontPreviewRegistry,
         IFontMergeService fontMergeService,
+        IAppUpdateService appUpdateService,
         IAppLocalizationService localizationService)
         : this(
             fontLibraryService,
@@ -408,6 +434,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
             clipboardService,
             fontPreviewRegistry,
             fontMergeService,
+            appUpdateService,
             localizationService,
             new FontLibraryViewModel(),
             new CollectionsViewModel(),
@@ -428,6 +455,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         IUserClipboardService clipboardService,
         IFontPreviewRegistry fontPreviewRegistry,
         IFontMergeService fontMergeService,
+        IAppUpdateService appUpdateService,
         IAppLocalizationService localizationService,
         FontLibraryViewModel fontLibraryPage,
         CollectionsViewModel collectionsPage,
@@ -445,6 +473,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         _fontMergeService = fontMergeService;
         _clipboardService = clipboardService;
         _fontPreviewRegistry = fontPreviewRegistry;
+        _appUpdateService = appUpdateService;
         _localizationService = localizationService;
         _fontLibraryPage = fontLibraryPage;
         _collectionsPage = collectionsPage;
@@ -711,6 +740,18 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     public string ManagedDirectoryStatus => HasManagedFontDirectory ? T("Label.ManagedDirectoryReady") : T("Label.ManagedDirectoryRequired");
 
     public string GoogleFontsApiKeyStatus => string.IsNullOrWhiteSpace(GoogleFontsApiKeyText) ? T("Common.NotConfigured") : T("Common.Configured");
+
+    public string AppUpdateCurrentVersion => _appUpdateService.CurrentVersion;
+
+    public string AppUpdateSource => _appUpdateService.UpdateSource;
+
+    public bool CanDownloadAppUpdate => HasPendingAppUpdate && !IsAppUpdateBusy;
+
+    public bool HasAppUpdateReleaseNotes => !string.IsNullOrWhiteSpace(AppUpdateReleaseNotes);
+
+    public string AppUpdateProgressLabel => IsAppUpdateBusy && AppUpdateProgress > 0
+        ? AppText.FormatLiteral("下载进度：{0}%", "Download progress: {0}%", AppUpdateProgress)
+        : "";
 
     public bool HasRemoteFonts => RemoteFonts.Count > 0;
 

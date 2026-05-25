@@ -1,5 +1,6 @@
 param(
     [string]$Configuration = "Release",
+    [string]$Version = "0.1.0",
     [string]$Python = "python",
     [switch]$SkipWorkerBuild
 )
@@ -32,6 +33,10 @@ New-Item -ItemType Directory -Force -Path $PublishArtifactsDir | Out-Null
     (Join-Path $Root "src\GlyphStash.Desktop\GlyphStash.Desktop.csproj") `
     -c $Configuration `
     /p:PublishProfile=win-x64-nativeaot `
+    /p:Version=$Version `
+    /p:AssemblyVersion=$Version `
+    /p:FileVersion=$Version `
+    /p:InformationalVersion=$Version `
     -v minimal `
     "-flp:logfile=$PublishLog;verbosity=normal"
 Assert-LastExitCode "Publishing NativeAOT desktop app"
