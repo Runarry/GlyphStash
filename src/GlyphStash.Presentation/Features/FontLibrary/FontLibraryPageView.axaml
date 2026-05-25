@@ -35,8 +35,7 @@
             <StackPanel Spacing="7">
               <TextBlock Text="{DynamicResource L.Text.A488E93D69CC1296}" Classes="caption" FontWeight="Bold" />
               <ComboBox ItemsSource="{Binding SourceFilterOptions}"
-                        SelectedValue="{Binding SelectedSourceFilter, Mode=TwoWay}"
-                        SelectedValueBinding="{Binding Value, x:CompileBindings=False}"
+                        SelectedItem="{Binding SelectedSourceFilterOption, Mode=TwoWay}"
                         HorizontalAlignment="Stretch">
                 <ComboBox.ItemTemplate>
                   <DataTemplate x:DataType="vm:LocalizedOptionViewModel">
@@ -48,8 +47,7 @@
             <StackPanel Spacing="7">
               <TextBlock Text="{DynamicResource L.Text.83DE9A9A34438B31}" Classes="caption" FontWeight="Bold" />
               <ComboBox ItemsSource="{Binding StateFilterOptions}"
-                        SelectedValue="{Binding SelectedStateFilter, Mode=TwoWay}"
-                        SelectedValueBinding="{Binding Value, x:CompileBindings=False}"
+                        SelectedItem="{Binding SelectedStateFilterOption, Mode=TwoWay}"
                         HorizontalAlignment="Stretch">
                 <ComboBox.ItemTemplate>
                   <DataTemplate x:DataType="vm:LocalizedOptionViewModel">
@@ -61,8 +59,7 @@
             <StackPanel Spacing="7">
               <TextBlock Text="{DynamicResource L.Text.1D0FD5F9336D9103}" Classes="caption" FontWeight="Bold" />
               <ComboBox ItemsSource="{Binding TagFilterOptions}"
-                        SelectedValue="{Binding SelectedTagFilter, Mode=TwoWay}"
-                        SelectedValueBinding="{Binding Value, x:CompileBindings=False}"
+                        SelectedItem="{Binding SelectedTagFilterOption, Mode=TwoWay}"
                         HorizontalAlignment="Stretch">
                 <ComboBox.ItemTemplate>
                   <DataTemplate x:DataType="vm:LocalizedOptionViewModel">
@@ -74,8 +71,7 @@
             <StackPanel Spacing="7">
               <TextBlock Text="{DynamicResource L.Text.528E5174C2D4E5C8}" Classes="caption" FontWeight="Bold" />
               <ComboBox ItemsSource="{Binding CollectionFilterOptions}"
-                        SelectedValue="{Binding SelectedCollectionFilter, Mode=TwoWay}"
-                        SelectedValueBinding="{Binding Value, x:CompileBindings=False}"
+                        SelectedItem="{Binding SelectedCollectionFilterOption, Mode=TwoWay}"
                         HorizontalAlignment="Stretch">
                 <ComboBox.ItemTemplate>
                   <DataTemplate x:DataType="vm:LocalizedOptionViewModel">

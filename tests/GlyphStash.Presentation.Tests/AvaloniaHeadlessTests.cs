@@ -101,7 +101,7 @@ public sealed class AvaloniaHeadlessTests
     }
 
     [Fact]
-    public void ComboBoxSelectedValueBindings_UpdateStableSelectionProperties()
+    public void ComboBoxSelectedItemBindings_UpdateStableSelectionProperties()
     {
         HeadlessTestHost.EnsureAvalonia();
         var vm = ShellViewModelTestFactory.Create(ShellViewModelTestFactory.CreateLibraryService(new FakeInventory(), new FakeStore()));
@@ -111,8 +111,8 @@ public sealed class AvaloniaHeadlessTests
         var fontLibraryWindow = Show(new FontLibraryPageView { DataContext = vm.CurrentPage });
         try
         {
-            SelectComboBoxValue(fontLibraryWindow, vm.TagFilterOptions, "UI");
-            SelectComboBoxValue(fontLibraryWindow, vm.CollectionFilterOptions, "官网改版");
+            SelectComboBoxItem(fontLibraryWindow, vm.TagFilterOptions, "UI");
+            SelectComboBoxItem(fontLibraryWindow, vm.CollectionFilterOptions, "官网改版");
         }
         finally
         {
@@ -123,8 +123,8 @@ public sealed class AvaloniaHeadlessTests
         var onlineFontsWindow = Show(new OnlineFontsPageView { DataContext = vm.CurrentPage });
         try
         {
-            SelectComboBoxValue(onlineFontsWindow, vm.OnlineSubsetOptionModels, "latin-ext");
-            SelectComboBoxValue(onlineFontsWindow, vm.OnlineCategoryOptionModels, "sans-serif");
+            SelectComboBoxItem(onlineFontsWindow, vm.OnlineSubsetOptionModels, "latin-ext");
+            SelectComboBoxItem(onlineFontsWindow, vm.OnlineCategoryOptionModels, "sans-serif");
         }
         finally
         {
@@ -135,7 +135,7 @@ public sealed class AvaloniaHeadlessTests
         var mergeToolWindow = Show(new MergeToolPageView { DataContext = vm.CurrentPage });
         try
         {
-            SelectComboBoxValue(mergeToolWindow, vm.MergeModeOptionModels, "覆盖");
+            SelectComboBoxItem(mergeToolWindow, vm.MergeModeOptionModels, "覆盖");
         }
         finally
         {
@@ -200,12 +200,13 @@ public sealed class AvaloniaHeadlessTests
         return window;
     }
 
-    private static void SelectComboBoxValue(Window window, object itemsSource, string value)
+    private static void SelectComboBoxItem(Window window, object itemsSource, string value)
     {
         var comboBox = window.GetVisualDescendants()
             .OfType<ComboBox>()
             .Single(comboBox => ReferenceEquals(comboBox.ItemsSource, itemsSource));
-        comboBox.SelectedValue = value;
+        comboBox.SelectedItem = ((IEnumerable<LocalizedOptionViewModel>)itemsSource)
+            .Single(option => option.Value == value);
         Dispatcher.UIThread.RunJobs();
         AvaloniaHeadlessPlatform.ForceRenderTimerTick(1);
     }

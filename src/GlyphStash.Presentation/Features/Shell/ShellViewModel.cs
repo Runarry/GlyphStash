@@ -77,13 +77,25 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     private string _selectedSourceFilter = AllSourceFilter;
 
     [ObservableProperty]
+    private LocalizedOptionViewModel? _selectedSourceFilterOption;
+
+    [ObservableProperty]
     private string _selectedStateFilter = AllStateFilter;
+
+    [ObservableProperty]
+    private LocalizedOptionViewModel? _selectedStateFilterOption;
 
     [ObservableProperty]
     private string _selectedTagFilter = AllTagFilter;
 
     [ObservableProperty]
+    private LocalizedOptionViewModel? _selectedTagFilterOption;
+
+    [ObservableProperty]
     private string _selectedCollectionFilter = AllCollectionFilter;
+
+    [ObservableProperty]
+    private LocalizedOptionViewModel? _selectedCollectionFilterOption;
 
     [ObservableProperty]
     private string _previewText = AppText.TranslateLiteral(DefaultPreviewTextZh);
@@ -212,7 +224,13 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     private string _selectedOnlineSubset = AllOnlineSubset;
 
     [ObservableProperty]
+    private LocalizedOptionViewModel? _selectedOnlineSubsetOption;
+
+    [ObservableProperty]
     private string _selectedOnlineCategory = AllOnlineCategory;
+
+    [ObservableProperty]
+    private LocalizedOptionViewModel? _selectedOnlineCategoryOption;
 
     [ObservableProperty]
     private string _selectedOnlineSort = "alpha";
@@ -338,6 +356,9 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     private string _selectedMergeModeLabel = SupplementMergeModeLabel;
 
     [ObservableProperty]
+    private LocalizedOptionViewModel? _selectedMergeModeOptionByValue;
+
+    [ObservableProperty]
     private LocalizedOptionViewModel? _selectedMergeModeOption;
 
     [ObservableProperty]
@@ -401,6 +422,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     private string _mergeReportPath = "";
 
     private LanguageOptionViewModel? _selectedLanguage;
+    private bool _isSynchronizingOptionSelection;
 
     public LanguageOptionViewModel? SelectedLanguage
     {

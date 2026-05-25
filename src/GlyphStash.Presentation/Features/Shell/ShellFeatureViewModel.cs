@@ -29,9 +29,13 @@ public abstract class ShellFeatureViewModel : ObservableObject
 
     public string SearchText { get => Shell.SearchText; set => Shell.SearchText = value; }
     public string SelectedSourceFilter { get => Shell.SelectedSourceFilter; set => Shell.SelectedSourceFilter = value; }
+    public LocalizedOptionViewModel? SelectedSourceFilterOption { get => Shell.SelectedSourceFilterOption; set => Shell.SelectedSourceFilterOption = value; }
     public string SelectedStateFilter { get => Shell.SelectedStateFilter; set => Shell.SelectedStateFilter = value; }
+    public LocalizedOptionViewModel? SelectedStateFilterOption { get => Shell.SelectedStateFilterOption; set => Shell.SelectedStateFilterOption = value; }
     public string SelectedTagFilter { get => Shell.SelectedTagFilter; set => Shell.SelectedTagFilter = value; }
+    public LocalizedOptionViewModel? SelectedTagFilterOption { get => Shell.SelectedTagFilterOption; set => Shell.SelectedTagFilterOption = value; }
     public string SelectedCollectionFilter { get => Shell.SelectedCollectionFilter; set => Shell.SelectedCollectionFilter = value; }
+    public LocalizedOptionViewModel? SelectedCollectionFilterOption { get => Shell.SelectedCollectionFilterOption; set => Shell.SelectedCollectionFilterOption = value; }
     public string PreviewText { get => Shell.PreviewText; set => Shell.PreviewText = value; }
     public double PreviewFontSize { get => Shell.PreviewFontSize; set => Shell.PreviewFontSize = value; }
     public FontFamilyItemViewModel? SelectedFont { get => Shell.SelectedFont; set => Shell.SelectedFont = value; }
@@ -85,8 +89,10 @@ public abstract class ShellFeatureViewModel : ObservableObject
     public string OnlineSearchText { get => Shell.OnlineSearchText; set => Shell.OnlineSearchText = value; }
     public ObservableCollection<LocalizedOptionViewModel> OnlineSubsetOptionModels => Shell.OnlineSubsetOptionModels;
     public string SelectedOnlineSubset { get => Shell.SelectedOnlineSubset; set => Shell.SelectedOnlineSubset = value; }
+    public LocalizedOptionViewModel? SelectedOnlineSubsetOption { get => Shell.SelectedOnlineSubsetOption; set => Shell.SelectedOnlineSubsetOption = value; }
     public ObservableCollection<LocalizedOptionViewModel> OnlineCategoryOptionModels => Shell.OnlineCategoryOptionModels;
     public string SelectedOnlineCategory { get => Shell.SelectedOnlineCategory; set => Shell.SelectedOnlineCategory = value; }
+    public LocalizedOptionViewModel? SelectedOnlineCategoryOption { get => Shell.SelectedOnlineCategoryOption; set => Shell.SelectedOnlineCategoryOption = value; }
     public IReadOnlyList<string> OnlineSortOptions => Shell.OnlineSortOptions;
     public string SelectedOnlineSort { get => Shell.SelectedOnlineSort; set => Shell.SelectedOnlineSort = value; }
     public bool OnlineCapabilityVf { get => Shell.OnlineCapabilityVf; set => Shell.OnlineCapabilityVf = value; }
@@ -131,6 +137,7 @@ public abstract class ShellFeatureViewModel : ObservableObject
     public string MergeUnicodeRanges { get => Shell.MergeUnicodeRanges; set => Shell.MergeUnicodeRanges = value; }
     public ObservableCollection<LocalizedOptionViewModel> MergeModeOptionModels => Shell.MergeModeOptionModels;
     public string SelectedMergeModeLabel { get => Shell.SelectedMergeModeLabel; set => Shell.SelectedMergeModeLabel = value; }
+    public LocalizedOptionViewModel? SelectedMergeModeOptionByValue { get => Shell.SelectedMergeModeOptionByValue; set => Shell.SelectedMergeModeOptionByValue = value; }
     public string MergeModeDescription => Shell.MergeModeDescription;
     public string MergePreviewSummary => Shell.MergePreviewSummary;
     public string MergeDefaultStrategy => Shell.MergeDefaultStrategy;

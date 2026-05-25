@@ -212,6 +212,12 @@ public sealed partial class ShellViewModel
         ReplaceLocalizedOptions(OnlineSubsetOptionModels, OnlineSubsetOptions);
         ReplaceLocalizedOptions(OnlineCategoryOptionModels, OnlineCategoryOptions);
         ReplaceMergeModeOptions();
+        SyncSelectedOptionFromValue(SourceFilterOptions, SelectedSourceFilter, nameof(SelectedSourceFilterOption));
+        SyncSelectedOptionFromValue(StateFilterOptions, SelectedStateFilter, nameof(SelectedStateFilterOption));
+        SyncSelectedOptionFromValue(TagFilterOptions, SelectedTagFilter, nameof(SelectedTagFilterOption));
+        SyncSelectedOptionFromValue(CollectionFilterOptions, SelectedCollectionFilter, nameof(SelectedCollectionFilterOption));
+        SyncSelectedOptionFromValue(OnlineSubsetOptionModels, SelectedOnlineSubset, nameof(SelectedOnlineSubsetOption));
+        SyncSelectedOptionFromValue(OnlineCategoryOptionModels, SelectedOnlineCategory, nameof(SelectedOnlineCategoryOption));
     }
 
     private static void ReplaceLocalizedOptions(ObservableCollection<LocalizedOptionViewModel> target, IEnumerable<string> values)
@@ -223,11 +229,112 @@ public sealed partial class ShellViewModel
         }
     }
 
+    private void SyncSelectedOptionFromValue(
+        ObservableCollection<LocalizedOptionViewModel> options,
+        string value,
+        string propertyName)
+    {
+        if (_isSynchronizingOptionSelection)
+        {
+            return;
+        }
+
+        var option = options.FirstOrDefault(candidate => string.Equals(candidate.Value, value, StringComparison.CurrentCultureIgnoreCase));
+        SetSelectedOptionProperty(propertyName, option);
+    }
+
+    private void SyncSelectedValueFromOption(LocalizedOptionViewModel? option, string propertyName)
+    {
+        if (_isSynchronizingOptionSelection || option is null)
+        {
+            return;
+        }
+
+        _isSynchronizingOptionSelection = true;
+        try
+        {
+            SetPropertyValue(propertyName, option.Value);
+        }
+        finally
+        {
+            _isSynchronizingOptionSelection = false;
+        }
+    }
+
+    private void SetSelectedOptionProperty(string propertyName, LocalizedOptionViewModel? option)
+    {
+        _isSynchronizingOptionSelection = true;
+        try
+        {
+            switch (propertyName)
+            {
+                case nameof(SelectedSourceFilterOption):
+                    SelectedSourceFilterOption = option;
+                    break;
+                case nameof(SelectedStateFilterOption):
+                    SelectedStateFilterOption = option;
+                    break;
+                case nameof(SelectedTagFilterOption):
+                    SelectedTagFilterOption = option;
+                    break;
+                case nameof(SelectedCollectionFilterOption):
+                    SelectedCollectionFilterOption = option;
+                    break;
+                case nameof(SelectedOnlineSubsetOption):
+                    SelectedOnlineSubsetOption = option;
+                    break;
+                case nameof(SelectedOnlineCategoryOption):
+                    SelectedOnlineCategoryOption = option;
+                    break;
+                case nameof(SelectedMergeModeOptionByValue):
+                    SelectedMergeModeOptionByValue = option;
+                    break;
+                default:
+                    throw new InvalidOperationException($"Unsupported selected option property: {propertyName}");
+            }
+        }
+        finally
+        {
+            _isSynchronizingOptionSelection = false;
+        }
+    }
+
+    private void SetPropertyValue(string propertyName, string value)
+    {
+        switch (propertyName)
+        {
+            case nameof(SelectedSourceFilter):
+                SelectedSourceFilter = value;
+                break;
+            case nameof(SelectedStateFilter):
+                SelectedStateFilter = value;
+                break;
+            case nameof(SelectedTagFilter):
+                SelectedTagFilter = value;
+                break;
+            case nameof(SelectedCollectionFilter):
+                SelectedCollectionFilter = value;
+                break;
+            case nameof(SelectedOnlineSubset):
+                SelectedOnlineSubset = value;
+                break;
+            case nameof(SelectedOnlineCategory):
+                SelectedOnlineCategory = value;
+                break;
+            case nameof(SelectedMergeModeLabel):
+                SelectedMergeModeLabel = value;
+                break;
+            default:
+                throw new InvalidOperationException($"Unsupported selected value property: {propertyName}");
+        }
+    }
+
     private void ReplaceMergeModeOptions()
     {
         MergeModeOptionModels.Clear();
         MergeModeOptionModels.Add(new LocalizedOptionViewModel(SupplementMergeModeLabel, SupplementMergeModeLabel, "Supplement (append)"));
         MergeModeOptionModels.Add(new LocalizedOptionViewModel(OverwriteMergeModeLabel, OverwriteMergeModeLabel, "Overwrite"));
+        SyncSelectedOptionFromValue(MergeModeOptionModels, SelectedMergeModeLabel, nameof(SelectedMergeModeOptionByValue));
     }
 
     private static void RefreshLocalizedOptions(IEnumerable<LocalizedOptionViewModel> options)

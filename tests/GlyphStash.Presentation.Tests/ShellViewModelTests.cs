@@ -119,6 +119,36 @@ public sealed class ShellViewModelTests
     }
 
     [Fact]
+    public async Task SettingStringFilter_ResolvesSelectedOptionInstance()
+    {
+        var vm = ShellViewModelTestFactory.Create(
+            ShellViewModelTestFactory.CreateLibraryService(new FakeInventory([]), new FakeStore([CreateFont("Inter")])));
+
+        await vm.InitializeAsync();
+        vm.SelectedTagFilter = "全部标签";
+        vm.SelectedOnlineSubset = "latin-ext";
+        vm.SelectedMergeModeLabel = "覆盖";
+
+        Assert.Equal("全部标签", vm.SelectedTagFilterOption?.Value);
+        Assert.Equal("latin-ext", vm.SelectedOnlineSubsetOption?.Value);
+        Assert.Equal("覆盖", vm.SelectedMergeModeOptionByValue?.Value);
+    }
+
+    [Fact]
+    public async Task SettingOptionSelection_UpdatesExistingStringApi()
+    {
+        var vm = ShellViewModelTestFactory.Create(
+            ShellViewModelTestFactory.CreateLibraryService(new FakeInventory([]), new FakeStore([CreateFont("Inter")])));
+
+        await vm.InitializeAsync();
+        vm.SelectedOnlineCategoryOption = vm.OnlineCategoryOptionModels.Single(option => option.Value == "sans-serif");
+        vm.SelectedMergeModeOptionByValue = vm.MergeModeOptionModels.Single(option => option.Value == "覆盖");
+
+        Assert.Equal("sans-serif", vm.SelectedOnlineCategory);
+        Assert.Equal("覆盖", vm.SelectedMergeModeLabel);
+    }
+
+    [Fact]
     public async Task Constructor_DoesNotOverwritePersistedLanguageBeforeSettingsLoad()
     {
         AppText.SetCulture("zh-CN");

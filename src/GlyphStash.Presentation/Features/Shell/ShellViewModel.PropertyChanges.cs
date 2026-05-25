@@ -13,16 +13,25 @@ public sealed partial class ShellViewModel
 
     partial void OnSelectedSourceFilterChanged(string value)
     {
+        SyncSelectedOptionFromValue(SourceFilterOptions, value, nameof(SelectedSourceFilterOption));
         ApplyFilters();
     }
+
+    partial void OnSelectedSourceFilterOptionChanged(LocalizedOptionViewModel? value) =>
+        SyncSelectedValueFromOption(value, nameof(SelectedSourceFilter));
 
     partial void OnSelectedStateFilterChanged(string value)
     {
+        SyncSelectedOptionFromValue(StateFilterOptions, value, nameof(SelectedStateFilterOption));
         ApplyFilters();
     }
 
+    partial void OnSelectedStateFilterOptionChanged(LocalizedOptionViewModel? value) =>
+        SyncSelectedValueFromOption(value, nameof(SelectedStateFilter));
+
     partial void OnSelectedTagFilterChanged(string value)
     {
+        SyncSelectedOptionFromValue(TagFilterOptions, value, nameof(SelectedTagFilterOption));
         if (string.IsNullOrWhiteSpace(value))
         {
             SelectTagFilter(AllTagFilter);
@@ -32,8 +41,12 @@ public sealed partial class ShellViewModel
         ApplyFilters();
     }
 
+    partial void OnSelectedTagFilterOptionChanged(LocalizedOptionViewModel? value) =>
+        SyncSelectedValueFromOption(value, nameof(SelectedTagFilter));
+
     partial void OnSelectedCollectionFilterChanged(string value)
     {
+        SyncSelectedOptionFromValue(CollectionFilterOptions, value, nameof(SelectedCollectionFilterOption));
         if (string.IsNullOrWhiteSpace(value))
         {
             SelectCollectionFilter(AllCollectionFilter);
@@ -42,6 +55,9 @@ public sealed partial class ShellViewModel
 
         ApplyFilters();
     }
+
+    partial void OnSelectedCollectionFilterOptionChanged(LocalizedOptionViewModel? value) =>
+        SyncSelectedValueFromOption(value, nameof(SelectedCollectionFilter));
 
     partial void OnCollectionSearchTextChanged(string value) => ApplyCollectionFilter();
 
@@ -140,6 +156,18 @@ public sealed partial class ShellViewModel
         }
     }
 
+    partial void OnSelectedOnlineSubsetChanged(string value) =>
+        SyncSelectedOptionFromValue(OnlineSubsetOptionModels, value, nameof(SelectedOnlineSubsetOption));
+
+    partial void OnSelectedOnlineSubsetOptionChanged(LocalizedOptionViewModel? value) =>
+        SyncSelectedValueFromOption(value, nameof(SelectedOnlineSubset));
+
+    partial void OnSelectedOnlineCategoryChanged(string value) =>
+        SyncSelectedOptionFromValue(OnlineCategoryOptionModels, value, nameof(SelectedOnlineCategoryOption));
+
+    partial void OnSelectedOnlineCategoryOptionChanged(LocalizedOptionViewModel? value) =>
+        SyncSelectedValueFromOption(value, nameof(SelectedOnlineCategory));
+
     partial void OnMergeStepIndexChanged(int value) => RefreshMergeStepState();
 
     partial void OnMergeBaseSearchTextChanged(string value) => RefreshMergeFontLists();
@@ -171,11 +199,15 @@ public sealed partial class ShellViewModel
 
     partial void OnSelectedMergeModeLabelChanged(string value)
     {
+        SyncSelectedOptionFromValue(MergeModeOptionModels, value, nameof(SelectedMergeModeOptionByValue));
         _currentMergePreview = null;
         MergeConflicts.Clear();
         MergeIssues.Clear();
         NotifyMergePreviewState();
     }
+
+    partial void OnSelectedMergeModeOptionByValueChanged(LocalizedOptionViewModel? value) =>
+        SyncSelectedValueFromOption(value, nameof(SelectedMergeModeLabel));
 
     partial void OnMergeOutputFontNameChanged(string value) => NotifyMergeExportState();
 
