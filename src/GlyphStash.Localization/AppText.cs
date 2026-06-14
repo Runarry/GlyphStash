@@ -317,6 +317,8 @@ public static class AppText
         ["搜索本地字体"] = "Search local fonts",
         ["Unicode 范围输入"] = "Unicode ranges",
         ["查看实际范围"] = "View actual range",
+        ["快速选择"] = "Quick presets",
+        ["按语言或用途快速填写范围；选择后仍可手动编辑。"] = "Fill ranges by language or use case; you can still edit the input after choosing.",
         ["合并模式"] = "Merge mode",
         ["范围摘要"] = "Range summary",
         ["点击下一步会执行 dry-run，检查补充字体覆盖、重复码位和阻止级问题。"] = "Next runs a dry-run to check supplemental coverage, duplicate code points, and blocking issues.",

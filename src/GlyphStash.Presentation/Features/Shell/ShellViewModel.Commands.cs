@@ -188,6 +188,20 @@ public sealed partial class ShellViewModel
     }
 
     [RelayCommand]
+    private void ApplyMergeUnicodePreset(MergeUnicodeRangePresetViewModel? preset)
+    {
+        if (preset is null)
+        {
+            return;
+        }
+
+        MergeUnicodeRanges = preset.RangeText;
+        MergeStatus = AppText.CurrentCultureCode == AppText.EnglishCultureCode
+            ? $"Selected quick preset: {preset.DisplayName} ({preset.RangeText})"
+            : $"已选择快速预设：{preset.DisplayName}（{preset.RangeText}）";
+    }
+
+    [RelayCommand]
     private async Task OpenMergeRangeDialogAsync()
     {
         IsMergeRangeDialogOpen = true;

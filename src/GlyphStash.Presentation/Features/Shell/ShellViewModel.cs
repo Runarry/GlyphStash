@@ -608,6 +608,9 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
 
     public ObservableCollection<FontFamilyItemViewModel> MergeSupplementalFonts { get; } = [];
 
+    public ObservableCollection<MergeUnicodeRangePresetViewModel> MergeUnicodeRangePresets { get; } =
+        [.. MergeUnicodeRangePresetCatalog.Presets.Select(preset => new MergeUnicodeRangePresetViewModel(preset))];
+
     public ObservableCollection<MergeRangeBlockItemViewModel> MergeRangeBlocks { get; } = [];
 
     public IReadOnlyList<MergeRangeSegmentItemViewModel> MergeRangeSegments => GetVisibleMergeRangeSegments().ToList();

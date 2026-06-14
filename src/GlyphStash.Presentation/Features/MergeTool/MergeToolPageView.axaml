@@ -113,6 +113,35 @@
                     </Grid>
                   </StackPanel>
                 <StackPanel Spacing="7">
+                  <TextBlock Text="{DynamicResource L.Text.825F27026631C8FE}" Classes="caption" FontWeight="Bold" />
+                  <TextBlock Text="{DynamicResource L.Text.1FB7B366AB20619A}" Classes="muted" TextWrapping="Wrap" />
+                  <ItemsControl ItemsSource="{Binding MergeUnicodeRangePresets}">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate>
+                        <WrapPanel />
+                      </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:MergeUnicodeRangePresetViewModel">
+                        <Button Classes="sm"
+                                Width="190"
+                                MinHeight="82"
+                                Margin="0,0,8,8"
+                                Padding="10,8"
+                                HorizontalContentAlignment="Stretch"
+                                Command="{Binding $parent[UserControl].((feature:MergeToolViewModel)DataContext).ApplyMergeUnicodePresetCommand}"
+                                CommandParameter="{Binding .}">
+                          <StackPanel Spacing="3">
+                            <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" />
+                            <TextBlock Text="{Binding Description}" Classes="muted" TextWrapping="Wrap" MaxLines="2" />
+                            <TextBlock Text="{Binding RangeCountLabel}" Classes="caption" />
+                          </StackPanel>
+                        </Button>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+                <StackPanel Spacing="7">
                   <TextBlock Text="{DynamicResource L.Text.B43C644EE7186159}" Classes="caption" FontWeight="Bold" />
                   <ComboBox ItemsSource="{Binding MergeModeOptionModels}"
                             SelectedItem="{Binding SelectedMergeModeOptionByValue, Mode=TwoWay}"
@@ -125,12 +154,6 @@
                   </ComboBox>
                   <TextBlock Text="{Binding MergeModeDescription}" Classes="muted" TextWrapping="Wrap" />
                 </StackPanel>
-                <WrapPanel>
-                  <Button Content="CJK Unified Ideographs" Classes="sm" Margin="0,0,8,8" Command="{Binding ApplyMergeUnicodeBlockCommand}" CommandParameter="U+4E00-U+9FFF" />
-                  <Button Content="Basic Latin" Classes="sm" Margin="0,0,8,8" Command="{Binding ApplyMergeUnicodeBlockCommand}" CommandParameter="U+0000-U+007F" />
-                  <Button Content="CJK Symbols" Classes="sm" Margin="0,0,8,8" Command="{Binding ApplyMergeUnicodeBlockCommand}" CommandParameter="U+3000-U+303F" />
-                  <Button Content="Punctuation" Classes="sm" Margin="0,0,8,8" Command="{Binding ApplyMergeUnicodeBlockCommand}" CommandParameter="U+2000-U+206F" />
-                </WrapPanel>
                 <Border Classes="card">
                   <StackPanel Spacing="8">
                     <TextBlock Text="{DynamicResource L.Text.64B95C202EF8B156}" Classes="h2" />

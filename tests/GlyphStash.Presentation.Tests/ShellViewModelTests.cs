@@ -197,6 +197,7 @@ public sealed class ShellViewModelTests
             Assert.Equal("1 Select fonts", vm.MergeSteps[0].Label);
             Assert.Equal("All subsets", vm.OnlineSubsetOptionModels[0].DisplayName);
             Assert.Equal("All categories", vm.OnlineCategoryOptionModels[0].DisplayName);
+            Assert.Equal("Chinese", vm.MergeUnicodeRangePresets.Single(preset => preset.Key == "chinese").DisplayName);
             Assert.Equal("Select a base font and supplemental font.", vm.MergeStatus);
             Assert.Contains("Notepad: covers newly started", vm.CompatibilityMatrix[0], StringComparison.Ordinal);
             Assert.Equal("Unknown license", new FontFamilyItemViewModel(CreateFont("Inter")).LicenseLabel);
@@ -207,6 +208,31 @@ public sealed class ShellViewModelTests
                 LicenseText = "请查看来源页面：https://fonts.example/Noto"
             });
             Assert.Equal("See source page: https://fonts.example/Noto", linkedFont.LicenseLabel);
+        }
+        finally
+        {
+            AppText.SetCulture("zh-CN");
+        }
+    }
+
+    [Fact]
+    public void MergeUnicodeRangePreset_ReplacesInputWithFullMultiRangeList()
+    {
+        AppText.SetCulture("zh-CN");
+        try
+        {
+            var vm = ShellViewModelTestFactory.Create(
+                ShellViewModelTestFactory.CreateLibraryService(new FakeInventory([]), new FakeStore([])));
+            var preset = vm.MergeUnicodeRangePresets.Single(item => item.Key == "japanese");
+
+            vm.MergeUnicodeRanges = "U+0041";
+            vm.ApplyMergeUnicodePresetCommand.Execute(preset);
+
+            Assert.Equal("日文", preset.DisplayName);
+            Assert.Equal(preset.RangeText, vm.MergeUnicodeRanges);
+            Assert.Contains(", ", vm.MergeUnicodeRanges, StringComparison.Ordinal);
+            Assert.Contains("U+3040-U+309F", vm.MergeUnicodeRanges, StringComparison.Ordinal);
+            Assert.Contains("日文", vm.MergeStatus, StringComparison.Ordinal);
         }
         finally
         {

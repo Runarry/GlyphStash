@@ -97,6 +97,11 @@ public sealed partial class ShellViewModel
             item.RefreshLocalizedState();
         }
 
+        foreach (var item in MergeUnicodeRangePresets)
+        {
+            item.RefreshLocalizedState();
+        }
+
         foreach (var item in _allMergeRangeSegments)
         {
             item.RefreshLocalizedState();

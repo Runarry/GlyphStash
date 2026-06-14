@@ -135,6 +135,7 @@ public abstract class ShellFeatureViewModel : ObservableObject
     public ObservableCollection<FontFamilyItemViewModel> MergeSupplementalFonts => Shell.MergeSupplementalFonts;
     public FontFamilyItemViewModel? SelectedMergeSupplementalFont { get => Shell.SelectedMergeSupplementalFont; set => Shell.SelectedMergeSupplementalFont = value; }
     public string MergeUnicodeRanges { get => Shell.MergeUnicodeRanges; set => Shell.MergeUnicodeRanges = value; }
+    public ObservableCollection<MergeUnicodeRangePresetViewModel> MergeUnicodeRangePresets => Shell.MergeUnicodeRangePresets;
     public ObservableCollection<LocalizedOptionViewModel> MergeModeOptionModels => Shell.MergeModeOptionModels;
     public string SelectedMergeModeLabel { get => Shell.SelectedMergeModeLabel; set => Shell.SelectedMergeModeLabel = value; }
     public LocalizedOptionViewModel? SelectedMergeModeOptionByValue { get => Shell.SelectedMergeModeOptionByValue; set => Shell.SelectedMergeModeOptionByValue = value; }
@@ -239,6 +240,7 @@ public abstract class ShellFeatureViewModel : ObservableObject
     public ICommand SetMergeStepCommand => Shell.SetMergeStepCommand;
     public ICommand OpenMergeRangeDialogCommand => Shell.OpenMergeRangeDialogCommand;
     public ICommand ApplyMergeUnicodeBlockCommand => Shell.ApplyMergeUnicodeBlockCommand;
+    public ICommand ApplyMergeUnicodePresetCommand => Shell.ApplyMergeUnicodePresetCommand;
     public ICommand PreviousMergeStepCommand => Shell.PreviousMergeStepCommand;
     public ICommand CancelMergeCommand => Shell.CancelMergeCommand;
     public ICommand NextMergeStepCommand => Shell.NextMergeStepCommand;
