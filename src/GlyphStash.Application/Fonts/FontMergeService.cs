@@ -190,13 +190,13 @@ public sealed class FontMergeService : IFontMergeService
         var extension = Path.GetExtension(font.File.Path);
         if (RecognizedButUnsupportedExtensions.Contains(extension, StringComparer.OrdinalIgnoreCase))
         {
-            issues.Add(new FontMergeIssue(FontMergeIssueKind.UnsupportedFontKind, FontMergeIssueSeverity.Error, F("{0}是 {1}，M4 v1 仅支持静态单字体 TTF/OTF。", "{0} is {1}. M4 v1 only supports static single-font TTF/OTF.", target, extension.TrimStart('.').ToUpperInvariant()), target));
+            issues.Add(new FontMergeIssue(FontMergeIssueKind.UnsupportedFontKind, FontMergeIssueSeverity.Error, F("{0}是 {1}，M4 v1 仅支持静态单字体 TTF/OTF；合并阶段仅支持静态 TrueType/glyf 轮廓，部分 OTF/CFF 暂不支持。", "{0} is {1}. M4 v1 only supports static single-font TTF/OTF; merging only supports static TrueType/glyf outlines, and some OTF/CFF fonts are not supported.", target, extension.TrimStart('.').ToUpperInvariant()), target));
             return;
         }
 
         if (!SupportedExtensions.Contains(extension, StringComparer.OrdinalIgnoreCase))
         {
-            issues.Add(new FontMergeIssue(FontMergeIssueKind.UnsupportedFormat, FontMergeIssueSeverity.Error, F("{0}格式不支持，M4 v1 仅支持 TTF/OTF。", "{0} format is unsupported. M4 v1 only supports TTF/OTF.", target), target));
+            issues.Add(new FontMergeIssue(FontMergeIssueKind.UnsupportedFormat, FontMergeIssueSeverity.Error, F("{0}格式不支持，M4 v1 仅支持 TTF/OTF 输入；合并阶段仅支持静态 TrueType/glyf 轮廓，部分 OTF/CFF 暂不支持。", "{0} format is unsupported. M4 v1 only supports TTF/OTF input; merging only supports static TrueType/glyf outlines, and some OTF/CFF fonts are not supported.", target), target));
         }
     }
 

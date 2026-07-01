@@ -107,6 +107,9 @@ public sealed partial class ShellViewModel
             item.RefreshLocalizedState();
         }
 
+        MergeBaseInput.RefreshLocalizedState();
+        MergeSupplementalInput.RefreshLocalizedState();
+
         OnPropertyChanged(nameof(CurrentPageTitle));
         OnPropertyChanged(nameof(CurrentPageDescription));
         OnPropertyChanged(nameof(FontCountLabel));
@@ -570,7 +573,7 @@ public sealed partial class ShellViewModel
         SelectedMergeRangeBlock = null;
         MergeRangeBaseSummary = L("未读取基础字体 A。");
         MergeRangeSupplementalSummary = L("未读取补充字体 B。");
-        MergeRangeDialogStatus = L("请选择基础字体和补充字体。");
+        MergeRangeDialogStatus = L("请选择基础字体 A 文件和补充字体 B 文件。");
         NotifyMergeRangeDialogState();
     }
 
@@ -678,6 +681,21 @@ public sealed partial class ShellViewModel
             : AppText.CurrentCultureCode == AppText.EnglishCultureCode
                 ? $"{font.FamilyName} · {face.StyleLabel} · Waiting to read"
                 : $"{font.FamilyName} · {face.StyleLabel} · 等待读取";
+    }
+
+    private static string BuildPendingMergeRangeSummary(MergeFontInputViewModel input, string fallbackLabel)
+    {
+        var selection = input.Selection;
+        if (selection is null)
+        {
+            return AppText.CurrentCultureCode == AppText.EnglishCultureCode
+                ? $"{fallbackLabel} file is not selected."
+                : $"未选择{fallbackLabel}文件。";
+        }
+
+        return AppText.CurrentCultureCode == AppText.EnglishCultureCode
+            ? $"{selection.FamilyName} · {selection.StyleName} · Waiting to read"
+            : $"{selection.FamilyName} · {selection.StyleName} · 等待读取";
     }
 
     private static IReadOnlyList<GlyphCoverageSegment> BuildComparisonSegments(
@@ -835,34 +853,13 @@ public sealed partial class ShellViewModel
     private FontMergeRequest CreateMergeRequest(bool includeOutput)
     {
         return new FontMergeRequest(
-            CreateMergeSelection(SelectedMergeBaseFont),
-            CreateMergeSelection(SelectedMergeSupplementalFont),
+            MergeBaseInput.Selection,
+            MergeSupplementalInput.Selection,
             MergeUnicodeRanges,
             includeOutput ? MergeOutputPath : "",
             MergeOutputFontName,
             MergeLicenseConfirmed,
             MergeMode: SelectedMergeMode);
-    }
-
-    private static FontMergeFontSelection? CreateMergeSelection(FontFamilyItemViewModel? font)
-    {
-        if (font is null)
-        {
-            return null;
-        }
-
-        var record = font.ToRecord();
-        var face = SelectDefaultPreviewFace(font)?.ToRecord() ?? record.Faces.FirstOrDefault();
-        if (face is null)
-        {
-            return null;
-        }
-
-        return new FontMergeFontSelection(
-            record.FamilyName,
-            FontStyleVariantFormatter.FormatFaceStyle(face.SubfamilyName, face.Weight, face.Slant),
-            new FontFileRef(face.File.Path, face.File.Format, face.File.Sha256),
-            new LicenseSnapshot(record.LicenseStatus, record.LicenseText));
     }
 
     private void ApplyMergePreview(FontMergePreview preview)
@@ -928,6 +925,16 @@ public sealed partial class ShellViewModel
         OnPropertyChanged(nameof(HasSelectedMergeSupplementalFont));
     }
 
+    private void NotifyMergeInputStateChanged()
+    {
+        _currentMergePreview = null;
+        MergeConflicts.Clear();
+        MergeIssues.Clear();
+        UpdateDefaultMergeOutputName();
+        NotifyMergePreviewState();
+        NotifyMergeExportState();
+    }
+
     private void NotifyMergeReportState()
     {
         OnPropertyChanged(nameof(HasMergeReport));
@@ -935,12 +942,12 @@ public sealed partial class ShellViewModel
 
     private void UpdateDefaultMergeOutputName()
     {
-        if (!string.IsNullOrWhiteSpace(MergeOutputFontName) || SelectedMergeBaseFont is null)
+        if (!string.IsNullOrWhiteSpace(MergeOutputFontName) || MergeBaseInput.Selection is null)
         {
             return;
         }
 
-        MergeOutputFontName = $"{SelectedMergeBaseFont.FamilyName} Patch";
+        MergeOutputFontName = $"{MergeBaseInput.Selection.FamilyName} Patch";
     }
 
     private string BuildSuggestedMergeOutputFileName()

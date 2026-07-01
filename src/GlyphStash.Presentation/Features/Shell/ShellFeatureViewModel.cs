@@ -128,6 +128,8 @@ public abstract class ShellFeatureViewModel : ObservableObject
     public bool IsMergeStepPreview => Shell.IsMergeStepPreview;
     public bool IsMergeStepExport => Shell.IsMergeStepExport;
     public bool IsMergeStepReport => Shell.IsMergeStepReport;
+    public MergeFontInputViewModel MergeBaseInput => Shell.MergeBaseInput;
+    public MergeFontInputViewModel MergeSupplementalInput => Shell.MergeSupplementalInput;
     public string MergeBaseSearchText { get => Shell.MergeBaseSearchText; set => Shell.MergeBaseSearchText = value; }
     public ObservableCollection<FontFamilyItemViewModel> MergeBaseFonts => Shell.MergeBaseFonts;
     public FontFamilyItemViewModel? SelectedMergeBaseFont { get => Shell.SelectedMergeBaseFont; set => Shell.SelectedMergeBaseFont = value; }
@@ -238,6 +240,10 @@ public abstract class ShellFeatureViewModel : ObservableObject
     public ICommand CopySelectedGlyphUnicodeCommand => Shell.CopySelectedGlyphUnicodeCommand;
     public ICommand LoadMergeReportCommand => Shell.LoadMergeReportCommand;
     public ICommand SetMergeStepCommand => Shell.SetMergeStepCommand;
+    public ICommand PickMergeBaseInputFontCommand => Shell.PickMergeBaseInputFontCommand;
+    public ICommand PickMergeSupplementalInputFontCommand => Shell.PickMergeSupplementalInputFontCommand;
+    public ICommand ClearMergeBaseInputCommand => Shell.ClearMergeBaseInputCommand;
+    public ICommand ClearMergeSupplementalInputCommand => Shell.ClearMergeSupplementalInputCommand;
     public ICommand OpenMergeRangeDialogCommand => Shell.OpenMergeRangeDialogCommand;
     public ICommand ApplyMergeUnicodeBlockCommand => Shell.ApplyMergeUnicodeBlockCommand;
     public ICommand ApplyMergeUnicodePresetCommand => Shell.ApplyMergeUnicodePresetCommand;

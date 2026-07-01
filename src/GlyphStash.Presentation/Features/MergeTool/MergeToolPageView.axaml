@@ -44,62 +44,54 @@
             <Grid>
               <Grid x:Name="MergeSelectFontsGrid" IsVisible="{Binding IsMergeStepSelectFonts}" RowDefinitions="*" ColumnDefinitions="*,*" ColumnSpacing="16">
                 <Border Classes="card" Padding="14">
-                  <Grid RowDefinitions="Auto,Auto,*" RowSpacing="12">
-                    <Grid ColumnDefinitions="*,Auto">
+                  <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="12">
+                    <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
                       <TextBlock Text="{DynamicResource L.Text.DBF90F3448FFF67E}" Classes="h2" />
                       <Border Grid.Column="1" Classes="badge blue"><TextBlock Text="{DynamicResource L.Text.FA21B588AD431D13}" FontSize="12" /></Border>
+                      <Button Grid.Column="2" Content="选择文件" Command="{Binding PickMergeBaseInputFontCommand}" />
+                      <Button Grid.Column="3" Content="清除" Command="{Binding ClearMergeBaseInputCommand}" IsEnabled="{Binding MergeBaseInput.HasFile}" />
                     </Grid>
-                    <TextBox Grid.Row="1" Text="{Binding MergeBaseSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="{DynamicResource L.Text.F39DAF702768A643}" />
-                    <ListBox Grid.Row="2"
-                             Classes="font-list"
-                             ItemsSource="{Binding MergeBaseFonts}"
-                             SelectedItem="{Binding SelectedMergeBaseFont, Mode=TwoWay}">
-                      <ListBox.ItemTemplate>
-                        <DataTemplate x:DataType="vm:FontFamilyItemViewModel">
-                          <Border Classes="card" Margin="0,0,0,8">
-                            <StackPanel Spacing="6">
-                              <TextBlock Text="{Binding FamilyName}" Classes="h2" />
-                              <TextBlock Text="{Binding FormatSummary}" Classes="muted" />
-                              <WrapPanel>
-                                <Border Classes="badge ok" Margin="0,0,7,7"><TextBlock Text="{Binding StateLabel}" FontSize="12" /></Border>
-                                <Border Classes="badge" Margin="0,0,7,7"><TextBlock Text="{Binding SourceLabel}" FontSize="12" /></Border>
-                                <Border Classes="badge" Margin="0,0,7,7"><TextBlock Text="{Binding LicenseLabel}" FontSize="12" /></Border>
-                              </WrapPanel>
-                            </StackPanel>
-                          </Border>
-                        </DataTemplate>
-                      </ListBox.ItemTemplate>
-                    </ListBox>
+                    <TextBlock Grid.Row="1" Text="{Binding MergeBaseInput.StatusLabel}" Classes="muted" TextWrapping="Wrap" />
+                    <Border Grid.Row="2" Classes="card subtle-card" IsVisible="{Binding MergeBaseInput.HasFile}">
+                      <StackPanel Spacing="7">
+                        <TextBlock Text="{Binding MergeBaseInput.FileName}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding MergeBaseInput.FilePath}" Classes="muted" TextWrapping="Wrap" />
+                      </StackPanel>
+                    </Border>
+                    <StackPanel Grid.Row="3" Spacing="8" IsVisible="{Binding MergeBaseInput.HasMetadata}">
+                      <TextBlock Text="{Binding MergeBaseInput.FamilyName}" Classes="h2" TextWrapping="Wrap" />
+                      <TextBlock Text="{Binding MergeBaseInput.StyleName}" Classes="muted" />
+                      <WrapPanel>
+                        <Border Classes="badge ok" Margin="0,0,7,7"><TextBlock Text="{Binding MergeBaseInput.Format}" FontSize="12" /></Border>
+                        <Border Classes="badge" Classes.warn="{Binding MergeBaseInput.IsLicenseUnknown}" Margin="0,0,7,7"><TextBlock Text="{Binding MergeBaseInput.LicenseLabel}" FontSize="12" /></Border>
+                      </WrapPanel>
+                    </StackPanel>
                   </Grid>
                 </Border>
 
                 <Border x:Name="MergeSupplementalPanel" Grid.Column="1" Classes="card" Padding="14">
-                  <Grid RowDefinitions="Auto,Auto,*" RowSpacing="12">
-                    <Grid ColumnDefinitions="*,Auto">
+                  <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="12">
+                    <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
                       <TextBlock Text="{DynamicResource L.Text.226670DD58EE6676}" Classes="h2" />
                       <Border Grid.Column="1" Classes="badge warn"><TextBlock Text="{DynamicResource L.Text.AECD817AD798493A}" FontSize="12" /></Border>
+                      <Button Grid.Column="2" Content="选择文件" Command="{Binding PickMergeSupplementalInputFontCommand}" />
+                      <Button Grid.Column="3" Content="清除" Command="{Binding ClearMergeSupplementalInputCommand}" IsEnabled="{Binding MergeSupplementalInput.HasFile}" />
                     </Grid>
-                    <TextBox Grid.Row="1" Text="{Binding MergeSupplementalSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="{DynamicResource L.Text.F39DAF702768A643}" />
-                    <ListBox Grid.Row="2"
-                             Classes="font-list"
-                             ItemsSource="{Binding MergeSupplementalFonts}"
-                             SelectedItem="{Binding SelectedMergeSupplementalFont, Mode=TwoWay}">
-                      <ListBox.ItemTemplate>
-                        <DataTemplate x:DataType="vm:FontFamilyItemViewModel">
-                          <Border Classes="card" Margin="0,0,0,8">
-                            <StackPanel Spacing="6">
-                              <TextBlock Text="{Binding FamilyName}" Classes="h2" />
-                              <TextBlock Text="{Binding FormatSummary}" Classes="muted" />
-                              <WrapPanel>
-                                <Border Classes="badge ok" Margin="0,0,7,7"><TextBlock Text="{Binding StateLabel}" FontSize="12" /></Border>
-                                <Border Classes="badge" Margin="0,0,7,7"><TextBlock Text="{Binding SourceLabel}" FontSize="12" /></Border>
-                                <Border Classes="badge" Margin="0,0,7,7"><TextBlock Text="{Binding LicenseLabel}" FontSize="12" /></Border>
-                              </WrapPanel>
-                            </StackPanel>
-                          </Border>
-                        </DataTemplate>
-                      </ListBox.ItemTemplate>
-                    </ListBox>
+                    <TextBlock Grid.Row="1" Text="{Binding MergeSupplementalInput.StatusLabel}" Classes="muted" TextWrapping="Wrap" />
+                    <Border Grid.Row="2" Classes="card subtle-card" IsVisible="{Binding MergeSupplementalInput.HasFile}">
+                      <StackPanel Spacing="7">
+                        <TextBlock Text="{Binding MergeSupplementalInput.FileName}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding MergeSupplementalInput.FilePath}" Classes="muted" TextWrapping="Wrap" />
+                      </StackPanel>
+                    </Border>
+                    <StackPanel Grid.Row="3" Spacing="8" IsVisible="{Binding MergeSupplementalInput.HasMetadata}">
+                      <TextBlock Text="{Binding MergeSupplementalInput.FamilyName}" Classes="h2" TextWrapping="Wrap" />
+                      <TextBlock Text="{Binding MergeSupplementalInput.StyleName}" Classes="muted" />
+                      <WrapPanel>
+                        <Border Classes="badge ok" Margin="0,0,7,7"><TextBlock Text="{Binding MergeSupplementalInput.Format}" FontSize="12" /></Border>
+                        <Border Classes="badge" Classes.warn="{Binding MergeSupplementalInput.IsLicenseUnknown}" Margin="0,0,7,7"><TextBlock Text="{Binding MergeSupplementalInput.LicenseLabel}" FontSize="12" /></Border>
+                      </WrapPanel>
+                    </StackPanel>
                   </Grid>
                 </Border>
               </Grid>
@@ -228,8 +220,8 @@
                     <TextBlock Text="{DynamicResource L.Text.EBB69A02038C8733}" Classes="h2" />
                     <TextBlock Text="{DynamicResource L.Text.0431D545006F362B}" Classes="muted" TextWrapping="Wrap" />
                     <WrapPanel>
-                      <Border Classes="badge ok" Margin="0,0,7,7"><TextBlock Text="{Binding SelectedMergeBaseFont.LicenseLabel}" FontSize="12" /></Border>
-                      <Border Classes="badge warn" Margin="0,0,7,7"><TextBlock Text="{Binding SelectedMergeSupplementalFont.LicenseLabel}" FontSize="12" /></Border>
+                      <Border Classes="badge" Classes.warn="{Binding MergeBaseInput.IsLicenseUnknown}" Margin="0,0,7,7"><TextBlock Text="{Binding MergeBaseInput.LicenseLabel}" FontSize="12" /></Border>
+                      <Border Classes="badge" Classes.warn="{Binding MergeSupplementalInput.IsLicenseUnknown}" Margin="0,0,7,7"><TextBlock Text="{Binding MergeSupplementalInput.LicenseLabel}" FontSize="12" /></Border>
                     </WrapPanel>
                     <CheckBox IsChecked="{Binding MergeLicenseConfirmed, Mode=TwoWay}" Content="{DynamicResource L.Text.DCF5F1AECFD13EFF}" />
                   </StackPanel>

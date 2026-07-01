@@ -42,6 +42,29 @@ public sealed class DesktopStorageDialogService : IUserFileDialogService, IUserC
             .ToList();
     }
 
+    public async Task<string?> PickMergeInputFontFileAsync(string title, CancellationToken cancellationToken)
+    {
+        if (TopLevel?.StorageProvider is not { CanOpen: true } storageProvider)
+        {
+            return null;
+        }
+
+        var files = await storageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = string.IsNullOrWhiteSpace(title) ? AppText.Get("Dialog.PickFontFilesTitle") : title,
+            AllowMultiple = false,
+            FileTypeFilter =
+            [
+                new FilePickerFileType(AppText.Get("Common.FontFiles"))
+                {
+                    Patterns = ["*.ttf", "*.otf"]
+                }
+            ]
+        });
+
+        return files.FirstOrDefault()?.TryGetLocalPath();
+    }
+
     public async Task<string?> PickManagedDirectoryAsync(CancellationToken cancellationToken)
     {
         if (TopLevel?.StorageProvider is not { CanPickFolder: true } storageProvider)

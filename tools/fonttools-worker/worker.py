@@ -16,6 +16,7 @@ except Exception:  # pragma: no cover - depends on bundled fontTools version
 
 
 DETAIL_LIMIT = 500
+SUPPORTED_OUTLINE_MESSAGE = "M4 v1 仅支持静态 TrueType/glyf 轮廓字体合并；请优先使用静态 TTF(glyf) 版本，暂不要混合 CFF/CFF2 OTF。"
 
 
 def emit_progress(percent, stage, message):
@@ -53,7 +54,7 @@ def expand_ranges(ranges):
 def load_font(path, target, issues):
     extension = Path(path).suffix.lower()
     if extension in {".ttc", ".otc", ".woff", ".woff2"}:
-        issues.append(issue("UnsupportedFontKind", "Error", f"{target} 是 {extension[1:].upper()}，M4 v1 仅支持静态单字体 TTF/OTF。", target))
+        issues.append(issue("UnsupportedFontKind", "Error", f"{target} 是 {extension[1:].upper()}，M4 v1 仅支持静态单字体 TTF/OTF；合并阶段仅支持静态 TrueType/glyf 轮廓字体。", target))
         return None
     if extension not in {".ttf", ".otf"}:
         issues.append(issue("UnsupportedFormat", "Error", f"{target} 格式不支持，M4 v1 仅支持 TTF/OTF。", target))
@@ -69,6 +70,65 @@ def load_font(path, target, issues):
     if "fvar" in font:
         issues.append(issue("VariableFont", "Error", f"{target} 是变量字体，M4 v1 不支持合并。", target))
     return font
+
+
+def create_outline_profile(font):
+    has_glyf = "glyf" in font
+    has_cff = "CFF " in font
+    has_cff2 = "CFF2" in font
+    is_cid_keyed_cff = False
+    if has_cff:
+        try:
+            top_dict = font["CFF "].cff.topDictIndex[0]
+            is_cid_keyed_cff = any(getattr(top_dict, name, None) is not None for name in ("ROS", "FDArray", "FDSelect"))
+        except Exception:
+            is_cid_keyed_cff = True
+
+    if has_glyf and not has_cff and not has_cff2:
+        outline_kind = "glyf"
+        label = "TrueType/glyf"
+    elif has_cff:
+        outline_kind = "cff"
+        label = "CID-keyed CFF" if is_cid_keyed_cff else "CFF"
+    elif has_cff2:
+        outline_kind = "cff2"
+        label = "CFF2"
+    else:
+        outline_kind = "unknown"
+        label = "未知轮廓"
+
+    return {
+        "outlineKind": outline_kind,
+        "label": label,
+        "isCidKeyedCff": is_cid_keyed_cff,
+        "isVariable": "fvar" in font,
+    }
+
+
+def validate_outline_profile(profile, target, issues):
+    if profile["outlineKind"] == "glyf":
+        return
+    issues.append(
+        issue(
+            "UnsupportedFontKind",
+            "Error",
+            f"{target} 使用 {profile['label']} 轮廓，{SUPPORTED_OUTLINE_MESSAGE}",
+            target,
+        )
+    )
+
+
+def validate_outline_pair(base_profile, supplemental_profile, issues):
+    outline_kinds = {base_profile["outlineKind"], supplemental_profile["outlineKind"]}
+    if "glyf" in outline_kinds and ("cff" in outline_kinds or "cff2" in outline_kinds):
+        issues.append(
+            issue(
+                "UnsupportedFontKind",
+                "Error",
+                f"基础字体 A 与补充字体 B 的轮廓类型不同（基础 {base_profile['label']}，补充 {supplemental_profile['label']}），{SUPPORTED_OUTLINE_MESSAGE}",
+                "字体轮廓",
+            )
+        )
 
 
 def font_units_per_em(font):
@@ -196,6 +256,18 @@ def perform_merge(base_path, supplemental_path, output_path, output_family_name,
         merged.close()
 
 
+def create_merge_failure_issue(exc):
+    message = str(exc)
+    normalized = message.lower()
+    if (
+        "notimplementedtype" in normalized and "cff" in normalized
+        or "cid-keyed cff" in normalized
+        or "cff tables" in normalized
+    ):
+        return issue("UnsupportedFontKind", "Error", f"fontTools dry-run 失败：输入字体包含 CFF/CFF2 或混合轮廓，{SUPPORTED_OUTLINE_MESSAGE}", "fontTools merge")
+    return issue("OpenTypeLayoutConflict", "Error", f"fontTools dry-run 失败：{message}", "fontTools merge")
+
+
 def analyze(request, dry_run):
     issues = []
     merge_mode = normalize_merge_mode(request.get("mergeMode"))
@@ -208,6 +280,12 @@ def analyze(request, dry_run):
         return create_preview(issues, [], len(requested), 0, 0, 0, 0, 0), []
 
     emit_progress(28, "预检查", "正在读取 Unicode cmap...")
+    base_profile = create_outline_profile(base_font)
+    supplemental_profile = create_outline_profile(supplemental_font)
+    validate_outline_profile(base_profile, "基础字体 A", issues)
+    validate_outline_profile(supplemental_profile, "补充字体 B", issues)
+    validate_outline_pair(base_profile, supplemental_profile, issues)
+
     base_cmap = get_cmap(base_font)
     supplemental_cmap = get_cmap(supplemental_font)
     conflicts, coverage_count, merge_count, duplicate_count, missing_count, overwritten_count = create_conflicts(
@@ -244,7 +322,7 @@ def analyze(request, dry_run):
                     merge_mode,
                 )
             except Exception as exc:
-                issues.append(issue("OpenTypeLayoutConflict", "Error", f"fontTools dry-run 失败：{exc}", "fontTools merge"))
+                issues.append(create_merge_failure_issue(exc))
 
     if len(requested) > DETAIL_LIMIT:
         issues.append(issue("InvalidInput", "Info", f"冲突明细仅显示前 {DETAIL_LIMIT} 个码位，报告保留完整统计。", "冲突明细"))

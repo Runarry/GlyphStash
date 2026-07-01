@@ -36,6 +36,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     private readonly IFontLibraryService _fontLibraryService;
     private readonly ILocalFontManagementService _localManagementService;
     private readonly IUserFileDialogService _fileDialogService;
+    private readonly IFontMetadataReader _fontMetadataReader;
     private readonly IUserClipboardService _clipboardService;
     private readonly IFontPreviewRegistry _fontPreviewRegistry;
     private readonly IAppLocalizationService _localizationService;
@@ -372,7 +373,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(MergeProgressLabel))]
-    private string _mergeStatus = AppText.TranslateLiteral("请选择基础字体和补充字体。");
+    private string _mergeStatus = AppText.TranslateLiteral("请选择基础字体 A 文件和补充字体 B 文件。");
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(MergeProgressLabel))]
@@ -440,6 +441,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         IFontLibraryService fontLibraryService,
         ILocalFontManagementService localManagementService,
         IUserFileDialogService fileDialogService,
+        IFontMetadataReader fontMetadataReader,
         IOnlineFontService onlineFontService,
         IGlyphCatalogService glyphCatalogService,
         IUserClipboardService clipboardService,
@@ -451,6 +453,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
             fontLibraryService,
             localManagementService,
             fileDialogService,
+            fontMetadataReader,
             onlineFontService,
             glyphCatalogService,
             clipboardService,
@@ -472,6 +475,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         IFontLibraryService fontLibraryService,
         ILocalFontManagementService localManagementService,
         IUserFileDialogService fileDialogService,
+        IFontMetadataReader fontMetadataReader,
         IOnlineFontService onlineFontService,
         IGlyphCatalogService glyphCatalogService,
         IUserClipboardService clipboardService,
@@ -490,6 +494,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         _fontLibraryService = fontLibraryService;
         _localManagementService = localManagementService;
         _fileDialogService = fileDialogService;
+        _fontMetadataReader = fontMetadataReader;
         _onlineFontService = onlineFontService;
         _glyphCatalogService = glyphCatalogService;
         _fontMergeService = fontMergeService;
@@ -511,6 +516,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         _glyphBrowserPage.Attach(this);
         _settingsPage.Attach(this);
         _placeholderPage.Attach(this);
+        MergeBaseInput.PropertyChanged += (_, _) => NotifyMergeInputStateChanged();
+        MergeSupplementalInput.PropertyChanged += (_, _) => NotifyMergeInputStateChanged();
         CurrentPage = _fontLibraryPage;
         InitializeLocalizedOptions();
         foreach (var language in _localizationService.SupportedLanguages)
@@ -603,6 +610,10 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     public ObservableCollection<GlyphItemViewModel> Glyphs { get; } = [];
 
     public ObservableCollection<string> UnicodeBlocks { get; } = ["全部区块"];
+
+    public MergeFontInputViewModel MergeBaseInput { get; } = new("请选择基础字体 A 文件。");
+
+    public MergeFontInputViewModel MergeSupplementalInput { get; } = new("请选择补充字体 B 文件。");
 
     public ObservableCollection<FontFamilyItemViewModel> MergeBaseFonts { get; } = [];
 
@@ -848,9 +859,9 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
 
     public bool IsMergeStepReport => MergeStepIndex == 4;
 
-    public bool HasSelectedMergeBaseFont => SelectedMergeBaseFont is not null;
+    public bool HasSelectedMergeBaseFont => MergeBaseInput.HasSelection;
 
-    public bool HasSelectedMergeSupplementalFont => SelectedMergeSupplementalFont is not null;
+    public bool HasSelectedMergeSupplementalFont => MergeSupplementalInput.HasSelection;
 
     public bool HasMergePreview => _currentMergePreview is not null;
 

@@ -129,10 +129,10 @@ public sealed partial class ShellViewModel
 
         if (MergeStepIndex == 0)
         {
-            if (SelectedMergeBaseFont is null || SelectedMergeSupplementalFont is null)
+            if (MergeBaseInput.Selection is null || MergeSupplementalInput.Selection is null)
             {
-                MergeStatus = L("请先选择基础字体 A 和补充字体 B。");
-                ShowToast(L("请选择两个字体"));
+                MergeStatus = L("请先选择基础字体 A 文件和补充字体 B 文件。");
+                ShowToast(L("请选择两个字体文件"));
                 return;
             }
 
@@ -202,34 +202,96 @@ public sealed partial class ShellViewModel
     }
 
     [RelayCommand]
+    private async Task PickMergeBaseInputFontAsync()
+    {
+        await PickMergeInputFontAsync(MergeBaseInput, L("选择基础字体 A"));
+    }
+
+    [RelayCommand]
+    private async Task PickMergeSupplementalInputFontAsync()
+    {
+        await PickMergeInputFontAsync(MergeSupplementalInput, L("选择补充字体 B"));
+    }
+
+    [RelayCommand]
+    private void ClearMergeBaseInput()
+    {
+        MergeBaseInput.Clear();
+        MergeStatus = L("请选择基础字体 A 文件。");
+    }
+
+    [RelayCommand]
+    private void ClearMergeSupplementalInput()
+    {
+        MergeSupplementalInput.Clear();
+        MergeStatus = L("请选择补充字体 B 文件。");
+    }
+
+    private async Task PickMergeInputFontAsync(MergeFontInputViewModel input, string title)
+    {
+        var path = await _fileDialogService.PickMergeInputFontFileAsync(title, LifetimeToken);
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return;
+        }
+
+        input.SetLoading(path);
+        MergeStatus = AppText.CurrentCultureCode == AppText.EnglishCultureCode
+            ? $"Reading font metadata: {Path.GetFileName(path)}"
+            : $"正在读取字体元数据：{Path.GetFileName(path)}";
+
+        try
+        {
+            var extension = Path.GetExtension(path);
+            if (!string.Equals(extension, ".ttf", StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(extension, ".otf", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(L("合并输入只支持 .ttf 或 .otf 字体文件。"));
+            }
+
+            var metadata = await _fontMetadataReader.ReadMetadataAsync(path, LifetimeToken);
+            input.SetMetadata(metadata);
+            MergeStatus = AppText.CurrentCultureCode == AppText.EnglishCultureCode
+                ? $"Selected {title}: {metadata.FamilyName}"
+                : $"已选择{title}：{metadata.FamilyName}";
+        }
+        catch (Exception ex)
+        {
+            input.SetError(path, ex.ToUserMessage());
+            MergeStatus = input.ErrorMessage;
+            ShowToast(L("字体文件读取失败"));
+        }
+    }
+
+    [RelayCommand]
     private async Task OpenMergeRangeDialogAsync()
     {
         IsMergeRangeDialogOpen = true;
         ClearMergeRangeDialog();
 
-        var baseFace = SelectMergeFace(SelectedMergeBaseFont);
-        var supplementalFace = SelectMergeFace(SelectedMergeSupplementalFont);
-        MergeRangeBaseSummary = BuildPendingMergeRangeSummary(SelectedMergeBaseFont, baseFace, AppText.CurrentCultureCode == AppText.EnglishCultureCode ? "Base font A" : "基础字体 A");
-        MergeRangeSupplementalSummary = BuildPendingMergeRangeSummary(SelectedMergeSupplementalFont, supplementalFace, AppText.CurrentCultureCode == AppText.EnglishCultureCode ? "Supplemental font B" : "补充字体 B");
-        if (SelectedMergeBaseFont is null || SelectedMergeSupplementalFont is null || baseFace is null || supplementalFace is null)
+        var baseSelection = MergeBaseInput.Selection;
+        var supplementalSelection = MergeSupplementalInput.Selection;
+        MergeRangeBaseSummary = BuildPendingMergeRangeSummary(MergeBaseInput, AppText.CurrentCultureCode == AppText.EnglishCultureCode ? "Base font A" : "基础字体 A");
+        MergeRangeSupplementalSummary = BuildPendingMergeRangeSummary(MergeSupplementalInput, AppText.CurrentCultureCode == AppText.EnglishCultureCode ? "Supplemental font B" : "补充字体 B");
+        if (baseSelection is null || supplementalSelection is null)
         {
-            MergeRangeDialogStatus = L("请先选择基础字体 A 和补充字体 B。");
+            MergeRangeDialogStatus = L("请先选择基础字体 A 文件和补充字体 B 文件。");
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(baseFace.FilePath) || !File.Exists(baseFace.FilePath))
+        if (string.IsNullOrWhiteSpace(baseSelection.File.Path) || !File.Exists(baseSelection.File.Path))
         {
             MergeRangeDialogStatus = AppText.CurrentCultureCode == AppText.EnglishCultureCode
-                ? $"Base font A style {baseFace.StyleLabel} has no readable local file path."
-                : $"基础字体 A 的样式 {baseFace.StyleLabel} 没有可读取的本地文件路径。";
+                ? $"Base font A file has no readable local path: {baseSelection.File.Path}"
+                : $"基础字体 A 文件没有可读取的本地路径：{baseSelection.File.Path}";
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(supplementalFace.FilePath) || !File.Exists(supplementalFace.FilePath))
+        if (string.IsNullOrWhiteSpace(supplementalSelection.File.Path) || !File.Exists(supplementalSelection.File.Path))
         {
             MergeRangeDialogStatus = AppText.CurrentCultureCode == AppText.EnglishCultureCode
-                ? $"Supplemental font B style {supplementalFace.StyleLabel} has no readable local file path."
-                : $"补充字体 B 的样式 {supplementalFace.StyleLabel} 没有可读取的本地文件路径。";
+                ? $"Supplemental font B file has no readable local path: {supplementalSelection.File.Path}"
+                : $"补充字体 B 文件没有可读取的本地路径：{supplementalSelection.File.Path}";
             return;
         }
 
@@ -238,14 +300,14 @@ public sealed partial class ShellViewModel
         try
         {
             var baseCoverage = await _glyphCatalogService.GetCoverageAsync(
-                new GlyphCoverageQuery(baseFace.FilePath, baseFace.StyleLabel),
+                new GlyphCoverageQuery(baseSelection.File.Path, baseSelection.StyleName),
                 LifetimeToken);
             var supplementalCoverage = await _glyphCatalogService.GetCoverageAsync(
-                new GlyphCoverageQuery(supplementalFace.FilePath, supplementalFace.StyleLabel),
+                new GlyphCoverageQuery(supplementalSelection.File.Path, supplementalSelection.StyleName),
                 LifetimeToken);
 
-            MergeRangeBaseSummary = BuildCoverageSummary(SelectedMergeBaseFont.FamilyName, baseFace.StyleLabel, baseCoverage);
-            MergeRangeSupplementalSummary = BuildCoverageSummary(SelectedMergeSupplementalFont.FamilyName, supplementalFace.StyleLabel, supplementalCoverage);
+            MergeRangeBaseSummary = BuildCoverageSummary(baseSelection.FamilyName, baseSelection.StyleName, baseCoverage);
+            MergeRangeSupplementalSummary = BuildCoverageSummary(supplementalSelection.FamilyName, supplementalSelection.StyleName, supplementalCoverage);
             BuildMergeRangeComparison(baseCoverage, supplementalCoverage);
             MergeRangeDialogStatus = _allMergeRangeSegments.Count == 0
                 ? L("两个字体都没有可选择的 Unicode 映射覆盖。")

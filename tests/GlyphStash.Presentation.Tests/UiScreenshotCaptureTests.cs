@@ -498,6 +498,28 @@ public sealed class UiScreenshotCaptureTests
     {
         vm.SelectedMergeBaseFont = vm.Fonts.FirstOrDefault(font => font.FamilyName == "Noto Sans CJK SC");
         vm.SelectedMergeSupplementalFont = vm.Fonts.FirstOrDefault(font => font.FamilyName == "Source Han Serif SC");
+        vm.MergeBaseInput.SetMetadata(new FontMetadata(
+            @"C:\Fonts\NotoSansCJKSC-Regular.ttf",
+            "TTF",
+            "Noto Sans CJK SC",
+            "Regular",
+            "Noto Sans CJK SC Regular",
+            "NotoSansCJKSC-Regular",
+            null,
+            null,
+            "OFL",
+            "hash-base"));
+        vm.MergeSupplementalInput.SetMetadata(new FontMetadata(
+            @"C:\Fonts\SourceHanSerifSC-Regular.ttf",
+            "TTF",
+            "Source Han Serif SC",
+            "Regular",
+            "Source Han Serif SC Regular",
+            "SourceHanSerifSC-Regular",
+            null,
+            null,
+            "未知授权",
+            "hash-patch"));
         vm.MergeUnicodeRanges = "U+4E00-U+9FFF, U+3000-U+303F";
         vm.MergeOutputFontName = "Noto Sans CJK SC Patch";
         vm.MergeOutputPath = @"C:\Users\sleep\GlyphStash\Exports\NotoSansCJKSC-Patch.ttf";

@@ -198,7 +198,7 @@ public sealed class ShellViewModelTests
             Assert.Equal("All subsets", vm.OnlineSubsetOptionModels[0].DisplayName);
             Assert.Equal("All categories", vm.OnlineCategoryOptionModels[0].DisplayName);
             Assert.Equal("Chinese", vm.MergeUnicodeRangePresets.Single(preset => preset.Key == "chinese").DisplayName);
-            Assert.Equal("Select a base font and supplemental font.", vm.MergeStatus);
+            Assert.Equal("Select base font A file and supplemental font B file.", vm.MergeStatus);
             Assert.Contains("Notepad: covers newly started", vm.CompatibilityMatrix[0], StringComparison.Ordinal);
             Assert.Equal("Unknown license", new FontFamilyItemViewModel(CreateFont("Inter")).LicenseLabel);
 
@@ -280,20 +280,20 @@ public sealed class ShellViewModelTests
         var outputPath = Path.Combine(directory, "Merged.ttf");
         await File.WriteAllBytesAsync(basePath, [1], CancellationToken.None);
         await File.WriteAllBytesAsync(supplementalPath, [1], CancellationToken.None);
-        var fonts =
-            new[]
-            {
-                CreateFontWithFaces("Base", ("Regular", 400, "Normal", basePath)),
-                CreateFontWithFaces("Patch", ("Regular", 400, "Normal", supplementalPath))
-            };
+        var fileDialog = new QueuedFileDialogService(basePath, supplementalPath);
+        var metadataReader = new ConfiguredMetadataReader(
+            CreateMetadata(basePath, "Base"),
+            CreateMetadata(supplementalPath, "Patch"));
         var vm = ShellViewModelTestFactory.Create(
-            ShellViewModelTestFactory.CreateLibraryService(new FakeInventory([]), new FakeStore(fonts)),
-            null,
-            NullUserFileDialogService.Instance,
+            ShellViewModelTestFactory.CreateLibraryService(new FakeInventory([]), new FakeStore([])),
+            fileDialogService: fileDialog,
+            fontMetadataReader: metadataReader,
             fontMergeService: new FontMergeService(new FakeMergeWorker()));
 
         await vm.InitializeAsync();
         vm.SelectedNavigationItem = vm.NavigationItems.Single(item => item.Key == "merge-tool");
+        await vm.PickMergeBaseInputFontCommand.ExecuteAsync(null);
+        await vm.PickMergeSupplementalInputFontCommand.ExecuteAsync(null);
         vm.MergeUnicodeRanges = "U+0041";
         vm.SelectedMergeModeLabel = "覆盖";
         await vm.NextMergeStepCommand.ExecuteAsync(null);
@@ -310,7 +310,64 @@ public sealed class ShellViewModelTests
 
         Assert.True(vm.IsMergeStepReport);
         Assert.Contains("未完成授权确认", vm.MergeStatus, StringComparison.Ordinal);
+        Assert.Equal("Base + Patch", vm.MergeReportInputFonts);
         Assert.False(File.Exists(outputPath));
+    }
+
+    [Fact]
+    public async Task MergeWizard_MetadataReadFailureBlocksNextStep()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "GlyphStash.Tests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        var basePath = Path.Combine(directory, "Broken.ttf");
+        await File.WriteAllBytesAsync(basePath, [1], CancellationToken.None);
+        var vm = ShellViewModelTestFactory.Create(
+            ShellViewModelTestFactory.CreateLibraryService(new FakeInventory([]), new FakeStore([])),
+            fileDialogService: new QueuedFileDialogService(basePath),
+            fontMetadataReader: new ConfiguredMetadataReader(new InvalidOperationException("fixture metadata failed")));
+
+        await vm.InitializeAsync();
+        await vm.PickMergeBaseInputFontCommand.ExecuteAsync(null);
+        await vm.NextMergeStepCommand.ExecuteAsync(null);
+
+        Assert.True(vm.IsMergeStepSelectFonts);
+        Assert.True(vm.MergeBaseInput.HasError);
+        Assert.Contains("fixture metadata failed", vm.MergeBaseInput.ErrorMessage, StringComparison.Ordinal);
+        Assert.Contains("请先选择基础字体 A 文件和补充字体 B 文件", vm.MergeStatus, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task MergeWizard_SuccessWithNoMergedGlyphsExplainsNoop()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "GlyphStash.Tests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        var basePath = Path.Combine(directory, "Base.ttf");
+        var supplementalPath = Path.Combine(directory, "Patch.ttf");
+        var outputPath = Path.Combine(directory, "Merged.ttf");
+        await File.WriteAllBytesAsync(basePath, [1], CancellationToken.None);
+        await File.WriteAllBytesAsync(supplementalPath, [1], CancellationToken.None);
+        var vm = ShellViewModelTestFactory.Create(
+            ShellViewModelTestFactory.CreateLibraryService(new FakeInventory([]), new FakeStore([])),
+            fileDialogService: new QueuedFileDialogService(basePath, supplementalPath),
+            fontMetadataReader: new ConfiguredMetadataReader(
+                CreateMetadata(basePath, "Base", licenseText: "OFL"),
+                CreateMetadata(supplementalPath, "Patch", licenseText: "OFL")),
+            fontMergeService: new FontMergeService(new FakeMergeWorker()));
+
+        await vm.InitializeAsync();
+        await vm.PickMergeBaseInputFontCommand.ExecuteAsync(null);
+        await vm.PickMergeSupplementalInputFontCommand.ExecuteAsync(null);
+        vm.MergeUnicodeRanges = "U+0041";
+        await vm.NextMergeStepCommand.ExecuteAsync(null);
+        await vm.NextMergeStepCommand.ExecuteAsync(null);
+        vm.MergeOutputPath = outputPath;
+        vm.MergeLicenseConfirmed = true;
+        vm.MergeStepIndex = 3;
+        await vm.NextMergeStepCommand.ExecuteAsync(null);
+
+        Assert.True(vm.IsMergeStepReport);
+        Assert.True(File.Exists(outputPath));
+        Assert.Contains("未合入任何字形", vm.MergeStatus, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -319,28 +376,24 @@ public sealed class ShellViewModelTests
         var directory = Path.Combine(Path.GetTempPath(), "GlyphStash.Tests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);
         var basePath = Path.Combine(directory, "Base.ttf");
-        var baseBoldPath = Path.Combine(directory, "Base-Bold.ttf");
         var supplementalPath = Path.Combine(directory, "Patch.ttf");
         await File.WriteAllBytesAsync(basePath, [1], CancellationToken.None);
-        await File.WriteAllBytesAsync(baseBoldPath, [1], CancellationToken.None);
         await File.WriteAllBytesAsync(supplementalPath, [1], CancellationToken.None);
         var glyphService = new CapturingGlyphCatalogService();
         glyphService.Coverages[basePath] = CreateCoverage(new DomainUnicodeRange(0x0041, 0x0043), new DomainUnicodeRange(0x0100, 0x0100));
         glyphService.Coverages[supplementalPath] = CreateCoverage(new DomainUnicodeRange(0x0042, 0x0044), new DomainUnicodeRange(0x4E00, 0x4E00));
-        var fonts =
-            new[]
-            {
-                CreateFontWithFaces("Base", ("Regular", 400, "Normal", basePath), ("Bold", 700, "Normal", baseBoldPath)),
-                CreateFontWithFaces("Patch", ("Regular", 400, "Normal", supplementalPath))
-            };
         var vm = ShellViewModelTestFactory.Create(
-            ShellViewModelTestFactory.CreateLibraryService(new FakeInventory([]), new FakeStore(fonts)),
-            null,
-            NullUserFileDialogService.Instance,
+            ShellViewModelTestFactory.CreateLibraryService(new FakeInventory([]), new FakeStore([])),
+            fileDialogService: new QueuedFileDialogService(basePath, supplementalPath),
+            fontMetadataReader: new ConfiguredMetadataReader(
+                CreateMetadata(basePath, "Base"),
+                CreateMetadata(supplementalPath, "Patch")),
             glyphCatalogService: glyphService);
 
         await vm.InitializeAsync();
         vm.SelectedNavigationItem = vm.NavigationItems.Single(item => item.Key == "merge-tool");
+        await vm.PickMergeBaseInputFontCommand.ExecuteAsync(null);
+        await vm.PickMergeSupplementalInputFontCommand.ExecuteAsync(null);
         await vm.OpenMergeRangeDialogCommand.ExecuteAsync(null);
 
         Assert.True(vm.IsMergeRangeDialogOpen);
@@ -383,12 +436,12 @@ public sealed class ShellViewModelTests
         await vm.OpenMergeRangeDialogCommand.ExecuteAsync(null);
 
         Assert.True(vm.IsMergeRangeDialogOpen);
-        Assert.Contains("请先选择基础字体 A 和补充字体 B", vm.MergeRangeDialogStatus, StringComparison.Ordinal);
+        Assert.Contains("请先选择基础字体 A 文件和补充字体 B 文件", vm.MergeRangeDialogStatus, StringComparison.Ordinal);
         Assert.False(vm.CanApplyMergeRangeSelection);
 
         vm.ApplyMergeRangeSelectionCommand.Execute(null);
 
-        Assert.Contains("请先选择基础字体 A 和补充字体 B", vm.MergeRangeDialogStatus, StringComparison.Ordinal);
+        Assert.Contains("请先选择基础字体 A 文件和补充字体 B 文件", vm.MergeRangeDialogStatus, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -899,9 +952,8 @@ public sealed class ShellViewModelTests
             new FakeDownloadRecordStore());
         var vm = ShellViewModelTestFactory.Create(
             ShellViewModelTestFactory.CreateLibraryService(new FakeInventory([]), new FakeStore([])),
-            null,
-            NullUserFileDialogService.Instance,
-            onlineService);
+            fileDialogService: NullUserFileDialogService.Instance,
+            onlineFontService: onlineService);
 
         await vm.SearchOnlineFontsCommand.ExecuteAsync(null);
 
@@ -925,9 +977,8 @@ public sealed class ShellViewModelTests
             new FakeDownloadRecordStore());
         var vm = ShellViewModelTestFactory.Create(
             ShellViewModelTestFactory.CreateLibraryService(new FakeInventory([]), new FakeStore([])),
-            null,
-            NullUserFileDialogService.Instance,
-            onlineService);
+            fileDialogService: NullUserFileDialogService.Instance,
+            onlineFontService: onlineService);
         vm.OnlineSearchText = "Noto";
         vm.SelectedOnlineSubset = "latin-ext";
         vm.SelectedOnlineCategory = "sans-serif";
@@ -961,9 +1012,8 @@ public sealed class ShellViewModelTests
             new FakeDownloadRecordStore());
         var vm = ShellViewModelTestFactory.Create(
             ShellViewModelTestFactory.CreateLibraryService(new FakeInventory([]), new FakeStore([])),
-            null,
-            NullUserFileDialogService.Instance,
-            onlineService);
+            fileDialogService: NullUserFileDialogService.Instance,
+            onlineFontService: onlineService);
         vm.SelectedRemoteFont = new RemoteFontFamilyItemViewModel(CreateRemoteFont("Noto Sans"));
 
         await vm.DownloadSelectedOnlineFontCommand.ExecuteAsync(null);
@@ -991,9 +1041,8 @@ public sealed class ShellViewModelTests
             new FakeDownloadRecordStore());
         var vm = ShellViewModelTestFactory.Create(
             ShellViewModelTestFactory.CreateLibraryService(new FakeInventory([]), new FakeStore([])),
-            null,
-            NullUserFileDialogService.Instance,
-            onlineService);
+            fileDialogService: NullUserFileDialogService.Instance,
+            onlineFontService: onlineService);
         vm.SelectedRemoteFont = new RemoteFontFamilyItemViewModel(CreateRemoteFont("Noto Sans"));
 
         await vm.DownloadSelectedOnlineFontCommand.ExecuteAsync(null);
@@ -1044,6 +1093,22 @@ public sealed class ShellViewModelTests
             [],
             [],
             false);
+
+    private static FontMetadata CreateMetadata(string path, string family, string subfamily = "Regular", string? licenseText = null) =>
+        new(
+            path,
+            Path.GetExtension(path).TrimStart('.').ToUpperInvariant(),
+            family,
+            subfamily,
+            $"{family} {subfamily}",
+            $"{family.Replace(' ', '-')}-{subfamily.Replace(' ', '-')}",
+            null,
+            null,
+            licenseText,
+            "hash",
+            400,
+            "Normal",
+            "Normal");
 
     private static GlyphCoverage CreateCoverage(params DomainUnicodeRange[] ranges)
     {
@@ -1181,6 +1246,65 @@ public sealed class ShellViewModelTests
         public Task RemoveActivationAsync(string fontPath, string ownerKey, CancellationToken cancellationToken) => Task.CompletedTask;
 
         public Task MarkAllOwnedStaleAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+    }
+
+    private sealed class QueuedFileDialogService : IUserFileDialogService
+    {
+        private readonly Queue<string?> _mergeInputPaths;
+
+        public QueuedFileDialogService(params string?[] mergeInputPaths)
+        {
+            _mergeInputPaths = new Queue<string?>(mergeInputPaths);
+        }
+
+        public Task<IReadOnlyList<string>> PickFontFilesAsync(CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<string>>([]);
+
+        public Task<string?> PickMergeInputFontFileAsync(string title, CancellationToken cancellationToken) =>
+            Task.FromResult(_mergeInputPaths.Count == 0 ? null : _mergeInputPaths.Dequeue());
+
+        public Task<string?> PickManagedDirectoryAsync(CancellationToken cancellationToken) =>
+            Task.FromResult<string?>(null);
+
+        public Task<string?> PickMergeOutputFileAsync(string suggestedFileName, CancellationToken cancellationToken) =>
+            Task.FromResult<string?>(null);
+
+        public Task<string?> PickMergeReportFileAsync(CancellationToken cancellationToken) =>
+            Task.FromResult<string?>(null);
+    }
+
+    private sealed class ConfiguredMetadataReader : IFontMetadataReader
+    {
+        private readonly Dictionary<string, FontMetadata> _metadataByPath = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Exception? _exception;
+
+        public ConfiguredMetadataReader(params FontMetadata[] metadata)
+        {
+            foreach (var item in metadata)
+            {
+                _metadataByPath[item.SourcePath] = item;
+            }
+        }
+
+        public ConfiguredMetadataReader(Exception exception)
+        {
+            _exception = exception;
+        }
+
+        public Task<FontMetadata> ReadMetadataAsync(string fontFilePath, CancellationToken cancellationToken)
+        {
+            if (_exception is not null)
+            {
+                throw _exception;
+            }
+
+            if (_metadataByPath.TryGetValue(fontFilePath, out var metadata))
+            {
+                return Task.FromResult(metadata);
+            }
+
+            throw new InvalidOperationException($"No metadata configured for {fontFilePath}.");
+        }
     }
 
     private sealed class FakeMetadataReader : IFontMetadataReader

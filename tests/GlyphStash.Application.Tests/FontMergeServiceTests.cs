@@ -21,7 +21,8 @@ public sealed class FontMergeServiceTests
         var preview = await service.PreviewAsync(CreateRequest(basePath, supplementalPath), CancellationToken.None);
 
         Assert.True(preview.HasBlockingIssues);
-        Assert.Contains(preview.Issues, issue => issue.Kind == FontMergeIssueKind.UnsupportedFontKind);
+        var issue = Assert.Single(preview.Issues, issue => issue.Kind == FontMergeIssueKind.UnsupportedFontKind);
+        Assert.Contains("TrueType/glyf", issue.Message, StringComparison.Ordinal);
         Assert.False(worker.WasCalled);
     }
 
