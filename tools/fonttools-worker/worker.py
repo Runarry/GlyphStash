@@ -5,8 +5,8 @@ import sys
 import tempfile
 from pathlib import Path
 
-from fontTools.merge import Merger
-from fontTools.subset import Options, Subsetter
+from fontTools.merge import Merger, Options as MergeOptions
+from fontTools.subset import Options as SubsetOptions, Subsetter
 from fontTools.ttLib import TTFont
 
 try:
@@ -17,6 +17,8 @@ except Exception:  # pragma: no cover - depends on bundled fontTools version
 
 DETAIL_LIMIT = 500
 SUPPORTED_OUTLINE_MESSAGE = "M4 v1 仅支持静态 TrueType/glyf 轮廓字体合并；请优先使用静态 TTF(glyf) 版本，暂不要混合 CFF/CFF2 OTF。"
+INCOMPATIBLE_TABLE_MESSAGE = "输入字体的 OpenType 表结构不兼容，fontTools 要求部分字段在两个字体中一致，但当前组合存在缺失值或不一致值；M4 v1 不能安全合并这组字体。请尝试使用同一家族、同格式的静态 TTF(glyf)，或先用专业字体工具统一表结构后再合并。"
+SINGLE_SIDED_OPTIONAL_DROP_TABLES = frozenset({"vhea", "vmtx", "VDMX", "hdmx", "LTSH", "PCLT"})
 
 
 def emit_progress(percent, stage, message):
@@ -208,7 +210,7 @@ def set_name_string(record, value):
 
 def subset_font(input_path, codepoints, output_path, target_units=None):
     font = TTFont(input_path, recalcBBoxes=False, recalcTimestamp=False, lazy=False)
-    options = Options()
+    options = SubsetOptions()
     options.ignore_missing_glyphs = True
     options.retain_gids = False
     subsetter = Subsetter(options=options)
@@ -235,7 +237,30 @@ def subset_base_for_overwrite(base_path, overwritten_codepoints, temp_dir):
     return subset_font(base_path, keep_codepoints, subset_path)
 
 
+def create_optional_merge_drop_tables(base_tags, supplemental_tags):
+    single_sided_tags = set(base_tags).symmetric_difference(set(supplemental_tags))
+    return sorted(single_sided_tags.intersection(SINGLE_SIDED_OPTIONAL_DROP_TABLES))
+
+
+def read_font_table_tags(path):
+    font = TTFont(path, recalcBBoxes=False, recalcTimestamp=False, lazy=False)
+    try:
+        return set(font.keys()).difference({"GlyphOrder"})
+    finally:
+        font.close()
+
+
+def merge_font_paths(base_input_path, supplemental_input_path):
+    drop_tables = create_optional_merge_drop_tables(
+        read_font_table_tags(base_input_path),
+        read_font_table_tags(supplemental_input_path),
+    )
+    merged = Merger(MergeOptions(drop_tables=drop_tables)).merge([base_input_path, supplemental_input_path])
+    return merged, drop_tables
+
+
 def perform_merge(base_path, supplemental_path, output_path, output_family_name, merge_codepoints, merge_mode):
+    dropped_tables = []
     with tempfile.TemporaryDirectory(prefix="glyphstash-fonttools-") as temp_dir:
         base_font = TTFont(base_path, recalcBBoxes=False, recalcTimestamp=False, lazy=False)
         base_units = font_units_per_em(base_font)
@@ -245,7 +270,7 @@ def perform_merge(base_path, supplemental_path, output_path, output_family_name,
             if merge_mode == "Overwrite":
                 base_input_path = subset_base_for_overwrite(base_path, merge_codepoints, temp_dir)
             base_font.close()
-            merged = Merger().merge([base_input_path, subset_path])
+            merged, dropped_tables = merge_font_paths(base_input_path, subset_path)
         else:
             merged = base_font
         rename_font(merged, output_family_name)
@@ -254,18 +279,31 @@ def perform_merge(base_path, supplemental_path, output_path, output_family_name,
             os.makedirs(output_dir, exist_ok=True)
         merged.save(output_path)
         merged.close()
+    return dropped_tables
 
 
 def create_merge_failure_issue(exc):
     message = str(exc)
-    normalized = message.lower()
+    normalized = message.lower().replace("notlmplemented", "notimplemented")
     if (
         "notimplementedtype" in normalized and "cff" in normalized
         or "cid-keyed cff" in normalized
         or "cff tables" in normalized
     ):
         return issue("UnsupportedFontKind", "Error", f"fontTools dry-run 失败：输入字体包含 CFF/CFF2 或混合轮廓，{SUPPORTED_OUTLINE_MESSAGE}", "fontTools merge")
+    if "items to be equal" in normalized or "notimplemented" in normalized or "not supported between instances" in normalized:
+        return issue("OpenTypeLayoutConflict", "Error", f"fontTools dry-run 失败：{INCOMPATIBLE_TABLE_MESSAGE} 原始错误：{message}", "fontTools merge")
     return issue("OpenTypeLayoutConflict", "Error", f"fontTools dry-run 失败：{message}", "fontTools merge")
+
+
+def create_dropped_optional_tables_issue(dropped_tables):
+    table_list = ", ".join(dropped_tables)
+    return issue(
+        "OpenTypeLayoutConflict",
+        "Info",
+        f"fontTools 合并时已跳过单边存在的可选表：{table_list}。这些表通常用于垂直排版或设备指标；为避免表结构冲突，本次仅合并字形轮廓、cmap 与基础 metrics。",
+        "fontTools merge",
+    )
 
 
 def analyze(request, dry_run):
@@ -313,7 +351,7 @@ def analyze(request, dry_run):
         with tempfile.TemporaryDirectory(prefix="glyphstash-fonttools-preview-") as temp_dir:
             preview_output = os.path.join(temp_dir, "preview.ttf")
             try:
-                perform_merge(
+                dropped_tables = perform_merge(
                     request["baseFontPath"],
                     request["supplementalFontPath"],
                     preview_output,
@@ -321,6 +359,8 @@ def analyze(request, dry_run):
                     merge_codepoints,
                     merge_mode,
                 )
+                if dropped_tables:
+                    issues.append(create_dropped_optional_tables_issue(dropped_tables))
             except Exception as exc:
                 issues.append(create_merge_failure_issue(exc))
 
